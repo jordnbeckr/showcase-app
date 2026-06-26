@@ -81,7 +81,6 @@ export async function addHeat(danceTypeId: number) {
   const nextNum = (maxHeat._max.number ?? 0) + 1
   await db.heat.create({ data: { number: nextNum, danceTypeId } })
   revalidatePath('/admin/config')
-  revalidatePath('/admin/master')
 }
 
 export async function removeLastHeat(danceTypeId: number) {
@@ -93,7 +92,6 @@ export async function removeLastHeat(danceTypeId: number) {
   if (entryCount > 0) return { error: `Heat #${last.number} has ${entryCount} entries — remove them first` }
   await db.heat.delete({ where: { id: last.id } })
   revalidatePath('/admin/config')
-  revalidatePath('/admin/master')
 }
 
 // --- Studios ---
