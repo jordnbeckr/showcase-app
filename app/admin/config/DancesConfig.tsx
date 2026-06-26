@@ -82,26 +82,19 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   }
 
   function handleAddHeat(danceTypeId: number) {
-    // Optimistically increment heat count
     setDanceTypes(prev => prev.map(d =>
       d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
     ))
-    startTransition(async () => {
-      await addHeat(danceTypeId)
-      router.refresh()
-    })
+    addHeat(danceTypeId).then(() => router.refresh())
   }
 
   function handleRemoveHeat(danceTypeId: number) {
-    // Optimistically decrement heat count
     setDanceTypes(prev => prev.map(d =>
       d.id === danceTypeId ? { ...d, heatCount: Math.max(0, d.heatCount - 1) } : d
     ))
-    startTransition(async () => {
-      const result = await removeLastHeat(danceTypeId)
+    removeLastHeat(danceTypeId).then(result => {
       if (result?.error) {
         setError(result.error)
-        // Revert on error
         setDanceTypes(prev => prev.map(d =>
           d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
         ))
@@ -190,7 +183,7 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleRemoveHeat(dance.id)}
-                      disabled={pending || dance.heatCount === 0}
+                      disabled={dance.heatCount === 0}
                       className="w-7 h-7 flex items-center justify-center font-bold disabled:opacity-30 text-sm"
                       style={{ border: '1px solid var(--border-dark)', borderRadius: 3 }}
                     >
@@ -198,7 +191,7 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
                     </button>
                     <button
                       onClick={() => handleAddHeat(dance.id)}
-                      disabled={pending}
+                      disabled={false}
                       className="w-7 h-7 flex items-center justify-center font-bold disabled:opacity-30 text-sm text-white"
                       style={{ backgroundColor: '#333', borderRadius: 3 }}
                     >
