@@ -1,10 +1,12 @@
 import { db } from '@/lib/db'
 import StudioLoginForm from './StudioLoginForm'
 import Link from 'next/link'
+import { unstable_noStore as noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 
 export default async function StudioLogin() {
+  noStore()
   const studios = await db.studio.findMany({ orderBy: { order: 'asc' } })
 
   return (
