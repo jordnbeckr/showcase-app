@@ -1,7 +1,6 @@
 'use server'
 
 import { db } from '@/lib/db'
-import type { db as DbType } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import * as crypto from 'crypto'
@@ -171,7 +170,7 @@ export async function reorderDanceTypes(orderedIds: number[]) {
 export async function reorderHeats(orderedIds: number[]) {
   await requireAdmin()
   // Two-pass to avoid unique constraint conflicts during renumbering
-  await db.$transaction(async (tx: Omit<typeof DbType, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
+  await db.$transaction(async (tx: Omit<typeof db, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
     for (let i = 0; i < orderedIds.length; i++) {
       await tx.heat.update({ where: { id: orderedIds[i] }, data: { number: 100000 + i + 1 } })
     }
@@ -223,7 +222,7 @@ export async function autoAssignLeaderNumbers() {
     return aLast.localeCompare(bLast)
   })
 
-  await db.$transaction(async (tx: Omit<typeof DbType, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
+  await db.$transaction(async (tx: Omit<typeof db, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
     for (let i = 0; i < sortedInstructors.length; i++) {
       await tx.instructor.update({ where: { id: sortedInstructors[i].id }, data: { leaderNumber: 100 + i } })
     }
