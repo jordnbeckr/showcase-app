@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Studio {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  slug         String        @unique
+  passwordHash String
+  order        Int           @default(0)
+  instructors  Instructor[]
+  students     Student[]
+  proShows     ProShow[]
+  studentShows StudentShow[]
+  studioBudget StudioBudget?
+}
+
+model Instructor {
+  id            Int            @id @default(autoincrement())
+  name          String
+  studioId      Int
+  studio        Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  heatEntries   HeatEntry[]
+  role          String         @default("Neither")
+  leaderNumber  Int?
+  studentEvents StudentEvent[]
+}
+
+model DanceType {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  order Int    @default(0)
+  heats Heat[]
+}
+
+model Event {
+  id             Int            @id @default(autoincrement())
+  name           String
+  order          Int            @default(0)
+  heats          EventHeat[]
+  studentEvents  StudentEvent[]
+}
+
+model StudentEvent {
+  id           Int        @id @default(autoincrement())
+  studentId    Int
+  eventId      Int
+  instructorId Int
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, eventId])
+}
+
+model EventHeat {
+  eventId Int
+  heatId  Int
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  heat    Heat  @relation(fields: [heatId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, heatId])
+}
+
+model Heat {
+  id          Int         @id @default(autoincrement())
+  number      Int         @unique
+  danceTypeId Int
+  danceType   DanceType   @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
+  maxCapacity Int         @default(24)
+  entries     HeatEntry[]
+  events      EventHeat[]
+}
+
+model Student {
+  id            Int            @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  role          String
+  studioId      Int
+  studio        Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  heatEntries   HeatEntry[]
+  studentShows  StudentShow[]  @relation("StudentShowStudents")
+  leaderNumber  Int?
+  checkedIn     Boolean        @default(false)
+  studentEvents StudentEvent[]
+}
+
+model BudgetItem {
+  id       Int    @id @default(autoincrement())
+  name     String
+  category String  // "participation" | "attendee"
+  unitCost Float
+  quantity Int    @default(1)
+  order    Int    @default(0)
+}
+
+model ShowcaseSettings {
+  id       Int   @id @default(autoincrement())
+  entryFee Float @default(0)
+}
+
+model StudioBudget {
+  id        Int     @id @default(autoincrement())
+  studioId  Int     @unique
+  studio    Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  attendees Int     @default(0)
+  paid      Boolean @default(false)
+}
+
+model HeatEntry {
+  id           Int        @id @default(autoincrement())
+  heatId       Int
+  heat         Heat       @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instructorId Int
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([heatId, studentId])
+}
+
+model ProShow {
+  id          Int      @id @default(autoincrement())
+  studioId    Int
+  studio      Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  partnership String
+  dances      String
+  songTitle   String?
+  artist      String?
+  musicLink   String?
+  notes       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model StudentShow {
+  id           Int       @id @default(autoincrement())
+  studioId     Int
+  studio       Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  students     Student[] @relation("StudentShowStudents")
+  instructors  String
+  dances       String
+  songTitle    String?
+  artist       String?
+  musicLink    String?
+  notes        String?
+  order        Int       @default(0)
+  createdAt    DateTime  @default(now())
+}
