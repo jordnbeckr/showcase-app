@@ -84,23 +84,22 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   }
 
   function adjustHeatCount(danceTypeId: number, delta: number) {
-    setDanceTypes(prev => {
-      const dance = prev.find(d => d.id === danceTypeId)
-      if (!dance) return prev
-      const newCount = Math.max(0, dance.heatCount + delta)
-      const entry = heatDebounce.current[danceTypeId]
-      if (entry) clearTimeout(entry.timer)
-      const timer = setTimeout(() => {
-        fetch('/api/heat-count', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ danceTypeId, count: newCount }),
-        })
-        delete heatDebounce.current[danceTypeId]
-      }, 600)
-      heatDebounce.current[danceTypeId] = { target: newCount, timer }
-      return prev.map(d => d.id === danceTypeId ? { ...d, heatCount: newCount } : d)
-    })
+    const current = danceTypes.find(d => d.id === danceTypeId)
+    if (!current) return
+    const newCount = Math.max(0, current.heatCount + delta)
+    setDanceTypes(prev => prev.map(d => d.id === danceTypeId ? { ...d, heatCount: newCount } : d))
+
+    const entry = heatDebounce.current[danceTypeId]
+    if (entry) clearTimeout(entry.timer)
+    const timer = setTimeout(() => {
+      fetch('/api/heat-count', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ danceTypeId, count: newCount }),
+      }).then(() => router.refresh())
+      delete heatDebounce.current[danceTypeId]
+    }, 800)
+    heatDebounce.current[danceTypeId] = { target: newCount, timer }
   }
 
   function handleAddHeat(danceTypeId: number) { adjustHeatCount(danceTypeId, 1) }
