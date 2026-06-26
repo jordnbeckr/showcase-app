@@ -9,8 +9,9 @@ export default async function AttendancePage() {
     orderBy: { order: 'asc' },
   })
 
-  const allStudents = studios.flatMap(s =>
-    s.students.map(st => ({
+  type StudioWithStudents = typeof studios[number]
+  const allStudents = studios.flatMap((s: StudioWithStudents) =>
+    s.students.map((st: StudioWithStudents['students'][number]) => ({
       id: st.id,
       name: `${st.firstName} ${st.lastName}`,
       role: st.role,
