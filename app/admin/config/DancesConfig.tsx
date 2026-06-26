@@ -85,7 +85,7 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
     setDanceTypes(prev => prev.map(d =>
       d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
     ))
-    addHeat(danceTypeId).then(() => router.refresh())
+    addHeat(danceTypeId)
   }
 
   function handleRemoveHeat(danceTypeId: number) {
@@ -98,7 +98,7 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
         setDanceTypes(prev => prev.map(d =>
           d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
         ))
-      } else router.refresh()
+      }
     })
   }
 
