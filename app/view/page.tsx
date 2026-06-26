@@ -2,6 +2,8 @@ import { db } from '@/lib/db'
 import ViewTabs from './ViewTabs'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function PublicView() {
   const [heats, studios, events, studentEvents] = await Promise.all([
     db.heat.findMany({
