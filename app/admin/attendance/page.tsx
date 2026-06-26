@@ -8,7 +8,7 @@ export default async function AttendancePage() {
     include: {
       students: { orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] },
     },
-    orderBy: { order: 'asc' },
+    orderBy: { name: 'asc' },
   })
 
   type StudioWithStudents = typeof studios[number]

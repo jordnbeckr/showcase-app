@@ -165,6 +165,22 @@ export async function removeHeatEntry(studioSlug: string, entryId: number) {
   revalidatePath('/view')
 }
 
+export async function reassignHeatEntry(
+  studioSlug: string,
+  entryId: number,
+  changes: { instructorId?: number; studentId?: number }
+) {
+  const studio = await requireStudio(studioSlug)
+  const entry = await db.heatEntry.findFirst({
+    where: { id: entryId, student: { studioId: studio.id } },
+  })
+  if (!entry) return { error: 'Entry not found' }
+  await db.heatEntry.update({ where: { id: entryId }, data: changes })
+  revalidatePath(`/studio/${studioSlug}/heatsheet`)
+  revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath('/admin/master')
+}
+
 // --- Shows ---
 
 export async function addProShow(studioSlug: string, formData: FormData) {

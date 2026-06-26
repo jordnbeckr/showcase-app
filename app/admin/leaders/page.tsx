@@ -9,7 +9,7 @@ export default async function LeadersPage() {
       include: {
         instructors: { orderBy: { name: 'asc' } },
       },
-      orderBy: { order: 'asc' },
+      orderBy: { name: 'asc' },
     }),
     db.student.findMany({
       where: { role: 'Leader' },

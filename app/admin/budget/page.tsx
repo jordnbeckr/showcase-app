@@ -8,7 +8,7 @@ export default async function BudgetPage() {
     db.budgetItem.findMany({ orderBy: { order: 'asc' } }),
     db.showcaseSettings.findFirst(),
     db.studio.findMany({
-      orderBy: { order: 'asc' },
+      orderBy: { name: 'asc' },
       include: { studioBudget: true },
     }),
     db.heatEntry.findMany({

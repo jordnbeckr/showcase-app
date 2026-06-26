@@ -19,11 +19,11 @@ export default async function MasterView() {
     }),
     db.studio.findMany({
       include: { instructors: true },
-      orderBy: { order: 'asc' },
+      orderBy: { name: 'asc' },
     }),
     db.event.findMany({
       include: { heats: { orderBy: { heat: { number: 'asc' } } } },
-      orderBy: { order: 'asc' },
+      orderBy: { name: 'asc' },
     }),
   ])
 
