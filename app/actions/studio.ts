@@ -108,7 +108,7 @@ export async function addEventEntry(
   if (!event) return { error: 'Event not found' }
   if (event.heats.length === 0) return { error: 'Event has no heats assigned yet' }
 
-  const heats = event.heats.map(eh => eh.heat)
+  const heats = event.heats.map((eh: typeof event.heats[number]) => eh.heat)
 
   // Check student not already enrolled in this event (via StudentEvent)
   const alreadyEnrolled = await db.studentEvent.findFirst({ where: { studentId, eventId } })
@@ -140,7 +140,8 @@ export async function removeEventEntry(
   studentId: number
 ): Promise<{ error: string } | null> {
   await requireStudio(studioSlug)
-  const eventHeatIds = (await db.eventHeat.findMany({ where: { eventId } })).map(eh => eh.heatId)
+  const eventHeatRows = await db.eventHeat.findMany({ where: { eventId } })
+  const eventHeatIds = eventHeatRows.map(eh => eh.heatId)
   await db.$transaction([
     db.studentEvent.deleteMany({ where: { studentId, eventId } }),
     db.heatEntry.deleteMany({ where: { studentId, heatId: { in: eventHeatIds } } }),
