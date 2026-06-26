@@ -421,44 +421,46 @@ export default function HeatSignUp({
         </span>
       </div>
 
-      {/* Grids — solo heats left, events right */}
+      {/* Grids — solo heats left, events right, single shared scroll container */}
       {(() => {
         const soloSegs = segments.filter(s => s.type === 'heat') as Extract<Segment, { type: 'heat' }>[]
         const eventSegs = segments.filter(s => s.type === 'event') as Extract<Segment, { type: 'event' }>[]
-        const colW = 160
-        const baseW = 380 + instructors.length * colW
+        const colW = 145
+        const baseW = 300 + instructors.length * colW
 
-        function instructorHeaders() {
-          return instructors.map(inst => (
-            <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
-          ))
+        function tableHead() {
+          return (
+            <thead>
+              <tr>
+                <th style={{ width: 6, padding: 0, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}></th>
+                <th style={{ width: 40, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>#</th>
+                <th style={{ width: 145, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Dance</th>
+                <th style={{ width: 95, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Status</th>
+                {instructors.map(inst => (
+                  <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
+                ))}
+              </tr>
+            </thead>
+          )
         }
 
         return (
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            {/* Solo heats */}
-            <div style={{ flex: '1 1 auto', overflow: 'auto', maxHeight: 'calc(100vh - 180px)', minWidth: 0 }}>
+          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: 'fit-content' }}>
+              {/* Solo heats */}
               <table className="data-table" style={{ minWidth: baseW }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: 8, padding: 0, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}></th>
-                    <th style={{ width: 52, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>#</th>
-                    <th style={{ width: 170, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Dance</th>
-                    <th style={{ width: 110, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Status</th>
-                    {instructorHeaders()}
-                  </tr>
-                </thead>
+                {tableHead()}
                 <tbody>
                   {soloSegs.map(seg => {
                     const heat = seg.heat
                     const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                     return (
                       <tr key={`heat-${heat.id}`}>
-                        <td style={{ padding: 0, width: 8 }}></td>
-                        <td style={{ color: 'var(--muted)', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.75rem' }}>{heat.number}</td>
-                        <td>{heat.dance}</td>
+                        <td style={{ padding: 0, width: 6 }}></td>
+                        <td style={{ color: 'var(--muted)', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
+                        <td style={{ fontSize: '0.82rem' }}>{heat.dance}</td>
                         <td>
-                          <span style={{ background: statusBg, color: statusFg, fontSize: '0.7rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                          <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                             {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                           </span>
                         </td>
@@ -471,21 +473,11 @@ export default function HeatSignUp({
                   )}
                 </tbody>
               </table>
-            </div>
 
-            {/* Events — only shown if any exist */}
-            {eventSegs.length > 0 && (
-              <div style={{ flex: '0 0 auto', overflow: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
+              {/* Events — only shown if any exist */}
+              {eventSegs.length > 0 && (
                 <table className="data-table" style={{ minWidth: baseW }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 8, padding: 0, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}></th>
-                      <th style={{ width: 52, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>#</th>
-                      <th style={{ width: 170, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Dance</th>
-                      <th style={{ width: 110, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Status</th>
-                      {instructorHeaders()}
-                    </tr>
-                  </thead>
+                  {tableHead()}
                   <tbody>
                     {eventSegs.map(seg => {
                       const { event, heats: eventHeats } = seg
@@ -509,11 +501,11 @@ export default function HeatSignUp({
                           const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                           return (
                             <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#7ecfa0' }}>
-                              <td style={{ padding: 0, width: 8, borderLeft: '3px solid #555' }}></td>
+                              <td style={{ padding: 0, width: 6, borderLeft: '3px solid #555' }}></td>
                               <td style={{ color: '#aaa', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
-                              <td style={{ fontSize: '0.8125rem' }}>{heat.dance}</td>
+                              <td style={{ fontSize: '0.8rem' }}>{heat.dance}</td>
                               <td>
-                                <span style={{ background: statusBg, color: statusFg, fontSize: '0.7rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                                <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                                   {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                                 </span>
                               </td>
@@ -525,8 +517,8 @@ export default function HeatSignUp({
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )
       })()}
