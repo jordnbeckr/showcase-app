@@ -21,7 +21,7 @@ export default async function AttendancePage() {
     }))
   )
 
-  const checkedIn = allStudents.filter(s => s.checkedIn).length
+  const checkedIn = allStudents.filter((s: typeof allStudents[number]) => s.checkedIn).length
 
   return (
     <div className="max-w-4xl space-y-4">
