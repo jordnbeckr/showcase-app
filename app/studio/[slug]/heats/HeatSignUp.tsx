@@ -1,7 +1,7 @@
 'use client'
 
 import { addHeatEntry, removeHeatEntry, addEventEntry, removeEventEntry } from '@/app/actions/studio'
-import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import { useState, useTransition, useMemo, useEffect, useRef, Fragment } from 'react'
 
 type HeatEntry = {
   id: number
@@ -421,37 +421,32 @@ export default function HeatSignUp({
         </span>
       </div>
 
-      {/* Grids — solo heats left, events right, single shared scroll container */}
+      {/* Single table — heats in order, events grouped inline */}
       {(() => {
-        const soloSegs = segments.filter(s => s.type === 'heat') as Extract<Segment, { type: 'heat' }>[]
-        const eventSegs = segments.filter(s => s.type === 'event') as Extract<Segment, { type: 'event' }>[]
         const colW = 145
         const baseW = 300 + instructors.length * colW
-
-        function tableHead() {
-          return (
-            <thead>
-              <tr>
-                <th style={{ width: 6, padding: 0, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}></th>
-                <th style={{ width: 40, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>#</th>
-                <th style={{ width: 145, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Dance</th>
-                <th style={{ width: 95, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Status</th>
-                {instructors.map(inst => (
-                  <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
-                ))}
-              </tr>
-            </thead>
-          )
-        }
+        const colSpan = 4 + instructors.length
 
         return (
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: 'fit-content' }}>
-              {/* Solo heats */}
-              <table className="data-table" style={{ minWidth: baseW }}>
-                {tableHead()}
-                <tbody>
-                  {soloSegs.map(seg => {
+            <table className="data-table" style={{ minWidth: baseW }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 6, padding: 0, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}></th>
+                  <th style={{ width: 40, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>#</th>
+                  <th style={{ width: 145, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Dance</th>
+                  <th style={{ width: 95, position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>Status</th>
+                  {instructors.map(inst => (
+                    <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {segments.length === 0 && (
+                  <tr><td colSpan={colSpan} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)', fontSize: '0.875rem' }}>No heats match your filter.</td></tr>
+                )}
+                {segments.map(seg => {
+                  if (seg.type === 'heat') {
                     const heat = seg.heat
                     const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                     return (
@@ -467,58 +462,47 @@ export default function HeatSignUp({
                         {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: false }))}
                       </tr>
                     )
-                  })}
-                  {soloSegs.length === 0 && (
-                    <tr><td colSpan={4 + instructors.length} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)', fontSize: '0.875rem' }}>No heats match your filter.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                  }
 
-              {/* Events — only shown if any exist */}
-              {eventSegs.length > 0 && (
-                <table className="data-table" style={{ minWidth: baseW }}>
-                  {tableHead()}
-                  <tbody>
-                    {eventSegs.map(seg => {
-                      const { event, heats: eventHeats } = seg
-                      const colSpan = 4 + instructors.length
-                      const isStudentEnrolled = studentEnrolledInEvent(event.id)
-                      return [
-                        <tr key={`event-title-${event.id}`}>
-                          <td colSpan={colSpan} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
-                            ◆ {event.name}
-                            <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: 10, fontSize: '0.7rem', textTransform: 'none' }}>
-                              {event.heatIds.length} dances — sign up for all at once
+                  // Event segment — banner row + one row per heat
+                  const { event, heats: eventHeats } = seg
+                  const isStudentEnrolled = studentEnrolledInEvent(event.id)
+                  return (
+                    <Fragment key={`event-${event.id}`}>
+                      <tr>
+                        <td colSpan={colSpan} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
+                          ◆ {event.name}
+                          <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: 10, fontSize: '0.7rem', textTransform: 'none' }}>
+                            {event.heatIds.length} dances — sign up for all at once
+                          </span>
+                          {isStudentEnrolled && (
+                            <span style={{ marginLeft: 12, fontWeight: 400, opacity: 0.85, fontSize: '0.7rem', color: '#86efac', textTransform: 'none' }}>
+                              ✓ {selectedStudent?.firstName} enrolled
                             </span>
-                            {isStudentEnrolled && (
-                              <span style={{ marginLeft: 12, fontWeight: 400, opacity: 0.85, fontSize: '0.7rem', color: '#86efac', textTransform: 'none' }}>
-                                ✓ {selectedStudent?.firstName} enrolled
+                          )}
+                        </td>
+                      </tr>
+                      {eventHeats.map(heat => {
+                        const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
+                        return (
+                          <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#7ecfa0' }}>
+                            <td style={{ padding: 0, width: 6, borderLeft: '3px solid #555' }}></td>
+                            <td style={{ color: '#aaa', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
+                            <td style={{ fontSize: '0.8rem' }}>{heat.dance}</td>
+                            <td>
+                              <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                                {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                               </span>
-                            )}
-                          </td>
-                        </tr>,
-                        ...eventHeats.map(heat => {
-                          const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
-                          return (
-                            <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#7ecfa0' }}>
-                              <td style={{ padding: 0, width: 6, borderLeft: '3px solid #555' }}></td>
-                              <td style={{ color: '#aaa', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
-                              <td style={{ fontSize: '0.8rem' }}>{heat.dance}</td>
-                              <td>
-                                <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                                  {statusText} · {heat.totalEntries}/{heat.maxCapacity}
-                                </span>
-                              </td>
-                              {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: true, eventId: event.id }))}
-                            </tr>
-                          )
-                        }),
-                      ]
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                            </td>
+                            {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: true, eventId: event.id }))}
+                          </tr>
+                        )
+                      })}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )
       })()}

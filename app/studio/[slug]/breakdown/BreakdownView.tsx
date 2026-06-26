@@ -33,51 +33,48 @@ type InstructorBreakdown = {
   }[]
 }
 
-// Two-column dance table with event grouping
+// Dance list with events visually juxtaposed against solo dances
 function DanceTable({ rows }: { rows: DanceRow[] }) {
   if (rows.length === 0) return <span style={{ color: 'var(--muted)', fontSize: '0.75rem', fontStyle: 'italic' }}>none</span>
+
+  const solos = rows.filter(r => r.kind === 'solo') as Extract<DanceRow, { kind: 'solo' }>[]
+  const events = rows.filter(r => r.kind === 'event') as Extract<DanceRow, { kind: 'event' }>[]
+
   return (
-    <table style={{ fontSize: '0.72rem', borderCollapse: 'collapse', width: 'auto' }}>
-      <tbody>
-        {rows.map((row, i) => {
-          if (row.kind === 'solo') {
-            return (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      {/* Solo dances */}
+      {solos.length > 0 && (
+        <table style={{ fontSize: '0.72rem', borderCollapse: 'collapse', width: 'auto' }}>
+          <tbody>
+            {solos.map((row, i) => (
               <tr key={`solo-${row.dance}-${i}`}>
                 <td style={{ padding: '0 6px 0 0', color: 'var(--text)', whiteSpace: 'nowrap' }}>{row.dance}</td>
                 <td style={{ padding: '0', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap' }}>{row.count}</td>
               </tr>
-            )
-          }
-          // Event row
-          return (
-            <Fragment key={`event-${row.eventId}`}>
-              <tr>
-                <td
-                  colSpan={2}
-                  style={{
-                    padding: '2px 4px',
-                    backgroundColor: '#2c2c2c',
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: '0.65rem',
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  ◆ {row.eventName}
-                </td>
-              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {/* Event blocks — each event side by side */}
+      {events.map(row => (
+        <div key={`event-${row.eventId}`} style={{ border: '1px solid #ccc', borderRadius: 3, overflow: 'hidden', fontSize: '0.72rem' }}>
+          <div style={{ padding: '2px 6px', backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            ◆ {row.eventName}
+            <span style={{ fontWeight: 400, opacity: 0.55, marginLeft: 6 }}>×{row.count}</span>
+          </div>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <tbody>
               {row.dances.map(d => (
-                <tr key={`event-${row.eventId}-${d.dance}`}>
-                  <td style={{ padding: '0 6px 0 8px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{d.dance}</td>
-                  <td style={{ padding: '0', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap' }}>{d.count}</td>
+                <tr key={d.dance} style={{ backgroundColor: '#f0fdf4' }}>
+                  <td style={{ padding: '1px 8px 1px 6px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{d.dance}</td>
                 </tr>
               ))}
-            </Fragment>
-          )
-        })}
-      </tbody>
-    </table>
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
   )
 }
 
