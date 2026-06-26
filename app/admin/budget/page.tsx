@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import BudgetManager from './BudgetManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function BudgetPage() {
   const [budgetItems, showcaseSettings, studios, allEntries] = await Promise.all([
     db.budgetItem.findMany({ orderBy: { order: 'asc' } }),

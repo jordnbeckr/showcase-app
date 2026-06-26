@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import HeatSheet from '@/components/HeatSheet'
 
+export const dynamic = 'force-dynamic'
+
 export default async function MasterView() {
   const [heats, studios, events] = await Promise.all([
     db.heat.findMany({

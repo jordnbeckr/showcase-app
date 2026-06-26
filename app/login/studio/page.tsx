@@ -2,6 +2,8 @@ import { db } from '@/lib/db'
 import StudioLoginForm from './StudioLoginForm'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function StudioLogin() {
   const studios = await db.studio.findMany({ orderBy: { order: 'asc' } })
 

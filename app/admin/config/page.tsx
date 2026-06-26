@@ -5,6 +5,8 @@ import EventsConfig from './EventsConfig'
 import HeatOrderConfig from './HeatOrderConfig'
 import CollapsibleSection from './CollapsibleSection'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ConfigPage() {
   const [danceTypes, studios, events, allHeats] = await Promise.all([
     db.danceType.findMany({

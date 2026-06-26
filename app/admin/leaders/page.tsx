@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import LeadersManager from './LeadersManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function LeadersPage() {
   const [studios, students] = await Promise.all([
     db.studio.findMany({

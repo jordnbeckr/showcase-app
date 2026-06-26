@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import AttendanceManager from './AttendanceManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AttendancePage() {
   const studios = await db.studio.findMany({
     include: {
