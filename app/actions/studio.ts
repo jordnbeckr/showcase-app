@@ -108,7 +108,8 @@ export async function addEventEntry(
   if (!event) return { error: 'Event not found' }
   if (event.heats.length === 0) return { error: 'Event has no heats assigned yet' }
 
-  const heats = event.heats.map((eh: typeof event.heats[number]) => eh.heat)
+  type EventHeatWithEntries = typeof event.heats[number]['heat']
+  const heats: EventHeatWithEntries[] = event.heats.map((eh: typeof event.heats[number]) => eh.heat)
 
   // Check student not already enrolled in this event (via StudentEvent)
   const alreadyEnrolled = await db.studentEvent.findFirst({ where: { studentId, eventId } })
@@ -121,7 +122,7 @@ export async function addEventEntry(
     }
   }
 
-  const heatIds = heats.map(h => h.id)
+  const heatIds = heats.map((h: EventHeatWithEntries) => h.id)
   await db.$transaction([
     db.studentEvent.create({ data: { studentId, eventId, instructorId } }),
     // Remove any orphaned entries for this student in these heats before creating fresh ones
