@@ -1,6 +1,6 @@
 'use client'
 
-import { addDanceType, addHeat, removeLastHeat, deleteDanceType, reorderDanceTypes, setHeatCount } from '@/app/actions/admin'
+import { addDanceType, deleteDanceType, reorderDanceTypes } from '@/app/actions/admin'
 import { useTransition, useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -91,7 +91,11 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
       const entry = heatDebounce.current[danceTypeId]
       if (entry) clearTimeout(entry.timer)
       const timer = setTimeout(() => {
-        setHeatCount(danceTypeId, newCount)
+        fetch('/api/heat-count', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ danceTypeId, count: newCount }),
+        })
         delete heatDebounce.current[danceTypeId]
       }, 600)
       heatDebounce.current[danceTypeId] = { target: newCount, timer }
