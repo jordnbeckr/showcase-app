@@ -1,5 +1,6 @@
 import { PrismaLibSql } from '@prisma/adapter-libsql'
-import { PrismaClient } from '@prisma/client'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PrismaClient } = require('@prisma/client')
 import * as crypto from 'crypto'
 import * as path from 'path'
 
