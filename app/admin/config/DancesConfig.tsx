@@ -82,6 +82,10 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   }
 
   function handleAddHeat(danceTypeId: number) {
+    // Optimistically increment heat count
+    setDanceTypes(prev => prev.map(d =>
+      d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
+    ))
     startTransition(async () => {
       await addHeat(danceTypeId)
       router.refresh()
@@ -89,10 +93,19 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   }
 
   function handleRemoveHeat(danceTypeId: number) {
+    // Optimistically decrement heat count
+    setDanceTypes(prev => prev.map(d =>
+      d.id === danceTypeId ? { ...d, heatCount: Math.max(0, d.heatCount - 1) } : d
+    ))
     startTransition(async () => {
       const result = await removeLastHeat(danceTypeId)
-      if (result?.error) setError(result.error)
-      else router.refresh()
+      if (result?.error) {
+        setError(result.error)
+        // Revert on error
+        setDanceTypes(prev => prev.map(d =>
+          d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
+        ))
+      } else router.refresh()
     })
   }
 
