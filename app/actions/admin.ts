@@ -66,8 +66,6 @@ export async function setHeatCount(danceTypeId: number, count: number) {
       await db.heat.delete({ where: { id: heat.id } })
     }
   }
-
-  revalidatePath('/admin/config')
 }
 
 export async function addHeat(danceTypeId: number) {
