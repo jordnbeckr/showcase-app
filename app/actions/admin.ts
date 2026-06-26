@@ -45,15 +45,13 @@ export async function renameDanceType(id: number, formData: FormData) {
 
 // --- Heats ---
 
-export async function setHeatCount(danceTypeId: number, formData: FormData) {
+export async function setHeatCount(danceTypeId: number, count: number) {
   await requireAdmin()
-  const count = parseInt(formData.get('count') as string)
   if (isNaN(count) || count < 0) return { error: 'Invalid count' }
 
   const existing = await db.heat.findMany({ where: { danceTypeId }, orderBy: { number: 'asc' } })
 
   if (count > existing.length) {
-    // Add heats — get the max heat number globally
     const maxHeat = await db.heat.aggregate({ _max: { number: true } })
     let nextNum = (maxHeat._max.number ?? 0) + 1
     const toAdd = count - existing.length
@@ -61,7 +59,6 @@ export async function setHeatCount(danceTypeId: number, formData: FormData) {
       await db.heat.create({ data: { number: nextNum++, danceTypeId } })
     }
   } else if (count < existing.length) {
-    // Remove from the end, but only heats with no entries
     const toRemove = existing.slice(count)
     for (const heat of toRemove) {
       const entryCount = await db.heatEntry.count({ where: { heatId: heat.id } })
@@ -71,8 +68,6 @@ export async function setHeatCount(danceTypeId: number, formData: FormData) {
   }
 
   revalidatePath('/admin/config')
-  revalidatePath('/admin/master')
-  revalidatePath('/view')
 }
 
 export async function addHeat(danceTypeId: number) {

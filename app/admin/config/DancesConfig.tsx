@@ -1,6 +1,6 @@
 'use client'
 
-import { addDanceType, addHeat, removeLastHeat, deleteDanceType, reorderDanceTypes } from '@/app/actions/admin'
+import { addDanceType, addHeat, removeLastHeat, deleteDanceType, reorderDanceTypes, setHeatCount } from '@/app/actions/admin'
 import { useTransition, useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -20,6 +20,8 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   const lastClickedIdx = useRef<number | null>(null)
   const dragId = useRef<number | null>(null)
   const router = useRouter()
+  // debounce heat count changes: { [danceTypeId]: { target, timer } }
+  const heatDebounce = useRef<Record<number, { target: number; timer: ReturnType<typeof setTimeout> }>>({})
 
   useEffect(() => { setDanceTypes(initialDanceTypes) }, [initialDanceTypes])
 
@@ -81,26 +83,24 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
     })
   }
 
-  function handleAddHeat(danceTypeId: number) {
-    setDanceTypes(prev => prev.map(d =>
-      d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
-    ))
-    addHeat(danceTypeId)
-  }
-
-  function handleRemoveHeat(danceTypeId: number) {
-    setDanceTypes(prev => prev.map(d =>
-      d.id === danceTypeId ? { ...d, heatCount: Math.max(0, d.heatCount - 1) } : d
-    ))
-    removeLastHeat(danceTypeId).then(result => {
-      if (result?.error) {
-        setError(result.error)
-        setDanceTypes(prev => prev.map(d =>
-          d.id === danceTypeId ? { ...d, heatCount: d.heatCount + 1 } : d
-        ))
-      }
+  function adjustHeatCount(danceTypeId: number, delta: number) {
+    setDanceTypes(prev => {
+      const dance = prev.find(d => d.id === danceTypeId)
+      if (!dance) return prev
+      const newCount = Math.max(0, dance.heatCount + delta)
+      const entry = heatDebounce.current[danceTypeId]
+      if (entry) clearTimeout(entry.timer)
+      const timer = setTimeout(() => {
+        setHeatCount(danceTypeId, newCount)
+        delete heatDebounce.current[danceTypeId]
+      }, 600)
+      heatDebounce.current[danceTypeId] = { target: newCount, timer }
+      return prev.map(d => d.id === danceTypeId ? { ...d, heatCount: newCount } : d)
     })
   }
+
+  function handleAddHeat(danceTypeId: number) { adjustHeatCount(danceTypeId, 1) }
+  function handleRemoveHeat(danceTypeId: number) { adjustHeatCount(danceTypeId, -1) }
 
   function handleDelete(danceTypeId: number, name: string) {
     if (!confirm(`Delete dance type "${name}"? This cannot be undone.`)) return
