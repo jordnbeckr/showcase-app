@@ -142,7 +142,7 @@ export async function removeEventEntry(
 ): Promise<{ error: string } | null> {
   await requireStudio(studioSlug)
   const eventHeatRows = await db.eventHeat.findMany({ where: { eventId } })
-  const eventHeatIds = eventHeatRows.map(eh => eh.heatId)
+  const eventHeatIds = eventHeatRows.map((eh: { eventId: number; heatId: number }) => eh.heatId)
   await db.$transaction([
     db.studentEvent.deleteMany({ where: { studentId, eventId } }),
     db.heatEntry.deleteMany({ where: { studentId, heatId: { in: eventHeatIds } } }),
