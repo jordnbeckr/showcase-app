@@ -1,7 +1,7 @@
 'use client'
 
 import { addDanceType, deleteDanceType, reorderDanceTypes } from '@/app/actions/admin'
-import { useTransition, useState, useRef, useEffect } from 'react'
+import { useTransition, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 type DanceType = {
@@ -23,7 +23,6 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   // debounce heat count changes: { [danceTypeId]: { target, timer } }
   const heatDebounce = useRef<Record<number, { target: number; timer: ReturnType<typeof setTimeout> }>>({})
 
-  useEffect(() => { setDanceTypes(initialDanceTypes) }, [initialDanceTypes])
 
   function toggleSelect(id: number, idx: number, e: React.MouseEvent) {
     setSelectedIds(prev => {
