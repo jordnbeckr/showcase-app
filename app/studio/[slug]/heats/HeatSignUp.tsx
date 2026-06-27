@@ -461,7 +461,7 @@ export default function HeatSignUp({
       {/* Single table — heats in order, events grouped inline */}
       {(() => {
         const colW = 130
-        const W1 = 34, W2 = 145, W3 = 95
+        const W1 = 34, W2 = 145, W3 = 125
         const baseW = W1 + W2 + W3 + instructors.length * colW
         const colSpan = 3 + instructors.length
         const stickyHead = (left: number, width: number, extra?: React.CSSProperties) => ({
