@@ -12,6 +12,8 @@ type StudentBreakdown = {
   lastName: string
   role: string
   total: number
+  heatTotal: number
+  showCount: number
   byInstructor: {
     instructor: string
     total: number
@@ -144,7 +146,14 @@ export default function BreakdownView({
                               <span className="mr-2 text-xs" style={{ color: 'var(--muted)' }}>{expandedStudents.has(student.id) ? '▾' : '›'}</span>
                               {student.name}
                             </td>
-                            <td style={{ textAlign: 'center', fontWeight: 700 }}>{student.total || '—'}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                              {student.total || '—'}
+                              {student.showCount > 0 && (
+                                <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 500, color: '#7c3aed' }}>
+                                  {student.heatTotal}h + {student.showCount}s
+                                </span>
+                              )}
+                            </td>
                           </tr>
                           {expandedStudents.has(student.id) && student.byInstructor.map(row => (
                             <tr key={row.instructor} style={{ backgroundColor: '#f9f9f9' }}>

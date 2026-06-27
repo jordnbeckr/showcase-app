@@ -16,7 +16,7 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
   })
   if (!studio) return <p>Studio not found</p>
 
-  const [entries, allEvents, studentEvents] = await Promise.all([
+  const [entries, allEvents, studentEvents, studentShows] = await Promise.all([
     db.heatEntry.findMany({
       where: { instructor: { studioId: studio.id } },
       include: {
@@ -33,7 +33,20 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
     db.studentEvent.findMany({
       where: { student: { studioId: studio.id } },
     }),
+    db.studentShow.findMany({
+      where: { students: { some: { studioId: studio.id } } },
+      include: { students: { where: { studioId: studio.id }, select: { id: true } } },
+    }),
   ])
+
+  // show count per student
+  const showCountByStudent = new Map<number, number>()
+  for (const show of studentShows) {
+    for (const s of show.students) {
+      showCountByStudent.set(s.id, (showCountByStudent.get(s.id) ?? 0) + 1)
+    }
+  }
+  const totalShowEntries = [...showCountByStudent.values()].reduce((a, b) => a + b, 0)
 
   type DanceRow =
     | { kind: 'solo'; dance: string; count: number }
@@ -91,12 +104,15 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
         return { instructor: inst.name, total: instEntries.length, danceRows: buildDanceRows(instEntries, student.id) }
       })
       .filter(r => r.total > 0)
+    const showCount = showCountByStudent.get(student.id) ?? 0
     return {
       id: student.id,
       name: `${student.firstName} ${student.lastName}`,
       lastName: student.lastName,
       role: student.role,
-      total: studentEntries.length,
+      total: studentEntries.length + showCount,
+      heatTotal: studentEntries.length,
+      showCount,
       byInstructor,
     }
   })
@@ -130,10 +146,10 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
       <div className="flex items-end gap-4">
         <h1 className="text-xl font-bold">Entry Breakdown — {studio.name}</h1>
         <span className="text-sm pb-0.5" style={{ color: 'var(--muted)' }}>
-          {entries.length} total heat entries
+          {entries.length} heat + {totalShowEntries} show entries
         </span>
       </div>
-      <BreakdownView byStudent={byStudent} byInstructor={byInstructor} totalEntries={entries.length} />
+      <BreakdownView byStudent={byStudent} byInstructor={byInstructor} totalEntries={entries.length + totalShowEntries} />
     </div>
   )
 }

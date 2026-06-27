@@ -20,7 +20,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
 
-  const [heats, events, studentEvents] = await Promise.all([
+  const [heats, events, studentEvents, studentShows] = await Promise.all([
     db.heat.findMany({
       include: {
         danceType: true,
@@ -39,7 +39,18 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
       where: { studentId: { in: studentIds } },
       include: { student: true },
     }),
+    db.studentShow.findMany({
+      where: { students: { some: { id: { in: studentIds } } } },
+      include: { students: { where: { id: { in: studentIds } }, select: { id: true } } },
+    }),
   ])
+
+  const showCountByStudent: Record<number, number> = {}
+  for (const show of studentShows) {
+    for (const s of show.students) {
+      showCountByStudent[s.id] = (showCountByStudent[s.id] ?? 0) + 1
+    }
+  }
 
   // Build amateur pairs: studentEvents with no instructor, deduplicated by leaderId
   const amateurEvents = studentEvents.filter(se => se.instructorId === null && se.partnerStudentId !== null)
@@ -62,10 +73,12 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
     })
   }
 
-  const totalEntries = heats.reduce(
+  const totalHeatEntries = heats.reduce(
     (s, h) => s + h.entries.filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId)).length,
     0
   )
+  const totalShowEntries = Object.values(showCountByStudent).reduce((a, b) => a + b, 0)
+  const totalEntries = totalHeatEntries + totalShowEntries
 
   return (
     <div className="space-y-3">
@@ -102,6 +115,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         }))}
         enrolledEvents={studentEvents.map(se => ({ studentId: se.studentId, eventId: se.eventId }))}
         amateurPairs={amateurPairs}
+        showCountByStudent={showCountByStudent}
       />
     </div>
   )

@@ -53,6 +53,7 @@ export default function HeatSignUp({
   events,
   enrolledEvents,
   amateurPairs,
+  showCountByStudent,
 }: {
   slug: string
   studio: { id: number; name: string }
@@ -62,6 +63,7 @@ export default function HeatSignUp({
   events: EventInfo[]
   enrolledEvents: { studentId: number; eventId: number }[]
   amateurPairs: AmateurPair[]
+  showCountByStudent: Record<number, number>
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -192,7 +194,9 @@ export default function HeatSignUp({
     })
   }
 
-  const totalMyEntries = heats.reduce((s, h) => s + h.myEntries.length, 0)
+  const totalMyHeatEntries = heats.reduce((s, h) => s + h.myEntries.length, 0)
+  const totalMyShowEntries = Object.values(showCountByStudent).reduce((a, b) => a + b, 0)
+  const totalMyEntries = totalMyHeatEntries + totalMyShowEntries
 
   function studentEnrolledInEvent(eventId: number): boolean {
     if (!selectedStudentId) return false
@@ -411,11 +415,13 @@ export default function HeatSignUp({
 
         {selectedStudent && (() => {
           const sid = parseInt(selectedStudentId)
-          const studentEntryCount = heats.reduce((sum, h) => sum + h.myEntries.filter(e => e.studentId === sid).length, 0)
+          const heatCount = heats.reduce((sum, h) => sum + h.myEntries.filter(e => e.studentId === sid).length, 0)
+          const showCount = showCountByStudent[sid] ?? 0
+          const entryCount = heatCount + showCount
           return (
             <div className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium" style={{ backgroundColor: '#f0f0f0', borderRadius: 4, border: '1px solid var(--border)' }}>
               Placing: <strong>{selectedStudent.firstName} {selectedStudent.lastName}</strong>
-              <span style={{ fontWeight: 700, color: '#7c3aed' }}>— {studentEntryCount} entries</span>
+              <span style={{ fontWeight: 700, color: '#7c3aed' }}>— {entryCount} entries</span>
               <button onClick={() => setSelectedStudentId('')} className="text-xs" style={{ color: 'var(--muted)' }}>✕</button>
             </div>
           )
