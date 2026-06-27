@@ -1,11 +1,12 @@
 'use client'
 
-import { addEvent, renameEvent, deleteEvent, addHeatToEvent, removeHeatFromEvent } from '@/app/actions/admin'
+import { addEvent, renameEvent, deleteEvent, addHeatToEvent, removeHeatFromEvent, setEventAmateur } from '@/app/actions/admin'
 import { useState, useTransition } from 'react'
 
 type EventRow = {
   id: number
   name: string
+  isAmateur: boolean
   heats: { id: number; number: number }[]
 }
 
@@ -41,6 +42,10 @@ export default function EventsConfig({
       if (result?.error) setError(result.error)
       else setRenaming(null)
     })
+  }
+
+  function handleToggleAmateur(eventId: number, current: boolean) {
+    startTransition(async () => { await setEventAmateur(eventId, !current) })
   }
 
   function handleDelete(eventId: number, name: string) {
@@ -116,10 +121,22 @@ export default function EventsConfig({
                         {isExpanded ? '▾' : '›'}
                       </span>
                       <span className="font-medium text-sm">{evt.name}</span>
+                      {evt.isAmateur && (
+                        <span className="text-xs px-1.5 py-0.5" style={{ backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: 3, color: '#166534', fontWeight: 600 }}>Amateur</span>
+                      )}
                       <span className="text-xs" style={{ color: 'var(--muted)' }}>
                         {evt.heats.length} heat{evt.heats.length !== 1 ? 's' : ''}
                         {evt.heats.length > 0 && ` (#${evt.heats[0].number}–#${evt.heats[evt.heats.length - 1].number})`}
                       </span>
+                    </button>
+                    <button
+                      onClick={() => handleToggleAmateur(evt.id, evt.isAmateur)}
+                      disabled={pending}
+                      className="text-xs px-2 py-0.5 mr-1"
+                      style={{ border: '1px solid var(--border)', borderRadius: 3, color: evt.isAmateur ? '#166534' : 'var(--muted)', backgroundColor: evt.isAmateur ? '#dcfce7' : 'transparent' }}
+                      title={evt.isAmateur ? 'Remove Amateur designation' : 'Mark as Amateur pairs event'}
+                    >
+                      {evt.isAmateur ? '✓ Amateur' : 'Amateur'}
                     </button>
                     <button onClick={() => setRenaming(evt.id)} className="text-xs" style={{ color: 'var(--muted)' }}>Rename</button>
                     <button onClick={() => handleDelete(evt.id, evt.name)} disabled={pending} className="text-xs ml-1" style={{ color: '#dc2626' }}>Delete</button>
@@ -229,16 +246,22 @@ export default function EventsConfig({
 
         <div className="px-5 py-4" style={{ borderTop: events.length > 0 ? '1px solid var(--border)' : undefined, backgroundColor: '#fafafa' }}>
           <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Add Event</div>
-          <form action={handleAdd} className="flex gap-2">
-            <input
-              name="name"
-              placeholder='e.g. "Scholarship Smooth A"'
-              required
-              className="field flex-1"
-            />
-            <button type="submit" className="text-sm px-4 py-1.5 font-medium text-white" style={{ backgroundColor: '#333', borderRadius: 4 }}>
-              Add
-            </button>
+          <form action={handleAdd} className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                name="name"
+                placeholder='e.g. "Scholarship Smooth A"'
+                required
+                className="field flex-1"
+              />
+              <button type="submit" className="text-sm px-4 py-1.5 font-medium text-white" style={{ backgroundColor: '#333', borderRadius: 4 }}>
+                Add
+              </button>
+            </div>
+            <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--muted)' }}>
+              <input type="checkbox" name="isAmateur" style={{ accentColor: '#166534' }} />
+              Amateur pairs event (students dance without an instructor)
+            </label>
           </form>
         </div>
       </div>

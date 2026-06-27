@@ -98,6 +98,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
           id: e.id,
           name: e.name,
           heatIds: e.heats.map(eh => eh.heatId),
+          isAmateur: e.isAmateur,
         }))}
         enrolledEvents={studentEvents.map(se => ({ studentId: se.studentId, eventId: se.eventId }))}
         amateurPairs={amateurPairs}

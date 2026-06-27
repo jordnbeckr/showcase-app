@@ -41,6 +41,7 @@ model Event {
   id             Int            @id @default(autoincrement())
   name           String
   order          Int            @default(0)
+  isAmateur      Boolean        @default(false)
   heats          EventHeat[]
   studentEvents  StudentEvent[]
 }

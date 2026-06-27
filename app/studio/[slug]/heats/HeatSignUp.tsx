@@ -32,6 +32,7 @@ type EventInfo = {
   id: number
   name: string
   heatIds: number[]
+  isAmateur: boolean
 }
 
 type Student = { id: number; firstName: string; lastName: string; role: string }
@@ -517,8 +518,8 @@ export default function HeatSignUp({
                           )}
                         </td>
                       </tr>
-                      {/* Amateur pairs sub-row */}
-                      <tr>
+                      {/* Amateur pairs sub-row — only for events designated as amateur */}
+                      {!event.isAmateur ? null : <tr>
                         <td colSpan={colSpan} style={{ backgroundColor: '#1e1e1e', padding: '4px 10px 5px', borderBottom: '1px solid #333' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ color: '#888', fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Amateur Pairs</span>
@@ -572,7 +573,7 @@ export default function HeatSignUp({
                             )}
                           </div>
                         </td>
-                      </tr>
+                      </tr>}
                       {eventHeats.map(heat => {
                         const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                         return (

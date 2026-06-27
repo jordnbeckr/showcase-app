@@ -36,6 +36,7 @@ export default async function ConfigPage() {
           events={events.map(e => ({
             id: e.id,
             name: e.name,
+            isAmateur: e.isAmateur,
             heats: e.heats.map(eh => ({ id: eh.heat.id, number: eh.heat.number })),
           }))}
           allHeats={allHeats.map(h => ({

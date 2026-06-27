@@ -246,8 +246,15 @@ export async function addEvent(formData: FormData) {
   await requireAdmin()
   const name = (formData.get('name') as string).trim()
   if (!name) return { error: 'Event name required' }
+  const isAmateur = formData.get('isAmateur') === 'on'
   const maxOrder = await db.event.aggregate({ _max: { order: true } })
-  await db.event.create({ data: { name, order: (maxOrder._max.order ?? 0) + 1 } })
+  await db.event.create({ data: { name, isAmateur, order: (maxOrder._max.order ?? 0) + 1 } })
+  revalidatePath('/admin/config')
+}
+
+export async function setEventAmateur(eventId: number, isAmateur: boolean) {
+  await requireAdmin()
+  await db.event.update({ where: { id: eventId }, data: { isAmateur } })
   revalidatePath('/admin/config')
 }
 
