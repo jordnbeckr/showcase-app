@@ -1,6 +1,6 @@
 'use client'
 
-import { addStudent, deleteStudent } from '@/app/actions/studio'
+import { addStudent, deleteStudent, updateStudent } from '@/app/actions/studio'
 import { useTransition, useState } from 'react'
 
 type Student = { id: number; firstName: string; lastName: string; role: string }
@@ -12,6 +12,18 @@ export default function RosterManager({ slug, students }: { slug: string; studen
   function handleAddStudent(formData: FormData) {
     startTransition(async () => {
       const result = await addStudent(slug, formData)
+      if (result?.error) setError(result.error)
+    })
+  }
+
+  function handleToggleRole(student: Student) {
+    const newRole = student.role === 'Leader' ? 'Follower' : 'Leader'
+    const fd = new FormData()
+    fd.set('firstName', student.firstName)
+    fd.set('lastName', student.lastName)
+    fd.set('role', newRole)
+    startTransition(async () => {
+      const result = await updateStudent(slug, student.id, fd)
       if (result?.error) setError(result.error)
     })
   }
@@ -84,6 +96,15 @@ export default function RosterManager({ slug, students }: { slug: string; studen
                 style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
               >
                 <span className="flex-1 text-sm">{s.firstName} {s.lastName}</span>
+                <button
+                  onClick={() => handleToggleRole(s)}
+                  disabled={pending}
+                  className="text-xs px-2 py-0.5 mr-3 disabled:opacity-40"
+                  style={{ border: '1px solid var(--border)', borderRadius: 3, color: 'var(--muted)' }}
+                  title={`Switch to ${s.role === 'Leader' ? 'Follower' : 'Leader'}`}
+                >
+                  → {s.role === 'Leader' ? 'Follower' : 'Leader'}
+                </button>
                 <button
                   onClick={() => handleDelete(s.id, `${s.firstName} ${s.lastName}`)}
                   disabled={pending}
