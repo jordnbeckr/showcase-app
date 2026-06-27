@@ -133,12 +133,17 @@ export default async function AdminResultsPage() {
 
   const eligibleTeachers = [...instructorMap.values()]
     .filter(t => t.totalEntries >= 30 && t.closedEntries / t.totalEntries >= 0.4)
-    .sort((a, b) =>
-      b.totalPlacements !== a.totalPlacements ? b.totalPlacements - a.totalPlacements :
-      b.goldCount !== a.goldCount ? b.goldCount - a.goldCount :
-      b.silverCount !== a.silverCount ? b.silverCount - a.silverCount :
-      b.bronzeCount - a.bronzeCount
-    )
+    .sort((a, b) => {
+      const goldPctA = a.closedEntries > 0 ? a.goldCount / a.closedEntries : 0
+      const goldPctB = b.closedEntries > 0 ? b.goldCount / b.closedEntries : 0
+      if (goldPctB !== goldPctA) return goldPctB - goldPctA
+      const silverPctA = a.closedEntries > 0 ? a.silverCount / a.closedEntries : 0
+      const silverPctB = b.closedEntries > 0 ? b.silverCount / b.closedEntries : 0
+      if (silverPctB !== silverPctA) return silverPctB - silverPctA
+      const bronzePctA = a.closedEntries > 0 ? a.bronzeCount / a.closedEntries : 0
+      const bronzePctB = b.closedEntries > 0 ? b.bronzeCount / b.closedEntries : 0
+      return bronzePctB - bronzePctA
+    })
 
   // TOP STUDIO
   type StudioAwardData = {
@@ -454,7 +459,7 @@ export default async function AdminResultsPage() {
             <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Teacher</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
               Eligible: ≥30 total entries AND ≥40% of entries in closed heats.
-              Ranked by total G/S/B placements across all students (highest first).
+              Ranked by Gold % of closed entries, then Silver %, then Bronze %.
             </p>
           </div>
 
@@ -480,7 +485,7 @@ export default async function AdminResultsPage() {
                     <th style={{ textAlign: 'center', width: 52 }}>
                       <span style={{ color: '#7c2d12' }}>B</span>
                     </th>
-                    <th style={{ textAlign: 'center', width: 80 }}>Total placed</th>
+                    <th style={{ textAlign: 'center', width: 80 }}>Gold %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -506,7 +511,7 @@ export default async function AdminResultsPage() {
                         <span style={{ color: '#7c2d12' }}>{t.bronzeCount || '—'}</span>
                       </td>
                       <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
-                        {t.totalPlacements || '—'}
+                        {t.closedEntries > 0 ? `${Math.round(t.goldCount / t.closedEntries * 100)}%` : '—'}
                       </td>
                     </tr>
                   ))}
