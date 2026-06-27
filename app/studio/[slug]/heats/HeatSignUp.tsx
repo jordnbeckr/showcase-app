@@ -206,7 +206,7 @@ export default function HeatSignUp({
     opts: { isEvent: boolean; eventId?: number }
   ) {
     const dropKey = opts.isEvent && opts.eventId != null
-      ? `event-${opts.eventId}-${inst.id}`
+      ? `event-${opts.eventId}-heat-${heat.id}-${inst.id}`
       : `heat-${heat.id}-${inst.id}`
 
     const allCellEntries = heat.myEntries.filter(e => e.instructorId === inst.id)
