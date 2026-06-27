@@ -216,9 +216,9 @@ export default function ShowsManager({
             <form action={addProShow.bind(null, slug)} className="space-y-3">
               <Field label="Partnership / Group" name="partnership" placeholder="e.g. Jordan Becker & Jane Doe" required />
               <Field label="Dance(s)" name="dances" placeholder="e.g. Waltz, Tango" required />
-              <Field label="Song Title" name="songTitle" placeholder="Optional" />
+              <Field label="Song Title" name="songTitle" required />
               <Field label="Artist" name="artist" placeholder="Optional" />
-              <Field label="Music Link (Google Drive / Dropbox)" name="musicLink" placeholder="Optional" />
+              <Field label="Music Link (Google Drive / Dropbox)" name="musicLink" required />
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notes / Costume / Special Requests</label>
                 <textarea name="notes" rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black" />
@@ -256,9 +256,9 @@ export default function ShowsManager({
               <TagPicker label="Student(s)" fieldName="studentIds" options={students} />
               <TagPicker label="Instructor(s)" fieldName="instructorIds" options={instructors} />
               <Field label="Dance(s)" name="dances" placeholder="e.g. Medley" required />
-              <Field label="Song Title" name="songTitle" placeholder="Optional" />
+              <Field label="Song Title" name="songTitle" required />
               <Field label="Artist" name="artist" placeholder="Optional" />
-              <Field label="Music Link (Google Drive / Dropbox)" name="musicLink" placeholder="Optional" />
+              <Field label="Music Link (Google Drive / Dropbox)" name="musicLink" required />
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notes / Costume / Special Requests</label>
                 <textarea name="notes" rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black" />
