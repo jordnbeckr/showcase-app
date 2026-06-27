@@ -46,13 +46,14 @@ model Event {
 }
 
 model StudentEvent {
-  id           Int        @id @default(autoincrement())
-  studentId    Int
-  eventId      Int
-  instructorId Int
-  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  id               Int        @id @default(autoincrement())
+  studentId        Int
+  eventId          Int
+  instructorId     Int?
+  partnerStudentId Int?
+  student          Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  event            Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  instructor       Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
 
   @@unique([studentId, eventId])
 }
@@ -77,17 +78,18 @@ model Heat {
 }
 
 model Student {
-  id            Int            @id @default(autoincrement())
-  firstName     String
-  lastName      String
-  role          String
-  studioId      Int
-  studio        Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  heatEntries   HeatEntry[]
-  studentShows  StudentShow[]  @relation("StudentShowStudents")
-  leaderNumber  Int?
-  checkedIn     Boolean        @default(false)
-  studentEvents StudentEvent[]
+  id              Int            @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  role            String
+  studioId        Int
+  studio          Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  heatEntries     HeatEntry[]    @relation("HeatEntryStudent")
+  partnerEntries  HeatEntry[]    @relation("HeatEntryPartner")
+  studentShows    StudentShow[]  @relation("StudentShowStudents")
+  leaderNumber    Int?
+  checkedIn       Boolean        @default(false)
+  studentEvents   StudentEvent[]
 }
 
 model BudgetItem {
@@ -113,14 +115,16 @@ model StudioBudget {
 }
 
 model HeatEntry {
-  id           Int        @id @default(autoincrement())
-  heatId       Int
-  heat         Heat       @relation(fields: [heatId], references: [id], onDelete: Cascade)
-  studentId    Int
-  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  instructorId Int
-  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
+  id               Int        @id @default(autoincrement())
+  heatId           Int
+  heat             Heat       @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId        Int
+  student          Student    @relation("HeatEntryStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  instructorId     Int?
+  instructor       Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  partnerStudentId Int?
+  partnerStudent   Student?   @relation("HeatEntryPartner", fields: [partnerStudentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime   @default(now())
 
   @@unique([heatId, studentId])
 }

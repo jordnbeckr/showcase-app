@@ -22,7 +22,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
   const [studentEntries, instructorEntries, studentEvents, allEvents] = await Promise.all([
     db.heatEntry.findMany({
       where: { student: { studioId: studio.id } },
-      include: { heat: { include: { danceType: true } }, instructor: true, student: true },
+      include: { heat: { include: { danceType: true } }, instructor: true, student: true, partnerStudent: true },
       orderBy: { heat: { number: 'asc' } },
     }),
     db.heatEntry.findMany({
@@ -53,7 +53,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         heatNumber: e.heat.number,
         dance: e.heat.danceType.name,
         partnerName: partnerIsInstructor
-          ? e.instructor.name
+          ? e.instructor?.name ?? (e.partnerStudent ? `${e.partnerStudent.firstName} ${e.partnerStudent.lastName}` : '—')
           : `${(e as typeof instructorEntries[number]).student.firstName} ${(e as typeof instructorEntries[number]).student.lastName}`,
       }
     }
@@ -83,7 +83,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
 
   const instructorMap = new Map<number, { instructor: typeof studio.instructors[number]; entries: typeof instructorEntries }>()
   for (const i of studio.instructors) instructorMap.set(i.id, { instructor: i, entries: [] })
-  for (const e of instructorEntries) instructorMap.get(e.instructorId)?.entries.push(e)
+  for (const e of instructorEntries) if (e.instructorId !== null) instructorMap.get(e.instructorId)?.entries.push(e)
 
   const studentSheets = [...studentMap.values()]
     .filter(s => s.entries.length > 0)

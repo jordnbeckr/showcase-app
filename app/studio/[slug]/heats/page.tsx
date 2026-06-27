@@ -18,6 +18,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   if (!studio) return <p>Studio not found</p>
 
   const studentIds = studio.students.map(s => s.id)
+  const instructorIds = studio.instructors.map(i => i.id)
 
   const [heats, events, studentEvents] = await Promise.all([
     db.heat.findMany({
@@ -36,11 +37,33 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
     }),
     db.studentEvent.findMany({
       where: { studentId: { in: studentIds } },
+      include: { student: true },
     }),
   ])
 
+  // Build amateur pairs: studentEvents with no instructor, deduplicated by leaderId
+  const amateurEvents = studentEvents.filter(se => se.instructorId === null && se.partnerStudentId !== null)
+  const seenPairs = new Set<string>()
+  const amateurPairs: { eventId: number; leaderId: number; leaderName: string; followerId: number; followerName: string }[] = []
+  for (const se of amateurEvents) {
+    const leader = studio.students.find(s => s.id === se.studentId && s.role === 'Leader')
+    if (!leader) continue
+    const pairKey = `${se.eventId}-${se.studentId}-${se.partnerStudentId}`
+    if (seenPairs.has(pairKey)) continue
+    seenPairs.add(pairKey)
+    const follower = studio.students.find(s => s.id === se.partnerStudentId)
+    if (!follower) continue
+    amateurPairs.push({
+      eventId: se.eventId,
+      leaderId: leader.id,
+      leaderName: `${leader.firstName} ${leader.lastName}`,
+      followerId: follower.id,
+      followerName: `${follower.firstName} ${follower.lastName}`,
+    })
+  }
+
   const totalEntries = heats.reduce(
-    (s, h) => s + h.entries.filter(e => e.instructor.studioId === studio.id).length,
+    (s, h) => s + h.entries.filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId)).length,
     0
   )
 
@@ -63,7 +86,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
           totalEntries: h.entries.length,
           eventIds: h.events.map(eh => eh.eventId),
           myEntries: h.entries
-            .filter(e => e.instructor.studioId === studio.id)
+            .filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId))
             .map(e => ({
               id: e.id,
               studentId: e.studentId,
@@ -77,6 +100,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
           heatIds: e.heats.map(eh => eh.heatId),
         }))}
         enrolledEvents={studentEvents.map(se => ({ studentId: se.studentId, eventId: se.eventId }))}
+        amateurPairs={amateurPairs}
       />
     </div>
   )

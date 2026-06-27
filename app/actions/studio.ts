@@ -153,6 +153,79 @@ export async function removeEventEntry(
   return null
 }
 
+export async function addAmateurEventEntry(
+  studioSlug: string,
+  eventId: number,
+  leaderId: number,
+  followerId: number
+) {
+  const studio = await requireStudio(studioSlug)
+
+  const leader = await db.student.findFirst({ where: { id: leaderId, studioId: studio.id } })
+  const follower = await db.student.findFirst({ where: { id: followerId, studioId: studio.id } })
+  if (!leader || !follower) return { error: 'Students not found' }
+  if (leaderId === followerId) return { error: 'Leader and follower must be different students' }
+
+  const event = await db.event.findUnique({
+    where: { id: eventId },
+    include: { heats: { include: { heat: { include: { entries: true } } }, orderBy: { heat: { number: 'asc' } } } },
+  })
+  if (!event) return { error: 'Event not found' }
+  if (event.heats.length === 0) return { error: 'Event has no heats assigned yet' }
+
+  const alreadyLeader = await db.studentEvent.findFirst({ where: { studentId: leaderId, eventId } })
+  const alreadyFollower = await db.studentEvent.findFirst({ where: { studentId: followerId, eventId } })
+  if (alreadyLeader) return { error: `${leader.firstName} is already enrolled in this event` }
+  if (alreadyFollower) return { error: `${follower.firstName} is already enrolled in this event` }
+
+  for (const eh of event.heats) {
+    if (eh.heat.entries.length + 2 > eh.heat.maxCapacity) {
+      return { error: `Heat #${eh.heat.number} doesn't have room for both students` }
+    }
+  }
+
+  const heatIds = event.heats.map(eh => eh.heatId)
+  await db.$transaction([
+    db.studentEvent.create({ data: { studentId: leaderId, eventId, partnerStudentId: followerId } }),
+    db.studentEvent.create({ data: { studentId: followerId, eventId, partnerStudentId: leaderId } }),
+    db.heatEntry.deleteMany({ where: { studentId: { in: [leaderId, followerId] }, heatId: { in: heatIds } } }),
+    db.heatEntry.createMany({
+      data: [
+        ...heatIds.map(heatId => ({ heatId, studentId: leaderId, partnerStudentId: followerId })),
+        ...heatIds.map(heatId => ({ heatId, studentId: followerId, partnerStudentId: leaderId })),
+      ],
+    }),
+  ])
+
+  revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath('/admin/master')
+  revalidatePath('/view')
+}
+
+export async function removeAmateurEventEntry(
+  studioSlug: string,
+  eventId: number,
+  studentId: number
+) {
+  await requireStudio(studioSlug)
+  const enrollment = await db.studentEvent.findFirst({ where: { studentId, eventId } })
+  const partnerId = enrollment?.partnerStudentId ?? null
+
+  const eventHeatRows = await db.eventHeat.findMany({ where: { eventId } })
+  const heatIds = eventHeatRows.map(eh => eh.heatId)
+
+  const deleteIds = partnerId ? [studentId, partnerId] : [studentId]
+  await db.$transaction([
+    db.studentEvent.deleteMany({ where: { studentId: { in: deleteIds }, eventId } }),
+    db.heatEntry.deleteMany({ where: { studentId: { in: deleteIds }, heatId: { in: heatIds } } }),
+  ])
+
+  revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath('/admin/master')
+  revalidatePath('/view')
+  return null
+}
+
 export async function removeHeatEntry(studioSlug: string, entryId: number) {
   const studio = await requireStudio(studioSlug)
   const entry = await db.heatEntry.findFirst({

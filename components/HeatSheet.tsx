@@ -107,7 +107,7 @@ export default function HeatSheet({
           </td>
         ) : (
           studios.map(studio => {
-            const studioEntries = heat.entries.filter(e => e.instructor.studio.name === studio.name)
+            const studioEntries = heat.entries.filter(e => e.instructor?.studio.name === studio.name)
             return (
               <td key={studio.id} style={{ textAlign: 'center' }}>
                 {studioEntries.length > 0 ? (

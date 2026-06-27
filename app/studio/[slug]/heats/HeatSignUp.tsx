@@ -1,13 +1,21 @@
 'use client'
 
-import { addHeatEntry, removeHeatEntry, addEventEntry, removeEventEntry } from '@/app/actions/studio'
+import { addHeatEntry, removeHeatEntry, addEventEntry, removeEventEntry, addAmateurEventEntry, removeAmateurEventEntry } from '@/app/actions/studio'
 import { useState, useTransition, useMemo, useEffect, useRef, Fragment } from 'react'
 
 type HeatEntry = {
   id: number
   studentId: number
   studentName: string
-  instructorId: number
+  instructorId: number | null
+}
+
+type AmateurPair = {
+  eventId: number
+  leaderId: number
+  leaderName: string
+  followerId: number
+  followerName: string
 }
 
 type HeatRow = {
@@ -43,6 +51,7 @@ export default function HeatSignUp({
   heats,
   events,
   enrolledEvents,
+  amateurPairs,
 }: {
   slug: string
   studio: { id: number; name: string }
@@ -51,6 +60,7 @@ export default function HeatSignUp({
   heats: HeatRow[]
   events: EventInfo[]
   enrolledEvents: { studentId: number; eventId: number }[]
+  amateurPairs: AmateurPair[]
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +68,9 @@ export default function HeatSignUp({
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [dropdownSearch, setDropdownSearch] = useState('')
+  const [amateurFormEventId, setAmateurFormEventId] = useState<number | null>(null)
+  const [amateurLeaderId, setAmateurLeaderId] = useState('')
+  const [amateurFollowerId, setAmateurFollowerId] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selectedStudent = students.find(s => s.id.toString() === selectedStudentId)
@@ -157,6 +170,24 @@ export default function HeatSignUp({
     startTransition(async () => {
       const result = await removeEventEntry(slug, eventId, studentId)
       if (result?.error) setError(result.error)
+    })
+  }
+
+  function handleAddAmateurPair(eventId: number) {
+    const lid = parseInt(amateurLeaderId)
+    const fid = parseInt(amateurFollowerId)
+    if (!lid || !fid) { setError('Select both a leader and a follower'); return }
+    startTransition(async () => {
+      const result = await addAmateurEventEntry(slug, eventId, lid, fid)
+      if (result?.error) setError(result.error)
+      else { setAmateurFormEventId(null); setAmateurLeaderId(''); setAmateurFollowerId('') }
+    })
+  }
+
+  function handleRemoveAmateurPair(eventId: number, leaderId: number) {
+    if (!confirm('Remove this amateur pair from the event?')) return
+    startTransition(async () => {
+      await removeAmateurEventEntry(slug, eventId, leaderId)
     })
   }
 
@@ -464,9 +495,13 @@ export default function HeatSignUp({
                     )
                   }
 
-                  // Event segment — banner row + one row per heat
+                  // Event segment — banner row + amateur pairs row + one row per heat
                   const { event, heats: eventHeats } = seg
                   const isStudentEnrolled = studentEnrolledInEvent(event.id)
+                  const eventPairs = amateurPairs.filter(p => p.eventId === event.id)
+                  const isAmateurFormOpen = amateurFormEventId === event.id
+                  const leaders = students.filter(s => s.role === 'Leader')
+                  const followers = students.filter(s => s.role === 'Follower')
                   return (
                     <Fragment key={`event-${event.id}`}>
                       <tr>
@@ -480,6 +515,62 @@ export default function HeatSignUp({
                               ✓ {selectedStudent?.firstName} enrolled
                             </span>
                           )}
+                        </td>
+                      </tr>
+                      {/* Amateur pairs sub-row */}
+                      <tr>
+                        <td colSpan={colSpan} style={{ backgroundColor: '#1e1e1e', padding: '4px 10px 5px', borderBottom: '1px solid #333' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ color: '#888', fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Amateur Pairs</span>
+                            {eventPairs.map(pair => (
+                              <span key={`${pair.leaderId}-${pair.followerId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#2d4a35', border: '1px solid #3d6b47', borderRadius: 3, padding: '1px 6px', fontSize: '0.71rem', color: '#86efac' }}>
+                                <span>{pair.leaderName}</span>
+                                <span style={{ opacity: 0.55 }}>+</span>
+                                <span>{pair.followerName}</span>
+                                <button
+                                  onClick={() => handleRemoveAmateurPair(event.id, pair.leaderId)}
+                                  disabled={pending}
+                                  style={{ color: '#888', fontWeight: 700, marginLeft: 2, fontSize: 10 }}
+                                >×</button>
+                              </span>
+                            ))}
+                            {!isAmateurFormOpen && (
+                              <button
+                                onClick={() => { setAmateurFormEventId(event.id); setAmateurLeaderId(''); setAmateurFollowerId('') }}
+                                style={{ color: '#6b7280', fontSize: '0.68rem', border: '1px dashed #444', borderRadius: 3, padding: '1px 7px', backgroundColor: 'transparent', cursor: 'pointer' }}
+                              >+ Add Pair</button>
+                            )}
+                            {isAmateurFormOpen && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <select
+                                  value={amateurLeaderId}
+                                  onChange={e => setAmateurLeaderId(e.target.value)}
+                                  style={{ fontSize: '0.72rem', padding: '1px 4px', borderRadius: 3, border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white' }}
+                                >
+                                  <option value="">Leader…</option>
+                                  {leaders.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
+                                </select>
+                                <span style={{ color: '#666' }}>+</span>
+                                <select
+                                  value={amateurFollowerId}
+                                  onChange={e => setAmateurFollowerId(e.target.value)}
+                                  style={{ fontSize: '0.72rem', padding: '1px 4px', borderRadius: 3, border: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white' }}
+                                >
+                                  <option value="">Follower…</option>
+                                  {followers.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
+                                </select>
+                                <button
+                                  onClick={() => handleAddAmateurPair(event.id)}
+                                  disabled={pending || !amateurLeaderId || !amateurFollowerId}
+                                  style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 3, backgroundColor: '#166534', color: 'white', border: 'none', cursor: 'pointer', opacity: pending || !amateurLeaderId || !amateurFollowerId ? 0.5 : 1 }}
+                                >Add</button>
+                                <button
+                                  onClick={() => setAmateurFormEventId(null)}
+                                  style={{ color: '#666', fontSize: '0.68rem' }}
+                                >Cancel</button>
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       {eventHeats.map(heat => {

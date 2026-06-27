@@ -38,6 +38,7 @@ export default async function PublicView() {
   for (const studio of studios) studioTotals[studio.id] = 0
   for (const heat of heats) {
     for (const entry of heat.entries) {
+      if (!entry.instructor) continue
       const sid = entry.instructor.studio.id
       studioTotals[sid] = (studioTotals[sid] ?? 0) + 1
     }
@@ -62,7 +63,7 @@ export default async function PublicView() {
     eventNames: heatEventNames.get(h.id) ?? [],
     studioCounts: studios.map(s => ({
       studioId: s.id,
-      count: h.entries.filter(e => e.instructor.studio.id === s.id).length,
+      count: h.entries.filter(e => e.instructor?.studio.id === s.id).length,
     })),
   }))
 
