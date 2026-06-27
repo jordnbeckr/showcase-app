@@ -26,6 +26,8 @@ type InstructorBreakdown = {
   name: string
   lastName: string
   total: number
+  heatTotal: number
+  showCount: number
   byStudent: {
     studentId: number
     name: string
@@ -192,7 +194,14 @@ export default function BreakdownView({
                       <span className="mr-2 text-xs" style={{ color: 'var(--muted)' }}>{expandedInstructors.has(inst.id) ? '▾' : '›'}</span>
                       {inst.name}
                     </td>
-                    <td style={{ textAlign: 'center', fontWeight: 700 }}>{inst.total || '—'}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {inst.total || '—'}
+                      {inst.showCount > 0 && (
+                        <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 500, color: '#7c3aed' }}>
+                          {inst.heatTotal}h + {inst.showCount}s
+                        </span>
+                      )}
+                    </td>
                   </tr>
                   {expandedInstructors.has(inst.id) && sortByTotal(inst.byStudent).map(row => (
                     <tr key={row.studentId} style={{ backgroundColor: '#f9f9f9' }}>

@@ -28,6 +28,7 @@ model Instructor {
   role          String         @default("Neither")
   leaderNumber  Int?
   studentEvents StudentEvent[]
+  studentShows  StudentShow[]  @relation("StudentShowInstructors")
 }
 
 model DanceType {
@@ -145,16 +146,16 @@ model ProShow {
 }
 
 model StudentShow {
-  id           Int       @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   studioId     Int
-  studio       Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  students     Student[] @relation("StudentShowStudents")
-  instructors  String
+  studio       Studio       @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  students     Student[]    @relation("StudentShowStudents")
+  instructors  Instructor[] @relation("StudentShowInstructors")
   dances       String
   songTitle    String?
   artist       String?
   musicLink    String?
   notes        String?
-  order        Int       @default(0)
-  createdAt    DateTime  @default(now())
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
 }

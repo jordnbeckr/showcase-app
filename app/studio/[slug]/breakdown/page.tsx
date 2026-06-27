@@ -34,8 +34,16 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
       where: { student: { studioId: studio.id } },
     }),
     db.studentShow.findMany({
-      where: { students: { some: { studioId: studio.id } } },
-      include: { students: { where: { studioId: studio.id }, select: { id: true } } },
+      where: {
+        OR: [
+          { students: { some: { studioId: studio.id } } },
+          { instructors: { some: { studioId: studio.id } } },
+        ],
+      },
+      include: {
+        students: { where: { studioId: studio.id }, select: { id: true } },
+        instructors: { where: { studioId: studio.id }, select: { id: true } },
+      },
     }),
   ])
 
@@ -46,7 +54,17 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
       showCountByStudent.set(s.id, (showCountByStudent.get(s.id) ?? 0) + 1)
     }
   }
+
+  // show count per instructor (StudentShow only — ProShow doesn't count)
+  const showCountByInstructor = new Map<number, number>()
+  for (const show of studentShows) {
+    for (const i of show.instructors) {
+      showCountByInstructor.set(i.id, (showCountByInstructor.get(i.id) ?? 0) + 1)
+    }
+  }
+
   const totalShowEntries = [...showCountByStudent.values()].reduce((a, b) => a + b, 0)
+    + [...showCountByInstructor.values()].reduce((a, b) => a + b, 0)
 
   type DanceRow =
     | { kind: 'solo'; dance: string; count: number }
@@ -132,11 +150,14 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
         }
       })
       .filter(r => r.total > 0)
+    const instShowCount = showCountByInstructor.get(inst.id) ?? 0
     return {
       id: inst.id,
       name: inst.name,
       lastName: instLastName,
-      total: instEntries.length,
+      total: instEntries.length + instShowCount,
+      heatTotal: instEntries.length,
+      showCount: instShowCount,
       byStudent: byStudentRows,
     }
   })

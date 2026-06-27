@@ -281,25 +281,21 @@ export async function deleteProShow(studioSlug: string, id: number) {
 export async function addStudentShow(studioSlug: string, formData: FormData) {
   const studio = await requireStudio(studioSlug)
   const studentIds = (formData.getAll('studentIds') as string[]).map(Number).filter(Boolean)
-  const entry = await db.studentShow.create({
+  const instructorIds = (formData.getAll('instructorIds') as string[]).map(Number).filter(Boolean)
+  const dances = (formData.get('dances') as string).trim()
+  if (!dances) return { error: 'Dances required' }
+  await db.studentShow.create({
     data: {
       studioId: studio.id,
-      instructors: (formData.get('instructors') as string).trim(),
-      dances: (formData.get('dances') as string).trim(),
+      dances,
       songTitle: (formData.get('songTitle') as string | null)?.trim() || null,
       artist: (formData.get('artist') as string | null)?.trim() || null,
       musicLink: (formData.get('musicLink') as string | null)?.trim() || null,
       notes: (formData.get('notes') as string | null)?.trim() || null,
+      students: studentIds.length > 0 ? { connect: studentIds.map(id => ({ id })) } : undefined,
+      instructors: instructorIds.length > 0 ? { connect: instructorIds.map(id => ({ id })) } : undefined,
     },
   })
-  if (studentIds.length > 0) {
-    await db.studentShow.update({
-      where: { id: entry.id },
-      data: {
-        students: { connect: studentIds.map(id => ({ id })) },
-      },
-    })
-  }
   revalidatePath(`/studio/${studioSlug}/shows`)
 }
 

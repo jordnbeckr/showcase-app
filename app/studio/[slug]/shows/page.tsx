@@ -14,7 +14,7 @@ export default async function ShowsPage({ params }: { params: Promise<{ slug: st
       instructors: { orderBy: { name: 'asc' } },
       proShows: { orderBy: { createdAt: 'asc' } },
       studentShows: {
-        include: { students: true },
+        include: { students: true, instructors: true },
         orderBy: { createdAt: 'asc' },
       },
     },
@@ -31,8 +31,14 @@ export default async function ShowsPage({ params }: { params: Promise<{ slug: st
         instructors={studio.instructors.map(i => ({ id: i.id, name: i.name }))}
         proShows={studio.proShows}
         studentShows={studio.studentShows.map(ss => ({
-          ...ss,
+          id: ss.id,
           students: ss.students.map(s => `${s.firstName} ${s.lastName}`),
+          instructors: ss.instructors.map(i => i.name),
+          dances: ss.dances,
+          songTitle: ss.songTitle,
+          artist: ss.artist,
+          musicLink: ss.musicLink,
+          notes: ss.notes,
         }))}
       />
     </div>
