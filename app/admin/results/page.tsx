@@ -198,6 +198,39 @@ export default async function AdminResultsPage() {
     .filter(s => s.totalEntries >= 200)
     .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
 
+  // BEST OF THE BEST — students who earned Gold or Silver in any closed heat, grouped by dance
+  // Need dance type per heat; closedScoresAll already has heat included
+  type BoBStudent = { studentId: number; name: string; studioName: string; placement: string }
+  const bobByDance = new Map<string, { dance: string; students: Map<number, BoBStudent> }>()
+
+  for (const score of closedScoresAll) {
+    if (score.placement !== 'Gold' && score.placement !== 'Silver') continue
+    const cat = heatCategory.get(score.heatId) ?? 'none'
+    if (cat !== 'closed') continue
+    // Get dance name from the scored heats (heats array only has category≠none heats, which includes closed)
+    const heat = heats.find(h => h.id === score.heatId)
+    if (!heat) continue
+    const dance = heat.danceType.name
+    if (!bobByDance.has(dance)) bobByDance.set(dance, { dance, students: new Map() })
+    const group = bobByDance.get(dance)!
+    if (!group.students.has(score.studentId)) {
+      group.students.set(score.studentId, {
+        studentId: score.studentId,
+        name: `${score.student.firstName} ${score.student.lastName}`,
+        studioName: score.student.studio.name,
+        placement: score.placement,
+      })
+    } else {
+      // If they have both Gold and Silver, show Gold
+      const existing = group.students.get(score.studentId)!
+      if (score.placement === 'Gold' && existing.placement !== 'Gold') existing.placement = 'Gold'
+    }
+  }
+
+  const bobDances = [...bobByDance.values()]
+    .map(g => ({ dance: g.dance, students: [...g.students.values()].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.dance.localeCompare(b.dance))
+
   // ────────────────────────────────────────────────────────────────────────────
 
   if (judges.length === 0) {
@@ -447,6 +480,42 @@ export default async function AdminResultsPage() {
 
       {closedHeats.length === 0 && openHeats.length === 0 && events.length === 0 && (
         <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No heats or events have been assigned categories yet. Set heat categories in Config → Heat Order & Categories.</p>
+      )}
+
+      {/* BEST OF THE BEST */}
+      {bobDances.length > 0 && (
+        <section className="space-y-4 pt-4" style={{ borderTop: '2px solid var(--border)' }}>
+          <div>
+            <h2 className="text-lg font-bold">Best of the Best</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Students who earned Gold or Silver in any closed heat, grouped by dance.</p>
+          </div>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+            {bobDances.map(({ dance, students }) => (
+              <div key={dance} className="card overflow-hidden">
+                <div className="px-4 py-2 font-semibold text-sm" style={{ backgroundColor: '#fef9c3', borderBottom: '1px solid #fde68a' }}>{dance}</div>
+                <table className="data-table">
+                  <tbody>
+                    {students.map(s => (
+                      <tr key={s.studentId}>
+                        <td>
+                          <span className="font-medium">{s.name}</span>
+                          <span className="text-xs ml-1.5" style={{ color: 'var(--muted)' }}>{s.studioName}</span>
+                        </td>
+                        <td style={{ textAlign: 'right', width: 56 }}>
+                          <span style={{
+                            display: 'inline-block', padding: '1px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 700,
+                            backgroundColor: s.placement === 'Gold' ? '#fde047' : '#cbd5e1',
+                            color: '#1e1e1e',
+                          }}>{s.placement[0]}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* AWARDS */}
