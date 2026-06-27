@@ -409,12 +409,17 @@ export default function HeatSignUp({
           </select>
         </div>
 
-        {selectedStudent && (
-          <div className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium" style={{ backgroundColor: '#f0f0f0', borderRadius: 4, border: '1px solid var(--border)' }}>
-            Placing: <strong>{selectedStudent.firstName} {selectedStudent.lastName}</strong>
-            <button onClick={() => setSelectedStudentId('')} className="text-xs" style={{ color: 'var(--muted)' }}>✕</button>
-          </div>
-        )}
+        {selectedStudent && (() => {
+          const sid = parseInt(selectedStudentId)
+          const studentEntryCount = heats.reduce((sum, h) => sum + h.myEntries.filter(e => e.studentId === sid).length, 0)
+          return (
+            <div className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium" style={{ backgroundColor: '#f0f0f0', borderRadius: 4, border: '1px solid var(--border)' }}>
+              Placing: <strong>{selectedStudent.firstName} {selectedStudent.lastName}</strong>
+              <span style={{ fontWeight: 700, color: '#7c3aed' }}>— {studentEntryCount} entries</span>
+              <button onClick={() => setSelectedStudentId('')} className="text-xs" style={{ color: 'var(--muted)' }}>✕</button>
+            </div>
+          )
+        })()}
 
         <div className="ml-auto flex items-center gap-3">
           <div>
@@ -456,9 +461,9 @@ export default function HeatSignUp({
       {/* Single table — heats in order, events grouped inline */}
       {(() => {
         const colW = 130
-        const W0 = 6, W1 = 34, W2 = 110, W3 = 76
-        const baseW = W0 + W1 + W2 + W3 + instructors.length * colW
-        const colSpan = 4 + instructors.length
+        const W1 = 34, W2 = 110, W3 = 76
+        const baseW = W1 + W2 + W3 + instructors.length * colW
+        const colSpan = 3 + instructors.length
         const stickyHead = (left: number, width: number, extra?: React.CSSProperties) => ({
           position: 'sticky' as const, top: 0, left, zIndex: 20, width,
           backgroundColor: 'var(--card)', ...extra,
@@ -470,13 +475,12 @@ export default function HeatSignUp({
 
         return (
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
-            <table className="data-table" style={{ minWidth: baseW }}>
+            <table className="data-table" style={{ width: baseW, tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th style={stickyHead(0, W0, { padding: 0 })}></th>
-                  <th style={stickyHead(W0, W1)}>#</th>
-                  <th style={stickyHead(W0 + W1, W2)}>Dance</th>
-                  <th style={stickyHead(W0 + W1 + W2, W3)}>Status</th>
+                  <th style={stickyHead(0, W1)}>#</th>
+                  <th style={stickyHead(W1, W2)}>Dance</th>
+                  <th style={stickyHead(W1 + W2, W3)}>Status</th>
                   {instructors.map(inst => (
                     <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
                   ))}
@@ -492,10 +496,9 @@ export default function HeatSignUp({
                     const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                     return (
                       <tr key={`heat-${heat.id}`}>
-                        <td style={{ ...stickyCell(0, W0), padding: 0 }}></td>
-                        <td style={{ ...stickyCell(W0, W1), color: 'var(--muted)', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
-                        <td style={{ ...stickyCell(W0 + W1, W2), fontSize: '0.82rem' }}>{heat.dance}</td>
-                        <td style={stickyCell(W0 + W1 + W2, W3)}>
+                        <td style={{ ...stickyCell(0, W1), color: 'var(--muted)', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
+                        <td style={{ ...stickyCell(W1, W2), fontSize: '0.82rem' }}>{heat.dance}</td>
+                        <td style={stickyCell(W1 + W2, W3)}>
                           <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                             {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                           </span>
@@ -587,10 +590,9 @@ export default function HeatSignUp({
                         const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                         return (
                           <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#7ecfa0' }}>
-                            <td style={{ ...stickyCell(0, W0), padding: 0, borderLeft: '3px solid #555', backgroundColor: '#7ecfa0' }}></td>
-                            <td style={{ ...stickyCell(W0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: '#7ecfa0' }}>{heat.number}</td>
-                            <td style={{ ...stickyCell(W0 + W1, W2), fontSize: '0.8rem', backgroundColor: '#7ecfa0' }}>{heat.dance}</td>
-                            <td style={{ ...stickyCell(W0 + W1 + W2, W3), backgroundColor: '#7ecfa0' }}>
+                            <td style={{ ...stickyCell(0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: '#7ecfa0' }}>{heat.number}</td>
+                            <td style={{ ...stickyCell(W1, W2), fontSize: '0.8rem', backgroundColor: '#7ecfa0' }}>{heat.dance}</td>
+                            <td style={{ ...stickyCell(W1 + W2, W3), backgroundColor: '#7ecfa0' }}>
                               <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                                 {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                               </span>
