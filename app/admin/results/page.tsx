@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminResultsPage() {
-  const [judges, heats, events] = await Promise.all([
+  const [judges, heats, events, allEntries, closedScoresAll, studios] = await Promise.all([
     db.judge.findMany({ orderBy: { name: 'asc' } }),
     db.heat.findMany({
       where: { category: { not: 'none' } },
@@ -38,6 +38,22 @@ export default async function AdminResultsPage() {
         },
       },
     }),
+    // For awards: ALL heat entries (all categories) with instructor and heat category
+    db.heatEntry.findMany({
+      include: {
+        heat: true,
+        student: { include: { studio: true } },
+        instructor: { include: { studio: true } },
+      },
+    }),
+    // All closed scores (for awards computation)
+    db.closedScore.findMany({
+      include: {
+        student: { include: { studio: true } },
+        heat: true,
+      },
+    }),
+    db.studio.findMany({ orderBy: { order: 'asc' } }),
     db.event.findMany({
       where: { isCompetitive: true },
       orderBy: { order: 'asc' },
@@ -54,6 +70,130 @@ export default async function AdminResultsPage() {
       },
     }),
   ])
+
+  // ── Awards computation ──────────────────────────────────────────────────────
+
+  // Index: heatId → category
+  const heatCategory = new Map<number, string>()
+  for (const h of heats) heatCategory.set(h.id, h.category)
+  // Also need ALL heats (not just scored ones) for entry counts
+  const allHeatIds = new Set(allEntries.map(e => e.heatId))
+
+  // TOP TEACHER
+  // Group entries by instructor
+  type InstructorAwardData = {
+    id: number
+    name: string
+    studioName: string
+    totalEntries: number
+    closedEntries: number
+    totalPlacements: number  // all G+S+B across all their students' closed heat entries
+    goldCount: number
+    silverCount: number
+    bronzeCount: number
+  }
+
+  const instructorMap = new Map<number, InstructorAwardData>()
+  for (const entry of allEntries) {
+    if (!entry.instructorId || !entry.instructor) continue
+    const iid = entry.instructorId
+    if (!instructorMap.has(iid)) {
+      instructorMap.set(iid, {
+        id: iid,
+        name: entry.instructor.name,
+        studioName: entry.instructor.studio.name,
+        totalEntries: 0,
+        closedEntries: 0,
+        totalPlacements: 0,
+        goldCount: 0,
+        silverCount: 0,
+        bronzeCount: 0,
+      })
+    }
+    const rec = instructorMap.get(iid)!
+    rec.totalEntries++
+    const cat = heatCategory.get(entry.heatId) ?? 'none'
+    if (cat === 'closed') rec.closedEntries++
+  }
+
+  // Count placements per instructor (via closed scores on entries they taught)
+  for (const score of closedScoresAll) {
+    const cat = heatCategory.get(score.heatId) ?? 'none'
+    if (cat !== 'closed') continue
+    // Find the entry for this student in this heat to get the instructor
+    const entry = allEntries.find(e => e.studentId === score.studentId && e.heatId === score.heatId)
+    if (!entry?.instructorId) continue
+    const rec = instructorMap.get(entry.instructorId)
+    if (!rec) continue
+    rec.totalPlacements++
+    if (score.placement === 'Gold') rec.goldCount++
+    else if (score.placement === 'Silver') rec.silverCount++
+    else if (score.placement === 'Bronze') rec.bronzeCount++
+  }
+
+  const eligibleTeachers = [...instructorMap.values()]
+    .filter(t => t.totalEntries >= 30 && t.closedEntries / t.totalEntries >= 0.4)
+    .sort((a, b) =>
+      b.totalPlacements !== a.totalPlacements ? b.totalPlacements - a.totalPlacements :
+      b.goldCount !== a.goldCount ? b.goldCount - a.goldCount :
+      b.silverCount !== a.silverCount ? b.silverCount - a.silverCount :
+      b.bronzeCount - a.bronzeCount
+    )
+
+  // TOP STUDIO
+  type StudioAwardData = {
+    id: number
+    name: string
+    totalEntries: number
+    studentsInClosed: number       // unique students who appeared in ≥1 closed heat
+    goldStudents: number           // unique students who earned ≥1 Gold in a closed heat
+    goldPct: number
+  }
+
+  const studioAwardMap = new Map<number, StudioAwardData>()
+  for (const s of studios) {
+    studioAwardMap.set(s.id, { id: s.id, name: s.name, totalEntries: 0, studentsInClosed: 0, goldStudents: 0, goldPct: 0 })
+  }
+
+  // Count total entries per studio
+  for (const entry of allEntries) {
+    const sid = entry.student.studio.id
+    const rec = studioAwardMap.get(sid)
+    if (rec) rec.totalEntries++
+  }
+
+  // Find unique students per studio in closed heats
+  const studioClosedStudents = new Map<number, Set<number>>() // studioId → Set<studentId>
+  const studioGoldStudents = new Map<number, Set<number>>()   // studioId → Set<studentId>
+
+  for (const entry of allEntries) {
+    const cat = heatCategory.get(entry.heatId) ?? 'none'
+    if (cat !== 'closed') continue
+    const studioId = entry.student.studio.id
+    if (!studioClosedStudents.has(studioId)) studioClosedStudents.set(studioId, new Set())
+    studioClosedStudents.get(studioId)!.add(entry.studentId)
+  }
+
+  for (const score of closedScoresAll) {
+    if (score.placement !== 'Gold') continue
+    const cat = heatCategory.get(score.heatId) ?? 'none'
+    if (cat !== 'closed') continue
+    const studioId = score.student.studio.id
+    if (!studioGoldStudents.has(studioId)) studioGoldStudents.set(studioId, new Set())
+    studioGoldStudents.get(studioId)!.add(score.studentId)
+  }
+
+  for (const [studioId, rec] of studioAwardMap) {
+    rec.studentsInClosed = studioClosedStudents.get(studioId)?.size ?? 0
+    rec.goldStudents = studioGoldStudents.get(studioId)?.size ?? 0
+    rec.goldPct = rec.studentsInClosed > 0 ? rec.goldStudents / rec.studentsInClosed : 0
+  }
+
+  const eligibleStudios = [...studioAwardMap.values()]
+    .filter(s => s.totalEntries >= 200)
+    .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
+
+  // ────────────────────────────────────────────────────────────────────────────
 
   if (judges.length === 0) {
     return (
@@ -303,6 +443,125 @@ export default async function AdminResultsPage() {
       {closedHeats.length === 0 && openHeats.length === 0 && events.length === 0 && (
         <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No heats or events have been assigned categories yet. Set heat categories in Config → Heat Order & Categories.</p>
       )}
+
+      {/* AWARDS */}
+      <section className="space-y-6 pt-4" style={{ borderTop: '2px solid var(--border)' }}>
+        <h2 className="text-lg font-bold">Awards</h2>
+
+        {/* TOP TEACHER */}
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Teacher</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+              Eligible: ≥30 total entries AND ≥40% of entries in closed heats.
+              Ranked by total G/S/B placements across all students (highest first).
+            </p>
+          </div>
+
+          {eligibleTeachers.length === 0 ? (
+            <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible teachers yet.</p>
+          ) : (
+            <div className="card overflow-hidden">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
+                    <th>Teacher</th>
+                    <th>Studio</th>
+                    <th style={{ textAlign: 'center', width: 80 }}>Total entries</th>
+                    <th style={{ textAlign: 'center', width: 80 }}>Closed entries</th>
+                    <th style={{ textAlign: 'center', width: 60 }}>Closed %</th>
+                    <th style={{ textAlign: 'center', width: 52 }}>
+                      <span style={{ color: '#713f12' }}>G</span>
+                    </th>
+                    <th style={{ textAlign: 'center', width: 52 }}>
+                      <span style={{ color: '#475569' }}>S</span>
+                    </th>
+                    <th style={{ textAlign: 'center', width: 52 }}>
+                      <span style={{ color: '#7c2d12' }}>B</span>
+                    </th>
+                    <th style={{ textAlign: 'center', width: 80 }}>Total placed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eligibleTeachers.map((t, i) => (
+                    <tr key={t.id} style={{ backgroundColor: i === 0 ? '#fffbeb' : i === 1 ? '#f8fafc' : i === 2 ? '#fff7ed' : undefined }}>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                      </td>
+                      <td className="font-semibold">{t.name}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{t.studioName}</td>
+                      <td style={{ textAlign: 'center' }}>{t.totalEntries}</td>
+                      <td style={{ textAlign: 'center' }}>{t.closedEntries}</td>
+                      <td style={{ textAlign: 'center', fontSize: '0.8rem' }}>
+                        {Math.round(t.closedEntries / t.totalEntries * 100)}%
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        <span style={{ color: '#713f12' }}>{t.goldCount || '—'}</span>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        <span style={{ color: '#475569' }}>{t.silverCount || '—'}</span>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        <span style={{ color: '#7c2d12' }}>{t.bronzeCount || '—'}</span>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
+                        {t.totalPlacements || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* TOP STUDIO */}
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Studio</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+              Eligible: ≥200 total entries.
+              Ranked by % of students in closed heats who earned at least one Gold (highest first).
+            </p>
+          </div>
+
+          {eligibleStudios.length === 0 ? (
+            <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible studios yet.</p>
+          ) : (
+            <div className="card overflow-hidden">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
+                    <th>Studio</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Total entries</th>
+                    <th style={{ textAlign: 'center', width: 120 }}>Students in closed</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Gold students</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Gold %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eligibleStudios.map((s, i) => (
+                    <tr key={s.id} style={{ backgroundColor: i === 0 ? '#fffbeb' : i === 1 ? '#f8fafc' : i === 2 ? '#fff7ed' : undefined }}>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                      </td>
+                      <td className="font-semibold">{s.name}</td>
+                      <td style={{ textAlign: 'center' }}>{s.totalEntries}</td>
+                      <td style={{ textAlign: 'center' }}>{s.studentsInClosed}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#713f12' }}>{s.goldStudents}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
+                        {s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
