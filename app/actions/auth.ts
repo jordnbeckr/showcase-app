@@ -38,6 +38,19 @@ export async function studioLogin(_prev: ActionState, formData: FormData): Promi
   redirect(`/studio/${studio.slug}`)
 }
 
+export async function judgeLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const judgeId = parseInt(formData.get('judgeId') as string)
+  const pin = formData.get('pin') as string
+
+  const judge = await db.judge.findUnique({ where: { id: judgeId } })
+  if (!judge || judge.pinHash !== hash(pin)) {
+    return { error: 'Invalid judge or PIN' }
+  }
+
+  await createSession({ role: 'judge', judgeId: judge.id, judgeName: judge.name })
+  redirect('/judge')
+}
+
 export async function logout() {
   await deleteSession()
   redirect('/')

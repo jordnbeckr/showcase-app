@@ -43,8 +43,12 @@ model Event {
   name           String
   order          Int            @default(0)
   isAmateur      Boolean        @default(false)
+  isCompetitive  Boolean        @default(false)
   heats          EventHeat[]
   studentEvents  StudentEvent[]
+  compRound      CompRound?
+  compScores     CompScore[]
+  semiMarks      SemiMark[]
 }
 
 model StudentEvent {
@@ -70,13 +74,17 @@ model EventHeat {
 }
 
 model Heat {
-  id          Int         @id @default(autoincrement())
-  number      Int         @unique
-  danceTypeId Int
-  danceType   DanceType   @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
-  maxCapacity Int         @default(24)
-  entries     HeatEntry[]
-  events      EventHeat[]
+  id           Int          @id @default(autoincrement())
+  number       Int          @unique
+  danceTypeId  Int
+  danceType    DanceType    @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
+  maxCapacity  Int          @default(24)
+  category     String       @default("none") // "none" | "closed" | "open"
+  entries      HeatEntry[]
+  events       EventHeat[]
+  closedScores ClosedScore[]
+  openThumbs   OpenThumb[]
+  openNotes    OpenNote[]
 }
 
 model Student {
@@ -92,6 +100,11 @@ model Student {
   leaderNumber    Int?
   checkedIn       Boolean        @default(false)
   studentEvents   StudentEvent[]
+  closedScores    ClosedScore[]
+  openThumbs      OpenThumb[]
+  openNotes       OpenNote[]
+  compScores      CompScore[]
+  semiMarks       SemiMark[]
 }
 
 model BudgetItem {
@@ -158,4 +171,104 @@ model StudentShow {
   notes        String?
   order        Int          @default(0)
   createdAt    DateTime     @default(now())
+}
+
+model Judge {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  pinHash      String
+  closedScores ClosedScore[]
+  openThumbs   OpenThumb[]
+  openNotes    OpenNote[]
+  compScores   CompScore[]
+  semiMarks    SemiMark[]
+}
+
+model FeedbackCategory {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  order      Int         @default(0)
+  openThumbs OpenThumb[]
+}
+
+// Closed heat: Gold/Silver/Bronze per judge × student × heat
+model ClosedScore {
+  id        Int     @id @default(autoincrement())
+  judgeId   Int
+  judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  heatId    Int
+  heat      Heat    @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  placement String  // "Gold" | "Silver" | "Bronze"
+
+  @@unique([judgeId, heatId, studentId])
+}
+
+// Open heat: thumbs up/down per judge × student × heat × category
+model OpenThumb {
+  id         Int              @id @default(autoincrement())
+  judgeId    Int
+  judge      Judge            @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  heatId     Int
+  heat       Heat             @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId  Int
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  categoryId Int
+  category   FeedbackCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sentiment  String           // "up" | "down"
+
+  @@unique([judgeId, heatId, studentId, categoryId])
+}
+
+// Open heat: optional free-text note per judge × student × heat
+model OpenNote {
+  id        Int     @id @default(autoincrement())
+  judgeId   Int
+  judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  heatId    Int
+  heat      Heat    @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  note      String
+
+  @@unique([judgeId, heatId, studentId])
+}
+
+// Competitive event: admin-set round type and sizes
+model CompRound {
+  id        Int   @id @default(autoincrement())
+  eventId   Int   @unique
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  round     String  @default("final") // "final" | "semifinal"
+  finalSize Int   @default(6)
+  semiSize  Int   @default(7)
+}
+
+// Competitive final: numeric place per judge × event × leader student
+model CompScore {
+  id        Int     @id @default(autoincrement())
+  judgeId   Int
+  judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  eventId   Int
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId Int     // the leader/representative student of the couple
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  place     Int
+
+  @@unique([judgeId, eventId, studentId])
+}
+
+// Competitive semifinal: callback mark per judge × event × leader student
+model SemiMark {
+  id        Int     @id @default(autoincrement())
+  judgeId   Int
+  judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  eventId   Int
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  called    Boolean @default(false)
+
+  @@unique([judgeId, eventId, studentId])
 }

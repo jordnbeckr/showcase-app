@@ -1,6 +1,6 @@
 'use client'
 
-import { reorderHeats } from '@/app/actions/admin'
+import { reorderHeats, setHeatCategory } from '@/app/actions/admin'
 import { useState, useTransition, useRef, useEffect } from 'react'
 
 type HeatItem = {
@@ -9,11 +9,18 @@ type HeatItem = {
   dance: string
   eventNames: string[]
   entryCount: number
+  category: string
 }
 
 export default function HeatOrderConfig({ heats: initialHeats }: { heats: HeatItem[] }) {
   const [heats, setHeats] = useState(initialHeats)
   const [pending, startTransition] = useTransition()
+
+  function cycleCategory(heatId: number, current: string) {
+    const next = current === 'none' ? 'closed' : current === 'closed' ? 'open' : 'none'
+    setHeats(prev => prev.map(h => h.id === heatId ? { ...h, category: next } : h))
+    startTransition(async () => { await setHeatCategory(heatId, next as 'none' | 'closed' | 'open') })
+  }
   const [saved, setSaved] = useState(false)
   const [filter, setFilter] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -186,6 +193,7 @@ export default function HeatOrderConfig({ heats: initialHeats }: { heats: HeatIt
               <th style={{ width: 160 }}>Dance</th>
               <th style={{ width: 160 }}>Event</th>
               <th style={{ width: 52, textAlign: 'center' }}>Entries</th>
+              <th style={{ width: 72, textAlign: 'center' }}>Category</th>
               <th style={{ width: 52, textAlign: 'center' }}>Move</th>
             </tr>
           </thead>
@@ -235,6 +243,25 @@ export default function HeatOrderConfig({ heats: initialHeats }: { heats: HeatIt
                   </td>
                   <td style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.8rem' }}>
                     {heat.entryCount > 0 ? heat.entryCount : '—'}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      onClick={() => cycleCategory(heat.id, heat.category)}
+                      disabled={pending}
+                      className="text-xs px-1.5 py-0.5 font-medium"
+                      style={{
+                        borderRadius: 3,
+                        border: '1px solid',
+                        ...(heat.category === 'closed'
+                          ? { backgroundColor: '#fef9c3', borderColor: '#fde68a', color: '#92400e' }
+                          : heat.category === 'open'
+                          ? { backgroundColor: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }
+                          : { backgroundColor: 'transparent', borderColor: 'var(--border)', color: 'var(--muted)' })
+                      }}
+                      title="Click to cycle: None → Closed → Open → None"
+                    >
+                      {heat.category === 'closed' ? 'Closed' : heat.category === 'open' ? 'Open' : '—'}
+                    </button>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <button onClick={() => moveUp(heat.id)} disabled={realIdx === 0 || pending} className="px-1 py-0.5 disabled:opacity-20 text-sm" title="Move up">↑</button>

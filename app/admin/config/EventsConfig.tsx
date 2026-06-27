@@ -1,12 +1,16 @@
 'use client'
 
-import { addEvent, renameEvent, deleteEvent, addHeatToEvent, removeHeatFromEvent, setEventAmateur } from '@/app/actions/admin'
+import { addEvent, renameEvent, deleteEvent, addHeatToEvent, removeHeatFromEvent, setEventAmateur, setEventCompetitive, setCompRound, setCompRoundSizes } from '@/app/actions/admin'
 import { useState, useTransition } from 'react'
+
+type CompRoundInfo = { round: string; finalSize: number; semiSize: number } | null
 
 type EventRow = {
   id: number
   name: string
   isAmateur: boolean
+  isCompetitive: boolean
+  compRound: CompRoundInfo
   heats: { id: number; number: number }[]
 }
 
@@ -46,6 +50,21 @@ export default function EventsConfig({
 
   function handleToggleAmateur(eventId: number, current: boolean) {
     startTransition(async () => { await setEventAmateur(eventId, !current) })
+  }
+
+  function handleToggleCompetitive(eventId: number, current: boolean) {
+    startTransition(async () => { await setEventCompetitive(eventId, !current) })
+  }
+
+  function handleSetRound(eventId: number, round: 'final' | 'semifinal') {
+    startTransition(async () => { await setCompRound(eventId, round) })
+  }
+
+  function handleRoundSizes(eventId: number, formData: FormData) {
+    const finalSize = parseInt(formData.get('finalSize') as string)
+    const semiSize = parseInt(formData.get('semiSize') as string)
+    if (isNaN(finalSize) || isNaN(semiSize)) return
+    startTransition(async () => { await setCompRoundSizes(eventId, finalSize, semiSize) })
   }
 
   function handleDelete(eventId: number, name: string) {
@@ -124,6 +143,11 @@ export default function EventsConfig({
                       {evt.isAmateur && (
                         <span className="text-xs px-1.5 py-0.5" style={{ backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: 3, color: '#166534', fontWeight: 600 }}>Amateur</span>
                       )}
+                      {evt.isCompetitive && (
+                        <span className="text-xs px-1.5 py-0.5" style={{ backgroundColor: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 3, color: '#1d4ed8', fontWeight: 600 }}>
+                          Competitive · {evt.compRound?.round === 'semifinal' ? 'Semi' : 'Final'}
+                        </span>
+                      )}
                       <span className="text-xs" style={{ color: 'var(--muted)' }}>
                         {evt.heats.length} heat{evt.heats.length !== 1 ? 's' : ''}
                         {evt.heats.length > 0 && ` (#${evt.heats[0].number}–#${evt.heats[evt.heats.length - 1].number})`}
@@ -138,6 +162,15 @@ export default function EventsConfig({
                     >
                       {evt.isAmateur ? '✓ Amateur' : 'Amateur'}
                     </button>
+                    <button
+                      onClick={() => handleToggleCompetitive(evt.id, evt.isCompetitive)}
+                      disabled={pending}
+                      className="text-xs px-2 py-0.5 mr-1"
+                      style={{ border: '1px solid var(--border)', borderRadius: 3, color: evt.isCompetitive ? '#1d4ed8' : 'var(--muted)', backgroundColor: evt.isCompetitive ? '#eff6ff' : 'transparent' }}
+                      title={evt.isCompetitive ? 'Remove Competitive designation' : 'Mark as competitive event (1–6 placement)'}
+                    >
+                      {evt.isCompetitive ? '✓ Comp' : 'Comp'}
+                    </button>
                     <button onClick={() => setRenaming(evt.id)} className="text-xs" style={{ color: 'var(--muted)' }}>Rename</button>
                     <button onClick={() => handleDelete(evt.id, evt.name)} disabled={pending} className="text-xs ml-1" style={{ color: '#dc2626' }}>Delete</button>
                   </>
@@ -145,7 +178,52 @@ export default function EventsConfig({
               </div>
 
               {isExpanded && (
-                <div className="px-5 py-4" style={{ backgroundColor: '#f9f9f9', borderTop: '1px solid var(--border)' }}>
+                <div className="px-5 py-4 space-y-5" style={{ backgroundColor: '#f9f9f9', borderTop: '1px solid var(--border)' }}>
+                  {/* Competitive round settings */}
+                  {evt.isCompetitive && evt.compRound && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#1d4ed8' }}>Competitive Settings</div>
+                      <div className="flex flex-wrap gap-3 items-start">
+                        <div>
+                          <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Active Round</div>
+                          <div className="flex gap-1">
+                            {(['final', 'semifinal'] as const).map(r => (
+                              <button
+                                key={r}
+                                onClick={() => handleSetRound(evt.id, r)}
+                                disabled={pending}
+                                className="text-xs px-3 py-1 font-medium"
+                                style={{
+                                  borderRadius: 3,
+                                  border: '1px solid var(--border)',
+                                  backgroundColor: evt.compRound?.round === r ? '#1d4ed8' : 'transparent',
+                                  color: evt.compRound?.round === r ? 'white' : 'var(--muted)',
+                                }}
+                              >
+                                {r === 'final' ? 'Final' : 'Semifinal'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <form action={fd => handleRoundSizes(evt.id, fd)} className="flex gap-2 items-end">
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Final size</label>
+                            <input name="finalSize" type="number" min={1} max={20} defaultValue={evt.compRound.finalSize}
+                              className="field" style={{ width: 70, padding: '3px 8px', fontSize: '0.875rem' }} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Semi size</label>
+                            <input name="semiSize" type="number" min={1} max={30} defaultValue={evt.compRound.semiSize}
+                              className="field" style={{ width: 70, padding: '3px 8px', fontSize: '0.875rem' }} />
+                          </div>
+                          <button type="submit" disabled={pending} className="text-xs px-3 py-1.5 text-white" style={{ backgroundColor: '#333', borderRadius: 3 }}>
+                            Save
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>
                     Heats in this Event
                   </div>
@@ -261,6 +339,10 @@ export default function EventsConfig({
             <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--muted)' }}>
               <input type="checkbox" name="isAmateur" style={{ accentColor: '#166534' }} />
               Amateur pairs event (students dance without an instructor)
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--muted)' }}>
+              <input type="checkbox" name="isCompetitive" style={{ accentColor: '#1d4ed8' }} />
+              Competitive event (judges give 1–6 placements)
             </label>
           </form>
         </div>

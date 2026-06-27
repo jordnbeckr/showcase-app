@@ -8,6 +8,7 @@ const SECRET = new TextEncoder().encode(
 export type Session =
   | { role: 'admin' }
   | { role: 'studio'; studioId: number; studioSlug: string; studioName: string }
+  | { role: 'judge'; judgeId: number; judgeName: string }
 
 export async function createSession(payload: Session) {
   const token = await new SignJWT(payload as Record<string, unknown>)

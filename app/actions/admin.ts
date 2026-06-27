@@ -247,8 +247,12 @@ export async function addEvent(formData: FormData) {
   const name = (formData.get('name') as string).trim()
   if (!name) return { error: 'Event name required' }
   const isAmateur = formData.get('isAmateur') === 'on'
+  const isCompetitive = formData.get('isCompetitive') === 'on'
   const maxOrder = await db.event.aggregate({ _max: { order: true } })
-  await db.event.create({ data: { name, isAmateur, order: (maxOrder._max.order ?? 0) + 1 } })
+  const event = await db.event.create({ data: { name, isAmateur, isCompetitive, order: (maxOrder._max.order ?? 0) + 1 } })
+  if (isCompetitive) {
+    await db.compRound.create({ data: { eventId: event.id, round: 'final', finalSize: 6, semiSize: 7 } })
+  }
   revalidatePath('/admin/config')
 }
 
@@ -287,4 +291,105 @@ export async function removeHeatFromEvent(heatId: number, eventId: number) {
   await requireAdmin()
   await db.eventHeat.deleteMany({ where: { eventId, heatId } })
   revalidatePath('/admin/config')
+}
+
+export async function setEventCompetitive(eventId: number, isCompetitive: boolean) {
+  await requireAdmin()
+  await db.event.update({ where: { id: eventId }, data: { isCompetitive } })
+  if (isCompetitive) {
+    await db.compRound.upsert({
+      where: { eventId },
+      create: { eventId, round: 'final', finalSize: 6, semiSize: 7 },
+      update: {},
+    })
+  }
+  revalidatePath('/admin/config')
+}
+
+export async function setCompRound(eventId: number, round: 'final' | 'semifinal') {
+  await requireAdmin()
+  await db.compRound.upsert({
+    where: { eventId },
+    create: { eventId, round, finalSize: 6, semiSize: 7 },
+    update: { round },
+  })
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+export async function setCompRoundSizes(eventId: number, finalSize: number, semiSize: number) {
+  await requireAdmin()
+  await db.compRound.update({ where: { eventId }, data: { finalSize, semiSize } })
+  revalidatePath('/admin/config')
+}
+
+// --- Heat category ---
+
+export async function setHeatCategory(heatId: number, category: 'none' | 'closed' | 'open') {
+  await requireAdmin()
+  await db.heat.update({ where: { id: heatId }, data: { category } })
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+// --- Judges ---
+
+export async function addJudge(formData: FormData) {
+  await requireAdmin()
+  const name = (formData.get('name') as string).trim()
+  const pin = (formData.get('pin') as string).trim()
+  if (!name || !pin) return { error: 'Name and PIN required' }
+  if (!/^\d{4,8}$/.test(pin)) return { error: 'PIN must be 4–8 digits' }
+  try {
+    await db.judge.create({ data: { name, pinHash: hash(pin) } })
+  } catch {
+    return { error: 'Judge name already exists' }
+  }
+  revalidatePath('/admin/config')
+}
+
+export async function resetJudgePin(judgeId: number, formData: FormData) {
+  await requireAdmin()
+  const pin = (formData.get('pin') as string).trim()
+  if (!pin || !/^\d{4,8}$/.test(pin)) return { error: 'PIN must be 4–8 digits' }
+  await db.judge.update({ where: { id: judgeId }, data: { pinHash: hash(pin) } })
+  revalidatePath('/admin/config')
+}
+
+export async function deleteJudge(judgeId: number) {
+  await requireAdmin()
+  await db.judge.delete({ where: { id: judgeId } })
+  revalidatePath('/admin/config')
+}
+
+// --- Feedback Categories ---
+
+export async function addFeedbackCategory(formData: FormData) {
+  await requireAdmin()
+  const name = (formData.get('name') as string).trim()
+  if (!name) return { error: 'Name required' }
+  const max = await db.feedbackCategory.aggregate({ _max: { order: true } })
+  try {
+    await db.feedbackCategory.create({ data: { name, order: (max._max.order ?? 0) + 1 } })
+  } catch {
+    return { error: 'Category already exists' }
+  }
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+export async function deleteFeedbackCategory(id: number) {
+  await requireAdmin()
+  await db.feedbackCategory.delete({ where: { id } })
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+export async function reorderFeedbackCategories(orderedIds: number[]) {
+  await requireAdmin()
+  await db.$transaction(
+    orderedIds.map((id, i) => db.feedbackCategory.update({ where: { id }, data: { order: i } }))
+  )
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
 }
