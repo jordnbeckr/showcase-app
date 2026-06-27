@@ -30,7 +30,7 @@ export default async function ConfigPage() {
       include: { danceType: true, entries: true, events: true },
       orderBy: { number: 'asc' },
     }),
-    db.judge.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    db.judge.findMany({ orderBy: { name: 'asc' }, include: { judgeFloors: true } }),
     db.feedbackCategory.findMany({ orderBy: { order: 'asc' } }),
   ])
 
@@ -91,7 +91,10 @@ export default async function ConfigPage() {
       </CollapsibleSection>
 
       <CollapsibleSection title="Judges">
-        <JudgesConfig judges={judges} />
+        <JudgesConfig
+          judges={judges.map(j => ({ id: j.id, name: j.name, floorIds: j.judgeFloors.map(jf => jf.floorId) }))}
+          floors={await db.floor.findMany({ orderBy: { order: 'asc' }, select: { id: true, label: true } })}
+        />
       </CollapsibleSection>
 
       <CollapsibleSection title="Open Heat Feedback Categories">

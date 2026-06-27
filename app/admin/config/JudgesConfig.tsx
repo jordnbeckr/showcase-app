@@ -1,11 +1,13 @@
 'use client'
 
 import { addJudge, resetJudgePin, deleteJudge } from '@/app/actions/admin'
+import { setJudgeFloors } from '@/app/actions/floors'
 import { useState, useTransition } from 'react'
 
-type JudgeRow = { id: number; name: string }
+type Floor = { id: number; label: string }
+type JudgeRow = { id: number; name: string; floorIds: number[] }
 
-export default function JudgesConfig({ judges }: { judges: JudgeRow[] }) {
+export default function JudgesConfig({ judges, floors }: { judges: JudgeRow[]; floors: Floor[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [resettingPin, setResettingPin] = useState<number | null>(null)
@@ -28,6 +30,13 @@ export default function JudgesConfig({ judges }: { judges: JudgeRow[] }) {
   function handleDelete(judgeId: number, name: string) {
     if (!confirm(`Remove judge "${name}"? Their scores will be deleted.`)) return
     startTransition(async () => { await deleteJudge(judgeId) })
+  }
+
+  function handleFloorToggle(judgeId: number, floorId: number, currentFloorIds: number[]) {
+    const next = currentFloorIds.includes(floorId)
+      ? currentFloorIds.filter(id => id !== floorId)
+      : [...currentFloorIds, floorId]
+    startTransition(async () => { await setJudgeFloors(judgeId, next) })
   }
 
   return (
@@ -58,9 +67,30 @@ export default function JudgesConfig({ judges }: { judges: JudgeRow[] }) {
               </form>
             ) : (
               <>
-                <span className="font-medium text-sm flex-1">{judge.name}</span>
-                <button onClick={() => setResettingPin(judge.id)} className="text-xs" style={{ color: 'var(--muted)' }}>Reset PIN</button>
-                <button onClick={() => handleDelete(judge.id, judge.name)} disabled={pending} className="text-xs ml-1" style={{ color: '#dc2626' }}>Remove</button>
+                <span className="font-medium text-sm" style={{ minWidth: 120 }}>{judge.name}</span>
+                {floors.length > 0 && (
+                  <div className="flex gap-1.5 items-center">
+                    <span className="text-xs" style={{ color: 'var(--muted)' }}>Floors:</span>
+                    {floors.map(f => {
+                      const active = judge.floorIds.includes(f.id)
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => handleFloorToggle(judge.id, f.id, judge.floorIds)}
+                          disabled={pending}
+                          className="text-xs px-2 py-0.5 font-bold"
+                          style={{ borderRadius: 4, border: '1px solid', borderColor: active ? '#1d4ed8' : 'var(--border)', backgroundColor: active ? '#eff6ff' : 'transparent', color: active ? '#1d4ed8' : 'var(--muted)' }}
+                        >
+                          {f.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <button onClick={() => setResettingPin(judge.id)} className="text-xs" style={{ color: 'var(--muted)' }}>Reset PIN</button>
+                  <button onClick={() => handleDelete(judge.id, judge.name)} disabled={pending} className="text-xs" style={{ color: '#dc2626' }}>Remove</button>
+                </div>
               </>
             )}
           </div>

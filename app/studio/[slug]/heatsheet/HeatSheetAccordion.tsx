@@ -7,6 +7,7 @@ type Entry = {
   heatNumber: number
   dance: string
   partnerName: string
+  floorLabel: string | null
 }
 
 type Seg =
@@ -31,6 +32,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
           <th style={{ width: 52, textAlign: 'center' }}>#</th>
           <th style={{ width: 180 }}>Dance</th>
           <th>Partner</th>
+          <th style={{ width: 64, textAlign: 'center' }}>Floor</th>
         </tr>
       </thead>
       <tbody>
@@ -42,12 +44,17 @@ function SheetTable({ segments }: { segments: Seg[] }) {
                 <td style={{ fontFamily: 'monospace', textAlign: 'center', fontSize: '0.85rem' }}>{e.heatNumber}</td>
                 <td>{e.dance}</td>
                 <td style={{ fontSize: '0.9rem' }}>{e.partnerName}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {e.floorLabel
+                    ? <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e1e1e' }}>{e.floorLabel}</span>
+                    : <span style={{ color: 'var(--muted)' }}>—</span>}
+                </td>
               </tr>
             )
           }
           return [
             <tr key={`evt-${seg.eventName}-${i}`}>
-              <td colSpan={3} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '4px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
+              <td colSpan={4} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '4px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
                 ◆ {seg.eventName}
                 <span style={{ fontWeight: 400, opacity: 0.55, marginLeft: 8, fontSize: '0.65rem', textTransform: 'none' }}>
                   {seg.entries.length} dances
@@ -59,6 +66,11 @@ function SheetTable({ segments }: { segments: Seg[] }) {
                 <td style={{ fontFamily: 'monospace', textAlign: 'center', fontSize: '0.85rem', borderLeft: '3px solid #555' }}>{e.heatNumber}</td>
                 <td style={{ fontSize: '0.8125rem' }}>{e.dance}</td>
                 <td style={{ fontSize: '0.8125rem' }}>{e.partnerName}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {e.floorLabel
+                    ? <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e1e1e' }}>{e.floorLabel}</span>
+                    : <span style={{ color: 'var(--muted)' }}>—</span>}
+                </td>
               </tr>
             )),
           ]

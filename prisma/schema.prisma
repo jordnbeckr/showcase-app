@@ -74,37 +74,39 @@ model EventHeat {
 }
 
 model Heat {
-  id           Int          @id @default(autoincrement())
-  number       Int          @unique
-  danceTypeId  Int
-  danceType    DanceType    @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
-  maxCapacity  Int          @default(24)
-  category     String       @default("none") // "none" | "closed" | "open"
-  entries      HeatEntry[]
-  events       EventHeat[]
-  closedScores ClosedScore[]
-  openThumbs   OpenThumb[]
-  openNotes    OpenNote[]
+  id              Int                   @id @default(autoincrement())
+  number          Int                   @unique
+  danceTypeId     Int
+  danceType       DanceType             @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
+  maxCapacity     Int                   @default(24)
+  category        String                @default("none") // "none" | "closed" | "open"
+  entries         HeatEntry[]
+  events          EventHeat[]
+  closedScores    ClosedScore[]
+  openThumbs      OpenThumb[]
+  openNotes       OpenNote[]
+  floorAssignments HeatFloorAssignment[]
 }
 
 model Student {
-  id              Int            @id @default(autoincrement())
+  id              Int                   @id @default(autoincrement())
   firstName       String
   lastName        String
   role            String
   studioId        Int
-  studio          Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  heatEntries     HeatEntry[]    @relation("HeatEntryStudent")
-  partnerEntries  HeatEntry[]    @relation("HeatEntryPartner")
-  studentShows    StudentShow[]  @relation("StudentShowStudents")
+  studio          Studio                @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  heatEntries     HeatEntry[]           @relation("HeatEntryStudent")
+  partnerEntries  HeatEntry[]           @relation("HeatEntryPartner")
+  studentShows    StudentShow[]         @relation("StudentShowStudents")
   leaderNumber    Int?
-  checkedIn       Boolean        @default(false)
+  checkedIn       Boolean               @default(false)
   studentEvents   StudentEvent[]
   closedScores    ClosedScore[]
   openThumbs      OpenThumb[]
   openNotes       OpenNote[]
   compScores      CompScore[]
   semiMarks       SemiMark[]
+  floorAssignments HeatFloorAssignment[]
 }
 
 model BudgetItem {
@@ -182,6 +184,36 @@ model Judge {
   openNotes    OpenNote[]
   compScores   CompScore[]
   semiMarks    SemiMark[]
+  judgeFloors  JudgeFloor[]
+}
+
+model Floor {
+  id          Int                   @id @default(autoincrement())
+  label       String                @unique // "A", "B", "C", "D"
+  order       Int                   @default(0)
+  assignments HeatFloorAssignment[]
+  judgeFloors JudgeFloor[]
+}
+
+model HeatFloorAssignment {
+  id        Int     @id @default(autoincrement())
+  heatId    Int
+  heat      Heat    @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  floorId   Int
+  floor     Floor   @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@unique([heatId, studentId])
+}
+
+model JudgeFloor {
+  judgeId Int
+  judge   Judge @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  floorId Int
+  floor   Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@id([judgeId, floorId])
 }
 
 model FeedbackCategory {

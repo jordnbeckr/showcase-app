@@ -19,7 +19,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
 
-  const [studentEntries, instructorEntries, studentEvents, allEvents] = await Promise.all([
+  const [studentEntries, instructorEntries, studentEvents, allEvents, floorAssignments, floors] = await Promise.all([
     db.heatEntry.findMany({
       where: { student: { studioId: studio.id } },
       include: { heat: { include: { danceType: true } }, instructor: true, student: true, partnerStudent: true },
@@ -32,7 +32,15 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     }),
     db.studentEvent.findMany({ where: { studentId: { in: studentIds } }, include: { event: true } }),
     db.event.findMany({ include: { heats: true }, orderBy: { order: 'asc' } }),
+    db.heatFloorAssignment.findMany({ where: { studentId: { in: studentIds } }, include: { floor: true } }),
+    db.floor.findMany({ orderBy: { order: 'asc' } }),
   ])
+
+  // floor lookup: studentId × heatId → floorLabel
+  const floorLabel = new Map<string, string>()
+  for (const a of floorAssignments) {
+    floorLabel.set(`${a.studentId}-${a.heatId}`, a.floor.label)
+  }
 
   const studentHeatEventName = new Map<number, Map<number, string>>()
   for (const se of studentEvents) {
@@ -42,12 +50,13 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     for (const eh of evt.heats) studentHeatEventName.get(se.studentId)!.set(eh.heatId, se.event.name)
   }
 
-  type SimpleEntry = { id: number; heatNumber: number; dance: string; partnerName: string }
+  type SimpleEntry = { id: number; heatNumber: number; dance: string; partnerName: string; floorLabel: string | null }
   type SimpleSeg = { type: 'event'; eventName: string; entries: SimpleEntry[] } | { type: 'solo'; entry: SimpleEntry }
 
-  function buildSegments(entries: typeof studentEntries, heatEventMap: Map<number, string>, partnerIsInstructor: boolean): SimpleSeg[] {
+  function buildSegments(entries: typeof studentEntries, heatEventMap: Map<number, string>, partnerIsInstructor: boolean, ownStudentId?: number): SimpleSeg[] {
     const eventGroups = new Map<string, SimpleEntry[]>()
     function toSimple(e: typeof studentEntries[number]): SimpleEntry {
+      const sid = ownStudentId ?? e.studentId
       return {
         id: e.id,
         heatNumber: e.heat.number,
@@ -55,6 +64,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         partnerName: partnerIsInstructor
           ? e.instructor?.name ?? (e.partnerStudent ? `${e.partnerStudent.firstName} ${e.partnerStudent.lastName}` : '—')
           : `${(e as typeof instructorEntries[number]).student.firstName} ${(e as typeof instructorEntries[number]).student.lastName}`,
+        floorLabel: floorLabel.get(`${sid}-${e.heatId}`) ?? null,
       }
     }
     for (const e of entries) {
@@ -94,7 +104,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       leaderNumber: student.leaderNumber,
       entryCount: entries.length,
       headerColor: '#1a1a1a',
-      segments: buildSegments(entries, studentHeatEventName.get(student.id) ?? new Map(), true),
+      segments: buildSegments(entries, studentHeatEventName.get(student.id) ?? new Map(), true, student.id),
     }))
 
   const instructorSheets = [...instructorMap.values()]
