@@ -125,10 +125,6 @@ export default function JudgeScoring({
     const next = current === placement ? null : placement
     setClosedScoresState(prev => {
       const updated = { ...prev }
-      // Remove this placement from any other student in this heat
-      for (const k of Object.keys(updated)) {
-        if (k.startsWith(`${heatId}-`) && updated[k] === placement) delete updated[k]
-      }
       if (next) updated[key] = next
       else delete updated[key]
       return updated

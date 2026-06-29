@@ -14,8 +14,6 @@ export async function setClosedScore(heatId: number, studentId: number, placemen
   if (placement === null) {
     await db.closedScore.deleteMany({ where: { judgeId, heatId, studentId } })
   } else {
-    // Enforce only one G, one S, one B per judge per heat
-    await db.closedScore.deleteMany({ where: { judgeId, heatId, placement } })
     await db.closedScore.upsert({
       where: { judgeId_heatId_studentId: { judgeId, heatId, studentId } },
       create: { judgeId, heatId, studentId, placement },
