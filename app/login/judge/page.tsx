@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import JudgeLoginForm from './JudgeLoginForm'
 
+export const dynamic = 'force-dynamic'
+
 export default async function JudgeLoginPage() {
   const judges = await db.judge.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } })
 

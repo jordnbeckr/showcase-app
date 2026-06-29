@@ -14,6 +14,11 @@ const entries = [
     sub: 'Sign up students and submit shows',
   },
   {
+    href: '/login/judge',
+    label: 'Judge Login',
+    sub: 'Score heats and competitive events',
+  },
+  {
     href: '/view',
     label: 'View Heat Sheet',
     sub: 'Read-only — all studios',
@@ -24,6 +29,7 @@ export default async function Home() {
   const session = await getSession()
   if (session?.role === 'admin') redirect('/admin')
   if (session?.role === 'studio') redirect(`/studio/${session.studioSlug}`)
+  if (session?.role === 'judge') redirect('/judge')
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--surface)' }}>
