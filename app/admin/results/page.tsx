@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminResultsPage() {
-  const [judges, heats, events, allEntries, closedScoresAll, studios] = await Promise.all([
+  const [judges, heats, allEntries, closedScoresAll, studios, events] = await Promise.all([
     db.judge.findMany({ orderBy: { name: 'asc' } }),
     db.heat.findMany({
       where: { category: { not: 'none' } },
