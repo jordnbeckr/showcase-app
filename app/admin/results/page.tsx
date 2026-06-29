@@ -472,6 +472,62 @@ export default async function AdminResultsPage() {
                     )}
                   </tbody>
                 </table>
+
+                {/* Final tabulation: sum scores, rank lowest-total first */}
+                {!isSemi && couples.length > 0 && (() => {
+                  const scoredCouples = couples.map(couple => {
+                    const scores = evt.compScores.filter(s => s.studentId === couple.studentId)
+                    const total = scores.reduce((sum, s) => sum + s.place, 0)
+                    const judgeCount = scores.length
+                    return { ...couple, total, judgeCount }
+                  }).filter(c => c.judgeCount > 0)
+                    .sort((a, b) => a.total !== b.total ? a.total - b.total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+
+                  if (scoredCouples.length === 0) return null
+
+                  // Assign ranks, handling ties
+                  type Ranked = typeof scoredCouples[number] & { rank: number }
+                  const ranked: Ranked[] = []
+                  for (let i = 0; i < scoredCouples.length; i++) {
+                    const rank = i === 0 ? 1 : scoredCouples[i].total === scoredCouples[i - 1].total ? ranked[i - 1].rank : i + 1
+                    ranked.push({ ...scoredCouples[i], rank })
+                  }
+
+                  const medalBg: Record<number, string> = { 1: '#fef9c3', 2: '#f1f5f9', 3: '#fff7ed' }
+
+                  return (
+                    <div style={{ borderTop: '2px solid #d8b4fe', backgroundColor: '#faf5ff' }}>
+                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b21a8', borderBottom: '1px solid #e9d5ff' }}>
+                        Final Standings
+                      </div>
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: 52, textAlign: 'center' }}>Place</th>
+                            <th>Couple</th>
+                            <th style={{ textAlign: 'center', width: 80 }}>Total pts</th>
+                            <th style={{ textAlign: 'center', width: 80 }}>Judges</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ranked.map(c => (
+                            <tr key={c.studentId} style={{ backgroundColor: medalBg[c.rank] }}>
+                              <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
+                                {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}
+                              </td>
+                              <td>
+                                <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{c.leaderNumber ?? '—'}</span>
+                                {c.personA}{c.personB ? ` & ${c.personB}` : ''}
+                              </td>
+                              <td style={{ textAlign: 'center', fontWeight: 700, color: '#6b21a8' }}>{c.total}</td>
+                              <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted)' }}>{c.judgeCount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}

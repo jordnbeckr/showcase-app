@@ -406,61 +406,79 @@ function EntryRow({
   }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
-      {/* Number */}
-      <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
-        {display.leaderNumber ?? '—'}
-      </span>
+    <div className="px-3 py-2" style={{ backgroundColor: 'var(--card)' }}>
+      {/* Number + name + GSB all on one row */}
+      <div className="flex items-center gap-2">
+        <span style={{ fontSize: '0.9rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 32, flexShrink: 0 }}>
+          {display.leaderNumber ?? '—'}
+        </span>
+        <span className="text-sm font-medium truncate flex-1" style={{ minWidth: 0 }}>
+          {display.personA}{display.personB ? ` & ${display.personB}` : ''}
+        </span>
 
-      {/* Closed: inline G/S/B */}
-      {isClosed && (
-        <div className="flex gap-1.5 flex-1">
-          {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
-            const active = placement === p
-            const c = closedColors[p]
-            return (
-              <button
-                key={p}
-                onClick={() => onClosedScore(heat.id, entry.studentId, p)}
-                className="font-bold flex-1"
-                style={{
-                  padding: '3px 0',
-                  borderRadius: 5,
-                  border: `2px solid ${c.border}`,
-                  backgroundColor: active ? c.activeBg : c.bg,
-                  color: c.text,
-                  fontSize: '0.8rem',
-                  boxShadow: active ? `0 0 0 2px ${c.border}` : undefined,
-                  opacity: active ? 1 : 0.65,
-                }}
-              >
-                {p[0]}
-              </button>
-            )
-          })}
-        </div>
-      )}
+        {/* Closed: narrow G/S/B buttons */}
+        {isClosed && (
+          <div className="flex gap-1 flex-shrink-0">
+            {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
+              const active = placement === p
+              const c = closedColors[p]
+              return (
+                <button
+                  key={p}
+                  onClick={() => onClosedScore(heat.id, entry.studentId, p)}
+                  className="font-bold"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 5,
+                    border: `2px solid ${c.border}`,
+                    backgroundColor: active ? c.activeBg : c.bg,
+                    color: c.text,
+                    fontSize: '0.75rem',
+                    boxShadow: active ? `0 0 0 2px ${c.border}` : undefined,
+                    opacity: active ? 1 : 0.6,
+                  }}
+                >
+                  {p[0]}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* Open: compact thumbs row + note on expand */}
+      {/* Open: thumbs + note below */}
       {isOpen && (
-        <div className="flex-1 space-y-1.5">
-          <div className="flex gap-1.5 flex-wrap">
+        <div className="mt-2 space-y-1.5">
+          <div className="flex gap-2 flex-wrap">
             {categories.map(cat => {
               const thumbKey = `${heat.id}-${entry.studentId}-${cat.id}`
               const sentiment = openThumbs[thumbKey]
               return (
-                <div key={cat.id} className="flex items-center gap-0.5">
+                <div key={cat.id} className="flex flex-col items-center gap-0.5" style={{ minWidth: 44 }}>
                   <button
                     onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'up')}
-                    className="w-6 h-6 flex items-center justify-center text-xs"
-                    style={{ borderRadius: 4, border: '1px solid', borderColor: sentiment === 'up' ? '#16a34a' : 'var(--border)', backgroundColor: sentiment === 'up' ? '#dcfce7' : 'transparent' }}
-                  >▲</button>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)', maxWidth: 36, lineHeight: 1.1, textAlign: 'center' }}>{cat.name}</span>
+                    className="w-8 h-7 flex items-center justify-center text-sm font-bold"
+                    style={{
+                      borderRadius: '4px 4px 0 0',
+                      border: '1.5px solid',
+                      borderColor: sentiment === 'up' ? '#15803d' : '#d1d5db',
+                      backgroundColor: sentiment === 'up' ? '#16a34a' : '#f0fdf4',
+                      color: sentiment === 'up' ? 'white' : '#15803d',
+                    }}
+                  >+</button>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.15, padding: '1px 0' }}>{cat.name}</span>
                   <button
                     onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'down')}
-                    className="w-6 h-6 flex items-center justify-center text-xs"
-                    style={{ borderRadius: 4, border: '1px solid', borderColor: sentiment === 'down' ? '#dc2626' : 'var(--border)', backgroundColor: sentiment === 'down' ? '#fee2e2' : 'transparent' }}
-                  >▼</button>
+                    className="w-8 h-7 flex items-center justify-center text-sm font-bold"
+                    style={{
+                      borderRadius: '0 0 4px 4px',
+                      border: '1.5px solid',
+                      borderColor: sentiment === 'down' ? '#dc2626' : '#d1d5db',
+                      backgroundColor: sentiment === 'down' ? '#dc2626' : '#fff1f2',
+                      color: sentiment === 'down' ? 'white' : '#dc2626',
+                    }}
+                  >−</button>
                 </div>
               )
             })}
