@@ -45,6 +45,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </nav>
         {/* Right side */}
         <div className="ml-auto flex items-center gap-3 px-5">
+          <Link href="/login/judge" className="text-xs text-white/50 hover:text-white/80 transition-colors">
+            Judge login
+          </Link>
           <Link href="/" className="text-xs text-white/50 hover:text-white/80 transition-colors">
             ← Home
           </Link>
