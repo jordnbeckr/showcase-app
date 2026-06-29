@@ -40,7 +40,7 @@ export default async function LeadersPage() {
       <div>
         <h1 className="text-xl font-bold">Leader Numbers</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
-          Mark instructor roles, then auto-assign numbers: instructors start at 100, students at 200 (both alphabetical by last name).
+          Mark instructor roles, then auto-assign numbers: instructors start at 100, Leader students start at 200 — both sorted alphabetically by last name across <em>all</em> studios.
         </p>
       </div>
       <LeadersManager instructors={instructors} studentLeaders={studentLeaders} />

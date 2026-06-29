@@ -296,8 +296,8 @@ function HeatBlock({
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${borderColor}` }}>
       {/* Header */}
-      <div className="px-4 py-2 flex items-center gap-3" style={{ backgroundColor: headerBg }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.9rem', color: '#555', minWidth: 32 }}>#{heat.number}</span>
+      <div className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: headerBg }}>
+        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem', color: '#555', minWidth: 28 }}>#{heat.number}</span>
         <span className="font-semibold text-sm">{heat.dance}</span>
         {isClosed && <span className="text-xs px-1.5 py-0.5 ml-auto" style={{ backgroundColor: '#fde68a', borderRadius: 3, color: '#92400e', fontWeight: 600 }}>Closed — G/S/B</span>}
         {isOpen && <span className="text-xs px-1.5 py-0.5 ml-auto" style={{ backgroundColor: '#93c5fd', borderRadius: 3, color: '#1d4ed8', fontWeight: 600 }}>Open — Feedback</span>}
@@ -306,7 +306,7 @@ function HeatBlock({
 
       {/* Entries */}
       {!isNone && heat.entries.length > 0 && (
-        <div className="divide-y" style={{ borderTop: `1px solid ${borderColor}` }}>
+        <div className="divide-y divide-gray-100" style={{ borderTop: `1px solid ${borderColor}` }}>
           {heat.entries.map(entry => (
             <EntryRow
               key={entry.studentId}
@@ -399,85 +399,68 @@ function EntryRow({
   const placement = closedScores[`${heat.id}-${entry.studentId}`]
   const note = openNotes[`${heat.id}-${entry.studentId}`] ?? ''
 
-  return (
-    <div className="px-4 py-3 space-y-3" style={{ backgroundColor: 'var(--card)' }}>
-      {/* Name row */}
-      <div className="flex items-baseline gap-3">
-        <span style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 44 }}>
-          {display.leaderNumber ?? '—'}
-        </span>
-        <span className="font-medium" style={{ fontSize: '0.9rem' }}>
-          {display.personA}{display.personB ? ` & ${display.personB}` : ''}
-        </span>
-      </div>
+  const closedColors: Record<string, { bg: string; border: string; text: string; activeBg: string }> = {
+    Gold:   { bg: '#fefce8', border: '#fde047', text: '#713f12', activeBg: '#fde047' },
+    Silver: { bg: '#f8fafc', border: '#94a3b8', text: '#1e293b', activeBg: '#cbd5e1' },
+    Bronze: { bg: '#fff7ed', border: '#fb923c', text: '#7c2d12', activeBg: '#fdba74' },
+  }
 
-      {/* Closed: G/S/B buttons */}
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+      {/* Number */}
+      <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
+        {display.leaderNumber ?? '—'}
+      </span>
+
+      {/* Closed: inline G/S/B */}
       {isClosed && (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 flex-1">
           {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
             const active = placement === p
-            const colors: Record<string, { bg: string; border: string; text: string; activeBg: string }> = {
-              Gold:   { bg: '#fefce8', border: '#fde047', text: '#713f12', activeBg: '#fde047' },
-              Silver: { bg: '#f8fafc', border: '#94a3b8', text: '#1e293b', activeBg: '#cbd5e1' },
-              Bronze: { bg: '#fff7ed', border: '#fb923c', text: '#7c2d12', activeBg: '#fdba74' },
-            }
-            const c = colors[p]
+            const c = closedColors[p]
             return (
               <button
                 key={p}
                 onClick={() => onClosedScore(heat.id, entry.studentId, p)}
-                className="px-4 py-1.5 text-sm font-bold"
+                className="font-bold flex-1"
                 style={{
-                  borderRadius: 6,
+                  padding: '3px 0',
+                  borderRadius: 5,
                   border: `2px solid ${c.border}`,
                   backgroundColor: active ? c.activeBg : c.bg,
                   color: c.text,
+                  fontSize: '0.8rem',
                   boxShadow: active ? `0 0 0 2px ${c.border}` : undefined,
-                  opacity: active ? 1 : 0.7,
+                  opacity: active ? 1 : 0.65,
                 }}
               >
-                {p === 'Gold' ? 'G' : p === 'Silver' ? 'S' : 'B'}
+                {p[0]}
               </button>
             )
           })}
-          {placement && (
-            <span className="ml-2 self-center text-xs font-semibold" style={{ color: '#555' }}>{placement}</span>
-          )}
         </div>
       )}
 
-      {/* Open: thumbs grid + note */}
+      {/* Open: compact thumbs row + note on expand */}
       {isOpen && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex-1 space-y-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {categories.map(cat => {
               const thumbKey = `${heat.id}-${entry.studentId}-${cat.id}`
               const sentiment = openThumbs[thumbKey]
               return (
-                <div key={cat.id} className="flex flex-col items-center gap-0.5">
-                  <span className="text-xs" style={{ color: 'var(--muted)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{cat.name}</span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'up')}
-                      className="w-8 h-8 flex items-center justify-center text-base"
-                      style={{
-                        borderRadius: 6,
-                        border: '1px solid',
-                        borderColor: sentiment === 'up' ? '#16a34a' : 'var(--border)',
-                        backgroundColor: sentiment === 'up' ? '#dcfce7' : 'transparent',
-                      }}
-                    >▲</button>
-                    <button
-                      onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'down')}
-                      className="w-8 h-8 flex items-center justify-center text-base"
-                      style={{
-                        borderRadius: 6,
-                        border: '1px solid',
-                        borderColor: sentiment === 'down' ? '#dc2626' : 'var(--border)',
-                        backgroundColor: sentiment === 'down' ? '#fee2e2' : 'transparent',
-                      }}
-                    >▼</button>
-                  </div>
+                <div key={cat.id} className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'up')}
+                    className="w-6 h-6 flex items-center justify-center text-xs"
+                    style={{ borderRadius: 4, border: '1px solid', borderColor: sentiment === 'up' ? '#16a34a' : 'var(--border)', backgroundColor: sentiment === 'up' ? '#dcfce7' : 'transparent' }}
+                  >▲</button>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)', maxWidth: 36, lineHeight: 1.1, textAlign: 'center' }}>{cat.name}</span>
+                  <button
+                    onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'down')}
+                    className="w-6 h-6 flex items-center justify-center text-xs"
+                    style={{ borderRadius: 4, border: '1px solid', borderColor: sentiment === 'down' ? '#dc2626' : 'var(--border)', backgroundColor: sentiment === 'down' ? '#fee2e2' : 'transparent' }}
+                  >▼</button>
                 </div>
               )
             })}
@@ -486,9 +469,9 @@ function EntryRow({
             value={note}
             onChange={e => onNoteChange(heat.id, entry.studentId, e.target.value)}
             onBlur={e => onNoteSave(heat.id, entry.studentId, e.target.value)}
-            placeholder="Additional notes…"
-            rows={2}
-            className="w-full text-sm rounded px-3 py-2"
+            placeholder="Notes…"
+            rows={1}
+            className="w-full text-xs rounded px-2 py-1"
             style={{ border: '1px solid var(--border)', resize: 'vertical', backgroundColor: 'var(--surface)' }}
           />
         </div>
@@ -531,10 +514,11 @@ function CompBlock({
           const myMark = semiMarks[scoreKey] ?? false
 
           return (
-            <div key={couple.studentId} className="px-4 py-3" style={{ backgroundColor: 'var(--card)' }}>
-              <div className="flex items-center gap-3">
-                <CoupleDisplay couple={couple} />
-                <div className="ml-auto flex gap-1.5 flex-wrap justify-end">
+            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+              <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
+                {couple.leaderNumber ?? '—'}
+              </span>
+              <div className="flex gap-1.5 flex-wrap flex-1 justify-start">
                   {isSemi ? (
                     <button
                       onClick={() => onSemiMark(event.id, couple.studentId)}
@@ -572,7 +556,6 @@ function CompBlock({
                     })
                   )}
                 </div>
-              </div>
             </div>
           )
         })}

@@ -97,7 +97,7 @@ export default function LeadersManager({
 
   function handleAutoAssign() {
     const instructorLeaders = instructors.filter(i => i.role === 'Leader')
-    if (!confirm(`Auto-assign numbers?\n\nInstructor leaders (${instructorLeaders.length}): starting at 100\nStudent leaders (${studentLeaders.length}): starting at 200\n\nThis will overwrite existing numbers.`)) return
+    if (!confirm(`Auto-assign numbers?\n\nInstructor leaders (${instructorLeaders.length}): 100, 101, … sorted A–Z by last name across all studios\nStudent leaders (${studentLeaders.length}): 200, 201, … sorted A–Z by last name across all studios\n\nThis will overwrite existing numbers.`)) return
     startTransition(async () => {
       await autoAssignLeaderNumbers()
       setAutoMsg('Numbers assigned!')
