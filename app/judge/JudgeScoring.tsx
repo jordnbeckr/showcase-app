@@ -520,9 +520,9 @@ function EntryRow({
                         borderColor: sentiment === 'up' ? '#15803d' : '#d1d5db',
                         backgroundColor: sentiment === 'up' ? '#16a34a' : '#f0fdf4',
                         color: sentiment === 'up' ? 'white' : '#15803d',
-                        fontSize: '0.9rem',
+                        fontSize: '0.8rem',
                       }}
-                    >✓</button>
+                    >▲</button>
                     <button
                       onClick={() => onThumb(heat.id, entry.studentId, cat.id, cat.name, 'down')}
                       className="flex items-center justify-center font-bold"
@@ -534,9 +534,9 @@ function EntryRow({
                         borderColor: sentiment === 'down' ? '#dc2626' : '#d1d5db',
                         backgroundColor: sentiment === 'down' ? '#dc2626' : '#fff1f2',
                         color: sentiment === 'down' ? 'white' : '#dc2626',
-                        fontSize: '0.85rem',
+                        fontSize: '0.8rem',
                       }}
-                    >✗</button>
+                    >▼</button>
                   </div>
                 </div>
               )
