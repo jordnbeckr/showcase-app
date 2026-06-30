@@ -39,6 +39,7 @@ export default async function StudioLayout({
             { href: `/studio/${slug}/shows`, label: 'Shows' },
             { href: `/studio/${slug}/breakdown`, label: 'Breakdown' },
             { href: `/studio/${slug}/heatsheet`, label: 'Heat Sheet' },
+            { href: `/studio/${slug}/feedback`, label: 'Feedback' },
           ].map(({ href, label }) => (
             <Link
               key={href}
