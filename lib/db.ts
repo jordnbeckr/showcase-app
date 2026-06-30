@@ -11,9 +11,11 @@ function createPrismaClient() {
   const tursoUrl = process.env.TURSO_DATABASE_URL
   const tursoToken = process.env.TURSO_AUTH_TOKEN
 
+  // Use https:// transport for Turso in serverless (avoids WebSocket cold-start latency)
+  const resolvedUrl = tursoUrl ? tursoUrl.replace(/^libsql:\/\//, 'https://') : null
   const adapter = new Adapter(
-    tursoUrl
-      ? { url: tursoUrl, authToken: tursoToken }
+    resolvedUrl
+      ? { url: resolvedUrl, authToken: tursoToken }
       : { url: 'file:' + path.resolve(process.cwd(), 'prisma/showcase.db') }
   )
   return new PrismaClient({ adapter })
