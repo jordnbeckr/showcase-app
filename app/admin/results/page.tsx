@@ -433,10 +433,14 @@ export default async function AdminResultsPage() {
                     <tr>
                       <th>Couple</th>
                       {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
+                      {!isSemi && <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8' }}>Total</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {couples.map(couple => (
+                    {couples.map(couple => {
+                      const coupleScores = evt.compScores.filter(s => s.studentId === couple.studentId)
+                      const total = coupleScores.reduce((sum, s) => sum + s.place, 0)
+                      return (
                       <tr key={couple.studentId}>
                         <td>
                           <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{couple.leaderNumber ?? '—'}</span>
@@ -465,10 +469,16 @@ export default async function AdminResultsPage() {
                             )
                           }
                         })}
+                        {!isSemi && (
+                          <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem', color: coupleScores.length > 0 ? '#6b21a8' : 'var(--muted)' }}>
+                            {coupleScores.length > 0 ? total : '—'}
+                          </td>
+                        )}
                       </tr>
-                    ))}
+                      )
+                    })}
                     {couples.length === 0 && (
-                      <tr><td colSpan={1 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
+                      <tr><td colSpan={1 + judges.length + (isSemi ? 0 : 1)} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
                     )}
                   </tbody>
                 </table>

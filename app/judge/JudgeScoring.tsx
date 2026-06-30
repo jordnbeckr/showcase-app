@@ -47,6 +47,51 @@ type CompetitiveEvent = {
 
 type Category = { id: number; name: string }
 
+// Auto-generated comments for open feedback
+const AUTO_COMMENTS: Record<string, { up: string[]; down: string[] }> = {
+  default: {
+    up: ['Looking great!', 'Really nice work here.', 'Excellent execution.', 'Beautiful!', 'Well done!'],
+    down: ['This area needs some work.', 'Keep practicing this.', 'Focus on improving this.', 'Room for growth here.'],
+  },
+  Posture: {
+    up: ['Great posture!', 'Posture is looking solid.', 'Beautiful upright carriage.', 'Your posture is excellent.', 'Strong frame and posture.'],
+    down: ['Work on keeping a taller posture.', 'Focus on lengthening through the spine.', 'Your posture needs attention.', 'Try to stand taller through the dance.'],
+  },
+  Footwork: {
+    up: ['Footwork is sharp!', 'Very clean footwork.', 'Excellent footwork technique.', 'Your footwork stands out.', 'Precise and beautiful footwork.'],
+    down: ['Footwork needs more precision.', 'Focus on your footwork timing.', 'Work on clean foot placement.', 'Practice your footwork technique.'],
+  },
+  Timing: {
+    up: ['Great timing!', 'Right on the music.', 'Excellent musical timing.', 'Your timing is spot on.', 'Beautiful connection to the music.'],
+    down: ['Watch your timing.', 'Try to stay closer to the beat.', 'Timing needs work.', 'Focus on listening to the music more.'],
+  },
+  Connection: {
+    up: ['Beautiful connection!', 'Lovely partnership.', 'Great connection between partners.', 'The connection feels natural.', 'Wonderful teamwork.'],
+    down: ['Work on your partner connection.', 'Focus on listening to your partner.', 'The connection needs more sensitivity.', 'Try to feel your partner more.'],
+  },
+  Expression: {
+    up: ['Wonderful expression!', 'Very expressive performance.', 'Great stage presence.', 'Love the expressiveness.', 'Beautiful artistic quality.'],
+    down: ['Work on your expression.', 'Try to connect more with the music emotionally.', 'Let the music move you more.', 'More expression needed.'],
+  },
+  'Frame': {
+    up: ['Excellent frame!', 'Beautiful frame shape.', 'Your frame is strong and consistent.', 'Great frame control.', 'Frame looks polished.'],
+    down: ['Frame needs attention.', 'Work on maintaining your frame.', 'Keep a more consistent frame.', 'Focus on frame stability.'],
+  },
+  'Leads & Follows': {
+    up: ['Very clear lead and follow.', 'Communication between partners is excellent.', 'The lead/follow is smooth and clear.', 'Great leading and following.'],
+    down: ['Work on the lead/follow communication.', 'Leads need to be clearer.', 'Following needs more sensitivity.', 'Focus on cleaner leads and follows.'],
+  },
+  'Musicality': {
+    up: ['Wonderful musicality!', 'Great interpretation of the music.', 'You really feel the music.', 'Beautiful musical phrasing.', 'Excellent musicality.'],
+    down: ['Work on your musicality.', 'Listen more carefully to the music.', 'Try to interpret the music more.', 'More musicality needed.'],
+  },
+}
+
+function getAutoComment(categoryName: string, sentiment: 'up' | 'down'): string {
+  const list = (AUTO_COMMENTS[categoryName] ?? AUTO_COMMENTS.default)[sentiment]
+  return list[Math.floor(Math.random() * list.length)]
+}
+
 type Props = {
   judgeId: number
   heats: Heat[]
@@ -132,16 +177,27 @@ export default function JudgeScoring({
     startTransition(() => setClosedScore(heatId, studentId, next))
   }
 
-  function handleThumb(heatId: number, studentId: number, categoryId: number, sentiment: string) {
+  function handleThumb(heatId: number, studentId: number, categoryId: number, categoryName: string, sentiment: 'up' | 'down') {
     const key = `${heatId}-${studentId}-${categoryId}`
+    const noteKey = `${heatId}-${studentId}`
     const current = openThumbs[key]
-    const next = current === sentiment ? null : sentiment
+    const next = current === sentiment ? null : (sentiment as string)
     setOpenThumbsState(prev => {
       const updated = { ...prev }
       if (next) updated[key] = next
       else delete updated[key]
       return updated
     })
+    // Auto-generate and append a comment when activating a thumb
+    if (next) {
+      const comment = getAutoComment(categoryName, sentiment)
+      setOpenNotesState(prev => {
+        const existing = prev[noteKey] ?? ''
+        const newNote = existing ? `${existing} ${comment}` : comment
+        startTransition(() => setOpenNote(heatId, studentId, newNote))
+        return { ...prev, [noteKey]: newNote }
+      })
+    }
     startTransition(() => setOpenThumb(heatId, studentId, categoryId, next))
   }
 
@@ -278,7 +334,7 @@ function HeatBlock({
   openThumbs: Record<string, string>
   openNotes: Record<string, string>
   onClosedScore: (heatId: number, studentId: number, placement: string) => void
-  onThumb: (heatId: number, studentId: number, categoryId: number, sentiment: string) => void
+  onThumb: (heatId: number, studentId: number, categoryId: number, categoryName: string, sentiment: 'up' | 'down') => void
   onNoteChange: (heatId: number, studentId: number, note: string) => void
   onNoteSave: (heatId: number, studentId: number, note: string) => void
 }) {
@@ -387,7 +443,7 @@ function EntryRow({
   openThumbs: Record<string, string>
   openNotes: Record<string, string>
   onClosedScore: (heatId: number, studentId: number, placement: string) => void
-  onThumb: (heatId: number, studentId: number, categoryId: number, sentiment: string) => void
+  onThumb: (heatId: number, studentId: number, categoryId: number, categoryName: string, sentiment: 'up' | 'down') => void
   onNoteChange: (heatId: number, studentId: number, note: string) => void
   onNoteSave: (heatId: number, studentId: number, note: string) => void
 }) {
@@ -443,38 +499,45 @@ function EntryRow({
         )}
       </div>
 
-      {/* Open: thumbs + note below */}
+      {/* Open: category chips + note below */}
       {isOpen && (
-        <div className="mt-2 space-y-1.5">
+        <div className="mt-2 space-y-2">
           <div className="flex gap-2 flex-wrap">
             {categories.map(cat => {
               const thumbKey = `${heat.id}-${entry.studentId}-${cat.id}`
               const sentiment = openThumbs[thumbKey]
               return (
-                <div key={cat.id} className="flex flex-col items-center gap-0.5" style={{ minWidth: 44 }}>
-                  <button
-                    onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'up')}
-                    className="w-8 h-7 flex items-center justify-center text-sm font-bold"
-                    style={{
-                      borderRadius: '4px 4px 0 0',
-                      border: '1.5px solid',
-                      borderColor: sentiment === 'up' ? '#15803d' : '#d1d5db',
-                      backgroundColor: sentiment === 'up' ? '#16a34a' : '#f0fdf4',
-                      color: sentiment === 'up' ? 'white' : '#15803d',
-                    }}
-                  >+</button>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.15, padding: '1px 0' }}>{cat.name}</span>
-                  <button
-                    onClick={() => onThumb(heat.id, entry.studentId, cat.id, 'down')}
-                    className="w-8 h-7 flex items-center justify-center text-sm font-bold"
-                    style={{
-                      borderRadius: '0 0 4px 4px',
-                      border: '1.5px solid',
-                      borderColor: sentiment === 'down' ? '#dc2626' : '#d1d5db',
-                      backgroundColor: sentiment === 'down' ? '#dc2626' : '#fff1f2',
-                      color: sentiment === 'down' ? 'white' : '#dc2626',
-                    }}
-                  >−</button>
+                <div key={cat.id} className="flex flex-col items-center gap-1" style={{ minWidth: 48 }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#555', textAlign: 'center', lineHeight: 1.2, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{cat.name}</span>
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => onThumb(heat.id, entry.studentId, cat.id, cat.name, 'up')}
+                      className="flex items-center justify-center font-bold"
+                      style={{
+                        width: 26, height: 26,
+                        borderRadius: '4px 0 0 4px',
+                        border: '1.5px solid',
+                        borderColor: sentiment === 'up' ? '#15803d' : '#d1d5db',
+                        backgroundColor: sentiment === 'up' ? '#16a34a' : '#f0fdf4',
+                        color: sentiment === 'up' ? 'white' : '#15803d',
+                        fontSize: '0.9rem',
+                      }}
+                    >✓</button>
+                    <button
+                      onClick={() => onThumb(heat.id, entry.studentId, cat.id, cat.name, 'down')}
+                      className="flex items-center justify-center font-bold"
+                      style={{
+                        width: 26, height: 26,
+                        borderRadius: '0 4px 4px 0',
+                        border: '1.5px solid',
+                        borderLeft: 'none',
+                        borderColor: sentiment === 'down' ? '#dc2626' : '#d1d5db',
+                        backgroundColor: sentiment === 'down' ? '#dc2626' : '#fff1f2',
+                        color: sentiment === 'down' ? 'white' : '#dc2626',
+                        fontSize: '0.85rem',
+                      }}
+                    >✗</button>
+                  </div>
                 </div>
               )
             })}
@@ -484,7 +547,7 @@ function EntryRow({
             onChange={e => onNoteChange(heat.id, entry.studentId, e.target.value)}
             onBlur={e => onNoteSave(heat.id, entry.studentId, e.target.value)}
             placeholder="Notes…"
-            rows={1}
+            rows={2}
             className="w-full text-xs rounded px-2 py-1"
             style={{ border: '1px solid var(--border)', resize: 'vertical', backgroundColor: 'var(--surface)' }}
           />
