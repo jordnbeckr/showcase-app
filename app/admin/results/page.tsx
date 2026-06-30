@@ -198,16 +198,14 @@ export default async function AdminResultsPage() {
     .filter(s => s.totalEntries >= 200)
     .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
 
-  // BEST OF THE BEST — students who earned Gold or Silver in any closed heat, grouped by dance
-  // Need dance type per heat; closedScoresAll already has heat included
-  type BoBStudent = { studentId: number; name: string; studioName: string; placement: string }
+  // BEST OF THE BEST — Gold recipients only, grouped by dance
+  type BoBStudent = { studentId: number; name: string; studioName: string }
   const bobByDance = new Map<string, { dance: string; students: Map<number, BoBStudent> }>()
 
   for (const score of closedScoresAll) {
-    if (score.placement !== 'Gold' && score.placement !== 'Silver') continue
+    if (score.placement !== 'Gold') continue
     const cat = heatCategory.get(score.heatId) ?? 'none'
     if (cat !== 'closed') continue
-    // Get dance name from the scored heats (heats array only has category≠none heats, which includes closed)
     const heat = heats.find(h => h.id === score.heatId)
     if (!heat) continue
     const dance = heat.danceType.name
@@ -218,12 +216,7 @@ export default async function AdminResultsPage() {
         studentId: score.studentId,
         name: `${score.student.firstName} ${score.student.lastName}`,
         studioName: score.student.studio.name,
-        placement: score.placement,
       })
-    } else {
-      // If they have both Gold and Silver, show Gold
-      const existing = group.students.get(score.studentId)!
-      if (score.placement === 'Gold' && existing.placement !== 'Gold') existing.placement = 'Gold'
     }
   }
 
@@ -553,7 +546,7 @@ export default async function AdminResultsPage() {
         <section className="space-y-4 pt-4" style={{ borderTop: '2px solid var(--border)' }}>
           <div>
             <h2 className="text-lg font-bold">Best of the Best</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Students who earned Gold or Silver in any closed heat, grouped by dance.</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Students who earned Gold in any closed heat, grouped by dance.</p>
           </div>
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
             {bobDances.map(({ dance, students }) => (
@@ -567,12 +560,8 @@ export default async function AdminResultsPage() {
                           <span className="font-medium">{s.name}</span>
                           <span className="text-xs ml-1.5" style={{ color: 'var(--muted)' }}>{s.studioName}</span>
                         </td>
-                        <td style={{ textAlign: 'right', width: 56 }}>
-                          <span style={{
-                            display: 'inline-block', padding: '1px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 700,
-                            backgroundColor: s.placement === 'Gold' ? '#fde047' : '#cbd5e1',
-                            color: '#1e1e1e',
-                          }}>{s.placement[0]}</span>
+                        <td style={{ textAlign: 'right', width: 40 }}>
+                          <span style={{ fontSize: '0.9rem' }}>🥇</span>
                         </td>
                       </tr>
                     ))}
