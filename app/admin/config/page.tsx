@@ -30,7 +30,7 @@ export default async function ConfigPage() {
       include: { danceType: true, entries: true, events: true },
       orderBy: { number: 'asc' },
     }),
-    db.judge.findMany({ orderBy: { name: 'asc' }, include: { judgeFloors: true } }),
+    db.judge.findMany({ orderBy: { name: 'asc' }, include: { floorRanges: { include: { floor: true }, orderBy: { heatFrom: 'asc' } } } }),
     db.feedbackCategory.findMany({ orderBy: { order: 'asc' } }),
   ])
 
@@ -92,7 +92,7 @@ export default async function ConfigPage() {
 
       <CollapsibleSection title="Judges">
         <JudgesConfig
-          judges={judges.map(j => ({ id: j.id, name: j.name, floorIds: j.judgeFloors.map(jf => jf.floorId) }))}
+          judges={judges.map(j => ({ id: j.id, name: j.name, floorRanges: j.floorRanges.map(r => ({ id: r.id, floorId: r.floorId, floorLabel: r.floor.label, heatFrom: r.heatFrom, heatTo: r.heatTo })) }))}
           floors={await db.floor.findMany({ orderBy: { order: 'asc' }, select: { id: true, label: true } })}
         />
       </CollapsibleSection>

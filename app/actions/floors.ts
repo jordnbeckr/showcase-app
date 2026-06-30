@@ -194,7 +194,7 @@ export async function autoAssignFloors(
   return { switches }
 }
 
-// --- Judge floor assignments ---
+// --- Judge floor assignments (legacy global) ---
 
 export async function setJudgeFloors(judgeId: number, floorIds: number[]) {
   await requireAdmin()
@@ -202,6 +202,24 @@ export async function setJudgeFloors(judgeId: number, floorIds: number[]) {
   if (floorIds.length > 0) {
     await db.judgeFloor.createMany({ data: floorIds.map(floorId => ({ judgeId, floorId })) })
   }
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+// --- Judge floor range assignments (heat-range-scoped) ---
+
+export async function addJudgeFloorRange(judgeId: number, floorId: number, heatFrom: number, heatTo: number | null) {
+  await requireAdmin()
+  await db.judgeFloorRange.create({
+    data: { judgeId, floorId, heatFrom, heatTo: heatTo ?? 9999 },
+  })
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+}
+
+export async function deleteJudgeFloorRange(rangeId: number) {
+  await requireAdmin()
+  await db.judgeFloorRange.delete({ where: { id: rangeId } })
   revalidatePath('/admin/config')
   revalidatePath('/judge')
 }

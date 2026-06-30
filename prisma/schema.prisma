@@ -176,8 +176,8 @@ model StudentShow {
 }
 
 model Judge {
-  id           Int           @id @default(autoincrement())
-  name         String        @unique
+  id           Int                @id @default(autoincrement())
+  name         String             @unique
   pinHash      String
   closedScores ClosedScore[]
   openThumbs   OpenThumb[]
@@ -185,6 +185,7 @@ model Judge {
   compScores   CompScore[]
   semiMarks    SemiMark[]
   judgeFloors  JudgeFloor[]
+  floorRanges  JudgeFloorRange[]
 }
 
 model Floor {
@@ -193,6 +194,17 @@ model Floor {
   order       Int                   @default(0)
   assignments HeatFloorAssignment[]
   judgeFloors JudgeFloor[]
+  judgeRanges JudgeFloorRange[]
+}
+
+model JudgeFloorRange {
+  id       Int   @id @default(autoincrement())
+  judgeId  Int
+  judge    Judge @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  floorId  Int
+  floor    Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  heatFrom Int
+  heatTo   Int   @default(9999)
 }
 
 model HeatFloorAssignment {

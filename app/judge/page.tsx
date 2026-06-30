@@ -9,21 +9,27 @@ export default async function JudgePage() {
   if (session?.role !== 'judge') return null
   const judgeId = session.judgeId
 
-  // Load judge's floor assignments
-  const judgeFloors = await db.judgeFloor.findMany({
+  // Load judge's heat-range floor assignments
+  const judgeFloorRanges = await db.judgeFloorRange.findMany({
     where: { judgeId },
-    include: { floor: true },
+    orderBy: { heatFrom: 'asc' },
   })
-  const judgeFloorIds = new Set(judgeFloors.map(jf => jf.floorId))
-  const hasFloorFilter = judgeFloors.length > 0
+  const hasFloorFilter = judgeFloorRanges.length > 0
 
   // Load all floor assignments for heat entries
-  const allFloorAssignments = await db.heatFloorAssignment.findMany({
-    include: { floor: true },
-  })
+  const allFloorAssignments = await db.heatFloorAssignment.findMany({})
   // studentId × heatId → floorId
   const entryFloorId = new Map<string, number>()
   for (const a of allFloorAssignments) entryFloorId.set(`${a.studentId}-${a.heatId}`, a.floorId)
+
+  // Returns the set of floorIds this judge covers for a given heat number
+  function judgeFloorIdsForHeat(heatNumber: number): Set<number> {
+    const ids = new Set<number>()
+    for (const r of judgeFloorRanges) {
+      if (heatNumber >= r.heatFrom && heatNumber <= r.heatTo) ids.add(r.floorId)
+    }
+    return ids
+  }
 
   const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks] = await Promise.all([
     db.heat.findMany({
@@ -84,10 +90,12 @@ export default async function JudgePage() {
         category: h.category as 'none' | 'closed' | 'open',
         eventIds: h.events.map(e => e.eventId),
         entries: h.entries.filter(e => {
-        if (!hasFloorFilter) return true
-        const fid = entryFloorId.get(`${e.studentId}-${h.id}`)
-        return fid !== undefined && judgeFloorIds.has(fid)
-      }).map(e => ({
+          if (!hasFloorFilter) return true
+          const floorIdsForThisHeat = judgeFloorIdsForHeat(h.number)
+          if (floorIdsForThisHeat.size === 0) return true // no range covers this heat — show all
+          const fid = entryFloorId.get(`${e.studentId}-${h.id}`)
+          return fid !== undefined && floorIdsForThisHeat.has(fid)
+        }).map(e => ({
           studentId: e.studentId,
           studentFirstName: e.student.firstName,
           studentLastName: e.student.lastName,
