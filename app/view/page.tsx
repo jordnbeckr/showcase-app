@@ -135,7 +135,7 @@ export default async function PublicView() {
     <div className="min-h-screen flex flex-col">
       <header
         className="sticky top-0 z-50 flex items-center gap-4 px-6 shadow-md"
-        style={{ backgroundColor: '#2c2c2c', minHeight: 52 }}
+        style={{ backgroundColor: 'var(--header)', minHeight: 52 }}
       >
         <h1 className="font-bold text-sm text-white">Showcase 2026 — Heat Sheet</h1>
         <span className="text-xs text-white/40 uppercase tracking-wide">Read-only</span>

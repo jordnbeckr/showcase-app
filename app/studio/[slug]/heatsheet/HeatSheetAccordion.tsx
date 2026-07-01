@@ -54,7 +54,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
           }
           return [
             <tr key={`evt-${seg.eventName}-${i}`}>
-              <td colSpan={4} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '4px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
+              <td colSpan={4} style={{ backgroundColor: 'var(--header)', color: 'white', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '4px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
                 ◆ {seg.eventName}
                 <span style={{ fontWeight: 400, opacity: 0.55, marginLeft: 8, fontSize: '0.65rem', textTransform: 'none' }}>
                   {seg.entries.length} dances
@@ -86,7 +86,7 @@ function AccordionSection({ sheet, onPrint }: { sheet: Sheet; onPrint: (sheetId:
   return (
     <div id={sheet.sheetId} className="sheet-section">
       <div
-        className="px-5 py-3"
+        className="sheet-accordion-header px-5 py-3"
         style={{ backgroundColor: sheet.headerColor, color: 'white', borderRadius: expanded ? '4px 4px 0 0' : 4, cursor: 'pointer' }}
         onClick={() => setExpanded(e => !e)}
       >
@@ -114,6 +114,13 @@ function AccordionSection({ sheet, onPrint }: { sheet: Sheet; onPrint: (sheetId:
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Print-only name header — hidden on screen */}
+      <div className="sheet-print-header" style={{ marginBottom: 8 }}>
+        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{sheet.name}</div>
+        <div style={{ fontSize: '0.85rem', color: '#555' }}>{sheet.subtitle}</div>
+        {sheet.leaderNumber && <div style={{ fontWeight: 700 }}>Leader #{sheet.leaderNumber}</div>}
       </div>
 
       {/* Always in DOM for print targeting; hidden via style when collapsed */}

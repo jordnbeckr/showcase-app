@@ -130,7 +130,7 @@ export default function LeadersManager({
           onClick={handleAutoAssign}
           disabled={pending}
           className="text-sm px-4 py-1.5 font-medium text-white"
-          style={{ backgroundColor: '#2c2c2c', borderRadius: 4 }}
+          style={{ backgroundColor: 'var(--header)', borderRadius: 4 }}
         >
           Auto-Assign All Numbers
         </button>
@@ -159,10 +159,10 @@ export default function LeadersManager({
                     disabled={pending}
                     className="text-xs px-2 py-0.5 font-medium"
                     style={{
-                      backgroundColor: inst.role === 'Leader' ? '#2c2c2c' : 'transparent',
+                      backgroundColor: inst.role === 'Leader' ? 'var(--header)' : 'transparent',
                       color: inst.role === 'Leader' ? 'white' : 'var(--muted)',
                       border: '1px solid',
-                      borderColor: inst.role === 'Leader' ? '#2c2c2c' : 'var(--border)',
+                      borderColor: inst.role === 'Leader' ? 'var(--header)' : 'var(--border)',
                       borderRadius: 3,
                     }}
                   >

@@ -524,7 +524,7 @@ export default function HeatSignUp({
                   return (
                     <Fragment key={`event-${event.id}`}>
                       <tr>
-                        <td colSpan={colSpan} style={{ backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
+                        <td colSpan={colSpan} style={{ backgroundColor: 'var(--header)', color: 'white', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 10px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
                           ◆ {event.name}
                           <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: 10, fontSize: '0.7rem', textTransform: 'none' }}>
                             {event.heatIds.length} dances — sign up for all at once

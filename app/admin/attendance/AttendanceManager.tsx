@@ -16,11 +16,13 @@ export default function AttendanceManager({ students }: { students: Student[] })
   const [pending, startTransition] = useTransition()
   const [filter, setFilter] = useState('')
   const [studioFilter, setStudioFilter] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
 
   const studios = [...new Set(students.map(s => s.studioName))].sort()
 
   const displayed = students.filter(s => {
     if (studioFilter && s.studioName !== studioFilter) return false
+    if (roleFilter && s.role !== roleFilter) return false
     if (filter && !s.name.toLowerCase().includes(filter.toLowerCase())) return false
     return true
   })
@@ -39,6 +41,14 @@ export default function AttendanceManager({ students }: { students: Student[] })
           <select value={studioFilter} onChange={e => setStudioFilter(e.target.value)} className="field" style={{ width: 200 }}>
             <option value="">All Studios</option>
             {studios.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>ROLE</label>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="field" style={{ width: 140 }}>
+            <option value="">All Roles</option>
+            <option value="Leader">Leader</option>
+            <option value="Follower">Follower</option>
           </select>
         </div>
         <div>

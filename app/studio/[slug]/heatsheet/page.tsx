@@ -103,7 +103,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       subtitle: `${student.role} · ${studio.name}`,
       leaderNumber: student.leaderNumber,
       entryCount: entries.length,
-      headerColor: '#1a1a1a',
+      headerColor: '#1a2744',
       segments: buildSegments(entries, studentHeatEventName.get(student.id) ?? new Map(), true, student.id),
     }))
 
@@ -124,7 +124,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         subtitle: `Instructor · ${studio.name}`,
         leaderNumber: instructor.leaderNumber,
         entryCount: entries.length,
-        headerColor: '#2c4a2c',
+        headerColor: '#2d7d5a',
         segments: buildSegments(entries as typeof studentEntries, instrHeatEventMap, false),
       }
     })
@@ -134,13 +134,20 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; }
+          body { background: white !important; margin: 0; padding: 0; }
           header { display: none !important; }
+          nav { display: none !important; }
+          main { padding: 0 !important; }
           .sheet-section { display: none !important; }
           .sheet-section.printing-target { display: block !important; }
+          .sheet-section.printing-target .sheet-accordion-header { display: none !important; }
           .sheet-section.printing-target .sheet-table-content { display: block !important; }
+          .sheet-section.printing-target .sheet-print-header { display: block !important; }
+          table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+          th, td { border: 1px solid #ccc; padding: 4px 6px; }
         }
         .sheet-section + .sheet-section { page-break-before: always; }
+        .sheet-print-header { display: none; }
       `}</style>
 
       <div className="mb-4">

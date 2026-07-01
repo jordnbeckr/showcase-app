@@ -94,7 +94,7 @@ export default function HeatSheetTable({
                 <td
                   colSpan={colSpan}
                   style={{
-                    backgroundColor: '#2c2c2c',
+                    backgroundColor: 'var(--header)',
                     color: 'white',
                     fontWeight: 700,
                     fontSize: '0.7rem',

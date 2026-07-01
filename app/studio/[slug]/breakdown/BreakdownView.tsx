@@ -63,7 +63,7 @@ function DanceTable({ rows }: { rows: DanceRow[] }) {
       {/* Event blocks — each event side by side */}
       {events.map(row => (
         <div key={`event-${row.eventId}`} style={{ border: '1px solid #ccc', borderRadius: 3, overflow: 'hidden', fontSize: '0.72rem' }}>
-          <div style={{ padding: '2px 6px', backgroundColor: '#2c2c2c', color: 'white', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          <div style={{ padding: '2px 6px', backgroundColor: 'var(--header)', color: 'white', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             ◆ {row.eventName}
             <span style={{ fontWeight: 400, opacity: 0.55, marginLeft: 6 }}>×{row.count}</span>
           </div>

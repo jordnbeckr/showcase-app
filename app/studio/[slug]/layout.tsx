@@ -20,15 +20,15 @@ export default async function StudioLayout({
     <div className="min-h-screen flex flex-col">
       <header
         className="sticky top-0 z-50 flex items-center gap-0 shadow-md"
-        style={{ backgroundColor: '#2c2c2c', minHeight: 52 }}
+        style={{ backgroundColor: 'var(--header)', minHeight: 64 }}
       >
         {/* Studio name */}
-        <div className="px-5 py-3 flex items-center gap-2 border-r border-white/10">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <div className="px-6 py-4 flex items-center gap-2 border-r border-white/10">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
             <rect x="1" y="7" width="14" height="8" rx="1" stroke="white" strokeWidth="1.5"/>
             <path d="M4 7V5.5a4 4 0 018 0V7" stroke="white" strokeWidth="1.5"/>
           </svg>
-          <span className="font-bold text-white text-sm tracking-wide">{session.studioName}</span>
+          <span className="font-bold text-white tracking-wide" style={{ fontSize: '0.9rem' }}>{session.studioName}</span>
         </div>
         {/* Nav */}
         <nav className="flex items-stretch h-full">
@@ -44,7 +44,8 @@ export default async function StudioLayout({
             <Link
               key={href}
               href={href}
-              className="px-4 py-3 text-sm text-white/75 hover:text-white hover:bg-white/10 transition-all flex items-center"
+              className="px-4 text-white/75 hover:text-white hover:bg-white/10 transition-all flex items-center"
+              style={{ fontSize: '0.875rem' }}
             >
               {label}
             </Link>
@@ -65,7 +66,9 @@ export default async function StudioLayout({
           </form>
         </div>
       </header>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-6">
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>{children}</div>
+      </main>
     </div>
   )
 }

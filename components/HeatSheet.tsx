@@ -1,8 +1,12 @@
 import { Fragment } from 'react'
 
 type Entry = {
-  student: { firstName: string; lastName: string; studio: { name: string } }
+  student: { firstName: string; lastName: string; leaderNumber: number | null; studio: { name: string } }
   instructor: { name: string; studio: { name: string } }
+}
+
+function studioAbbr(name: string): string {
+  return name.split(/\s+/).map(w => w[0].toUpperCase()).join('')
 }
 
 type Heat = {
@@ -99,8 +103,11 @@ export default function HeatSheet({
                   className="text-xs px-1.5 py-0.5"
                   style={{ backgroundColor: '#ebebeb', borderRadius: 3, border: '1px solid var(--border)' }}
                 >
-                  {e.student.firstName} {e.student.lastName}
-                  <span className="ml-1" style={{ color: 'var(--muted)' }}>({e.student.studio.name})</span>
+                  {e.student.leaderNumber != null && (
+                    <strong className="mr-1">{e.student.leaderNumber}</strong>
+                  )}
+                  {e.student.lastName} {e.student.firstName}
+                  <span className="ml-1" style={{ color: 'var(--muted)' }}>({studioAbbr(e.student.studio.name)})</span>
                 </span>
               ))}
             </div>
@@ -155,7 +162,7 @@ export default function HeatSheet({
                   <td
                     colSpan={colCount}
                     style={{
-                      backgroundColor: '#2c2c2c',
+                      backgroundColor: 'var(--header)',
                       color: 'white',
                       fontWeight: 700,
                       fontSize: '0.72rem',

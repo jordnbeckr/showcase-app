@@ -120,7 +120,7 @@ function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: 
                   <td
                     colSpan={colSpan}
                     style={{
-                      backgroundColor: '#2c2c2c',
+                      backgroundColor: 'var(--header)',
                       color: 'white',
                       fontWeight: 700,
                       fontSize: '0.72rem',
@@ -240,7 +240,7 @@ function ByTeacherView({ teacherData }: { teacherData: TeacherData[] }) {
                                 <span
                                   key={evtName}
                                   className="text-xs px-1.5 py-0.5"
-                                  style={{ backgroundColor: '#2c2c2c', color: 'white', borderRadius: 3 }}
+                                  style={{ backgroundColor: 'var(--header)', color: 'white', borderRadius: 3 }}
                                 >
                                   ◆ {evtName}
                                 </span>

@@ -138,7 +138,7 @@ export default function FloorsManager({
         <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Floors</div>
         <div className="flex flex-wrap gap-2 items-center">
           {floors.map(f => (
-            <div key={f.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm" style={{ backgroundColor: '#2c2c2c', color: 'white' }}>
+            <div key={f.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-sm" style={{ backgroundColor: 'var(--header)', color: 'white' }}>
               Floor {f.label}
               <button onClick={() => handleDeleteFloor(f.id, f.label)} disabled={pending} style={{ color: '#aaa', fontWeight: 700, marginLeft: 4 }}>×</button>
             </div>
