@@ -3,26 +3,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 const entries = [
-  {
-    href: '/login/admin',
-    label: 'Admin',
-    sub: 'Manage heats, dances, and studios',
-  },
-  {
-    href: '/login/studio',
-    label: 'Studio Login',
-    sub: 'Sign up students and submit shows',
-  },
-  {
-    href: '/login/judge',
-    label: 'Judge Login',
-    sub: 'Score heats and competitive events',
-  },
-  {
-    href: '/view',
-    label: 'View Heat Sheet',
-    sub: 'Read-only — all studios',
-  },
+  { href: '/login/admin', label: 'Admin' },
+  { href: '/login/studio', label: 'Studio Login' },
+  { href: '/login/judge', label: 'Judge Login' },
+  { href: '/view', label: 'Full Heat Sheet — Read Only' },
 ]
 
 export default async function Home() {
@@ -43,7 +27,7 @@ export default async function Home() {
           </div>
         </div>
         <div className="card overflow-hidden">
-          {entries.map(({ href, label, sub }, i) => (
+          {entries.map(({ href, label }, i) => (
             <Link
               key={href}
               href={href}
@@ -52,7 +36,6 @@ export default async function Home() {
             >
               <div className="flex-1">
                 <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{label}</div>
-                <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{sub}</div>
               </div>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--muted)' }}>
                 <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
