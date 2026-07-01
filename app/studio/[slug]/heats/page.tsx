@@ -83,7 +83,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Heat Sign-Up — {studio.name}</h1>
+        <h1 className="text-xl font-bold text-center">Heat Sign-Up — {studio.name}</h1>
         <span className="text-sm" style={{ color: 'var(--muted)' }}>{totalEntries} entries from this studio</span>
       </div>
       <HeatSignUp

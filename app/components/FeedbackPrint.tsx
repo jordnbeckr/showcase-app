@@ -27,7 +27,7 @@ function StudentSheet({ student }: { student: StudentFeedback }) {
       {/* Student header */}
       <div className="flex items-baseline justify-between mb-4 pb-2" style={{ borderBottom: '2px solid #1e1e1e' }}>
         <div>
-          <div className="text-xl font-bold">{student.name}</div>
+          <div className="text-xl font-bold text-center">{student.name}</div>
           <div className="text-sm" style={{ color: '#555' }}>{student.studioName}</div>
         </div>
         <div className="text-sm font-semibold no-print" style={{ color: '#555' }}>Judge Feedback</div>
@@ -104,7 +104,7 @@ export default function FeedbackPrint({ students }: { students: StudentFeedback[
       `}</style>
 
       <div className="no-print flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-bold">Judge Feedback Sheets</h1>
+        <h1 className="text-xl font-bold text-center">Judge Feedback Sheets</h1>
         <button
           onClick={() => window.print()}
           className="text-sm px-4 py-1.5 font-medium text-white"

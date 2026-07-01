@@ -27,7 +27,7 @@ export default async function StudioDashboard({ params }: { params: Promise<{ sl
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-bold">{studio?.name}</h1>
+        <h1 className="text-xl font-bold text-center">{studio?.name}</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>Dance Showcase 2026</p>
       </div>
 
@@ -38,7 +38,7 @@ export default async function StudioDashboard({ params }: { params: Promise<{ sl
           { label: 'Heat Entries', value: entryCount },
         ].map(stat => (
           <div key={stat.label} className="card p-4 text-center">
-            <div className="text-3xl font-bold" style={{ color: 'var(--text)' }}>{stat.value}</div>
+            <div className="text-3xl font-bold text-center" style={{ color: 'var(--text)' }}>{stat.value}</div>
             <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{stat.label}</div>
           </div>
         ))}

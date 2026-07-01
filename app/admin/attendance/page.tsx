@@ -29,11 +29,11 @@ export default async function AttendancePage() {
     <div className="max-w-4xl space-y-4">
       <div className="flex items-end gap-4">
         <div>
-          <h1 className="text-xl font-bold">Attendance</h1>
+          <h1 className="text-xl font-bold text-center">Attendance</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>Check in students as they arrive at the event.</p>
         </div>
         <div className="ml-auto text-right">
-          <div className="text-2xl font-bold">{checkedIn} / {allStudents.length}</div>
+          <div className="text-2xl font-bold text-center">{checkedIn} / {allStudents.length}</div>
           <div className="text-xs" style={{ color: 'var(--muted)' }}>checked in</div>
         </div>
       </div>

@@ -17,7 +17,7 @@ export default function AdminLogin() {
               <path d="M11 2v2M11 18v2M2 11h2M18 11h2" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
             </svg>
           </div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Admin Login</h1>
+          <h1 className="text-xl font-bold text-center" style={{ color: 'var(--text)' }}>Admin Login</h1>
         </div>
 
         <form action={action} className="card p-6 space-y-4">

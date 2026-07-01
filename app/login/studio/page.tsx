@@ -21,7 +21,7 @@ export default async function StudioLogin() {
               <circle cx="11" cy="15" r="2" fill="white"/>
             </svg>
           </div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Studio Login</h1>
+          <h1 className="text-xl font-bold text-center" style={{ color: 'var(--text)' }}>Studio Login</h1>
         </div>
         <StudioLoginForm studios={studios.map(s => ({ slug: s.slug, name: s.name }))} />
         <div className="text-center">

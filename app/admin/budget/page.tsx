@@ -33,7 +33,7 @@ export default async function BudgetPage() {
   return (
     <div className="max-w-5xl space-y-6">
       <div>
-        <h1 className="text-xl font-bold">Budget</h1>
+        <h1 className="text-xl font-bold text-center">Budget</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
           Manage showcase costs and studio dues.
         </p>

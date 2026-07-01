@@ -24,7 +24,7 @@ export default async function ShowsPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-2xl font-bold">Shows</h1>
+      <h1 className="text-2xl font-bold text-center">Shows</h1>
       <ShowsManager
         slug={slug}
         students={studio.students.map(s => ({ id: s.id, name: `${s.firstName} ${s.lastName}` }))}

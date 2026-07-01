@@ -125,7 +125,7 @@ export default function FloorsManager({
 
   return (
     <div className="max-w-6xl space-y-6">
-      <h1 className="text-xl font-bold">Floor Assignments</h1>
+      <h1 className="text-xl font-bold text-center">Floor Assignments</h1>
 
       {error && (
         <div className="text-sm px-3 py-2 flex justify-between" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 4, color: '#dc2626' }}>

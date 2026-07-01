@@ -15,7 +15,7 @@ export default async function JudgeLoginPage() {
               <path d="M11 2L13.5 8H20L14.5 12L16.5 18L11 14L5.5 18L7.5 12L2 8H8.5L11 2Z" stroke="white" strokeWidth="1.6" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Judge Login</h1>
+          <h1 className="text-xl font-bold text-center" style={{ color: 'var(--text)' }}>Judge Login</h1>
           {judges.length === 0 && (
             <p className="text-sm" style={{ color: 'var(--muted)' }}>No judges configured yet. Ask the admin.</p>
           )}

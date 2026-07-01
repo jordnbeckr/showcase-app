@@ -229,7 +229,7 @@ export default async function AdminResultsPage() {
   if (judges.length === 0) {
     return (
       <div className="max-w-4xl">
-        <h1 className="text-xl font-bold mb-4">Judge Results</h1>
+        <h1 className="text-xl font-bold text-center mb-4">Judge Results</h1>
         <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No judges configured yet.</p>
       </div>
     )
@@ -256,7 +256,7 @@ export default async function AdminResultsPage() {
 
   return (
     <div className="max-w-5xl space-y-10">
-      <h1 className="text-xl font-bold">Judge Results</h1>
+      <h1 className="text-xl font-bold text-center">Judge Results</h1>
 
       {/* CLOSED HEATS */}
       {closedHeats.length > 0 && (

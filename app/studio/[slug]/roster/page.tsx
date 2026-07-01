@@ -16,7 +16,7 @@ export default async function RosterPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="max-w-2xl space-y-4">
-      <h1 className="text-2xl font-bold">Student Roster</h1>
+      <h1 className="text-2xl font-bold text-center">Student Roster</h1>
       <p className="text-sm text-gray-500">{studio.students.length} students</p>
       <RosterManager slug={slug} students={studio.students} />
     </div>
