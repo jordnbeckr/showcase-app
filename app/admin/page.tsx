@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   const halfHeats = heats.filter(h => h.entries.length >= Math.floor(h.maxCapacity / 2)).length
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-xl font-bold">Admin Dashboard — Showcase 2026</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

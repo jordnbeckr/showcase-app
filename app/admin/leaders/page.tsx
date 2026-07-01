@@ -36,7 +36,7 @@ export default async function LeadersPage() {
   }))
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="max-w-3xl mx-auto space-y-4">
       <div>
         <h1 className="text-xl font-bold">Leader Numbers</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
