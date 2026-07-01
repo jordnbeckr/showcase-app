@@ -79,7 +79,7 @@ export default function HeatSheet({
   function renderHeatRow(heat: Heat, inEvent = false) {
     const { label, color } = statusInfo(heat.entries.length, heat.maxCapacity)
     return (
-      <tr key={heat.id} style={{ backgroundColor: inEvent ? '#7ecfa0' : undefined }}>
+      <tr key={heat.id} style={{ backgroundColor: inEvent ? '#c8d9a8' : undefined }}>
         <td style={{
           color: inEvent ? '#aaa' : 'var(--muted)',
           fontFamily: 'monospace',

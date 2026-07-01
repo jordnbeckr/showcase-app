@@ -71,7 +71,7 @@ function openPdfWindow(sheet: Sheet) {
   td { border: 1px solid #d0d8e0; padding: 3px 6px; vertical-align: top; }
   tr:nth-child(even) td { background: #f8f9fa; }
   .event-row td { background: #1a2744 !important; color: white; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; padding: 3px 6px; }
-  .event-entry td { background: #d4edda !important; }
+  .event-entry td { background: #c8d9a8 !important; }
   col.num { width: 36px; }
   col.dance { width: 140px; }
   col.floor { width: 44px; text-align: center; }
@@ -144,7 +144,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
               </td>
             </tr>,
             ...seg.entries.map(e => (
-              <tr key={e.id} style={{ backgroundColor: '#d4edda' }}>
+              <tr key={e.id} style={{ backgroundColor: '#c8d9a8' }}>
                 <td style={{ fontFamily: 'monospace', textAlign: 'center', borderLeft: '3px solid #555' }}>{e.heatNumber}</td>
                 <td style={{ fontSize: '0.8rem' }}>{e.dance}</td>
                 <td style={{ fontSize: '0.8rem' }}>{e.partnerName}</td>

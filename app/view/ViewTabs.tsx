@@ -137,7 +137,7 @@ function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: 
                   </td>
                 </tr>
                 {evtHeats.map(heat => (
-                  <tr key={heat.id} style={{ backgroundColor: '#7ecfa0' }}>
+                  <tr key={heat.id} style={{ backgroundColor: '#c8d9a8' }}>
                     <td style={{ color: '#aaa', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', borderLeft: '3px solid #555' }}>{heat.number}</td>
                     <td style={{ fontSize: '0.8125rem' }}>{heat.dance}</td>
                     <td style={{ textAlign: 'center' }}>

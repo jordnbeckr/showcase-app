@@ -25,7 +25,7 @@ export default async function StudioDashboard({ params }: { params: Promise<{ sl
   ]
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-center">{studio?.name}</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>Dance Showcase 2026</p>

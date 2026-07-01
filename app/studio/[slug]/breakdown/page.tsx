@@ -163,7 +163,7 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
   })
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-end gap-4">
         <h1 className="text-xl font-bold text-center">Entry Breakdown — {studio.name}</h1>
         <span className="text-sm pb-0.5" style={{ color: 'var(--muted)' }}>

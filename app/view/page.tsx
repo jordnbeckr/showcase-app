@@ -1,10 +1,12 @@
 import { db } from '@/lib/db'
+import { getSession } from '@/lib/session'
 import ViewTabs from './ViewTabs'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PublicView() {
+  const session = await getSession()
   const [heats, studios, events, studentEvents] = await Promise.all([
     db.heat.findMany({
       include: {
@@ -135,20 +137,31 @@ export default async function PublicView() {
     <div className="min-h-screen flex flex-col">
       <header
         className="sticky top-0 z-50 flex items-center gap-4 px-6 shadow-md"
-        style={{ backgroundColor: 'var(--header)', minHeight: 52 }}
+        style={{ backgroundColor: 'var(--header)', minHeight: 64 }}
       >
-        <h1 className="font-bold text-sm text-white">Showcase 2026 — Heat Sheet</h1>
+        <h1 className="font-bold text-sm text-white tracking-wide">Showcase 2026 — Heat Sheet</h1>
         <span className="text-xs text-white/40 uppercase tracking-wide">Read-only</span>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3">
           <span className="text-xs text-white/50">
             {heats.length} heats · {totalEntries} entries
           </span>
-          <Link
-            href="/"
-            className="text-xs font-medium text-white/80 hover:text-white transition-colors px-3 py-1.5 rounded"
-            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-          >
-            ← Home
+          {session?.role === 'admin' && (
+            <Link href="/admin" className="text-xs text-white/70 hover:text-white transition-colors px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              ← Admin
+            </Link>
+          )}
+          {session?.role === 'studio' && (
+            <Link href={`/studio/${session.studioSlug}`} className="text-xs text-white/70 hover:text-white transition-colors px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              ← {session.studioName}
+            </Link>
+          )}
+          {session?.role === 'judge' && (
+            <Link href="/judge" className="text-xs text-white/70 hover:text-white transition-colors px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              ← Scoring
+            </Link>
+          )}
+          <Link href="/" className="text-xs text-white/50 hover:text-white/80 transition-colors">
+            Home
           </Link>
         </div>
       </header>

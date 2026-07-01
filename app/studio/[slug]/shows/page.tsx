@@ -23,7 +23,7 @@ export default async function ShowsPage({ params }: { params: Promise<{ slug: st
   if (!studio) return <p>Studio not found</p>
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8">
       <h1 className="text-2xl font-bold text-center">Shows</h1>
       <ShowsManager
         slug={slug}
