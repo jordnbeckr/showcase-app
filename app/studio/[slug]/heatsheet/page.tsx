@@ -133,7 +133,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     <>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-center mb-1">Heat Sheets — {studio.name}</h1>
-        <p className="text-sm" style={{ color: 'var(--muted)' }}>Click a name to expand. Click PDF to open a print-ready sheet.</p>
+        <p className="text-sm text-center" style={{ color: 'var(--muted)' }}>Click a name to expand. Click PDF to open a print-ready sheet.</p>
       </div>
 
       {studentSheets.length > 0 && (

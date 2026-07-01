@@ -595,10 +595,10 @@ export default function HeatSignUp({
                       {eventHeats.map(heat => {
                         const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
                         return (
-                          <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#7ecfa0' }}>
-                            <td style={{ ...stickyCell(0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: '#7ecfa0' }}>{heat.number}</td>
-                            <td style={{ ...stickyCell(W1, W2), fontSize: '0.8rem', backgroundColor: '#7ecfa0' }}>{heat.dance}</td>
-                            <td style={{ ...stickyCell(W1 + W2, W3), backgroundColor: '#7ecfa0' }}>
+                          <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#c8d9a8' }}>
+                            <td style={{ ...stickyCell(0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: '#c8d9a8' }}>{heat.number}</td>
+                            <td style={{ ...stickyCell(W1, W2), fontSize: '0.8rem', backgroundColor: '#c8d9a8' }}>{heat.dance}</td>
+                            <td style={{ ...stickyCell(W1 + W2, W3), backgroundColor: '#c8d9a8' }}>
                               <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                                 {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                               </span>

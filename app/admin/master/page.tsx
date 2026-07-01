@@ -30,7 +30,7 @@ export default async function MasterView() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-center">Master Heat Sheet</h1>
-      <p className="text-sm text-gray-500">All studios · {heats.length} heats · {heats.reduce((s, h) => s + h.entries.length, 0)} total entries</p>
+      <p className="text-sm text-gray-500 text-center">All studios · {heats.length} heats · {heats.reduce((s, h) => s + h.entries.length, 0)} total entries</p>
       <HeatSheet
         heats={heats}
         studios={studios}

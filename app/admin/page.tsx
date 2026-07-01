@@ -15,7 +15,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold text-center">Admin Dashboard — Showcase 2026</h1>
+      <h1 className="text-xl font-bold text-center">Admin Dashboard — Team Spirit Showcase</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[

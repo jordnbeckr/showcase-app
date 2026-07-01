@@ -36,7 +36,7 @@ export default async function Home() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-1">
           <h1 className="text-3xl font-bold text-center" style={{ color: 'var(--text)' }}>Showcase 2026</h1>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>Summer Dance Showcase Management</p>
+          <p className="text-sm text-center" style={{ color: 'var(--muted)' }}>Team Spirit Showcase</p>
         </div>
         <div className="card overflow-hidden">
           {entries.map(({ href, label, sub }, i) => (

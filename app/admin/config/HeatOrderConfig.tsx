@@ -210,7 +210,7 @@ export default function HeatOrderConfig({ heats: initialHeats }: { heats: HeatIt
                   onDrop={handleDrop}
                   style={{
                     cursor: filter ? 'default' : 'grab',
-                    backgroundColor: isSelected ? '#eef6ff' : heat.eventNames.length > 0 ? '#7ecfa0' : undefined,
+                    backgroundColor: isSelected ? '#eef6ff' : heat.eventNames.length > 0 ? '#c8d9a8' : undefined,
                     opacity: pending ? 0.6 : 1,
                     outline: isSelected ? '1px solid #93c5fd' : undefined,
                   }}
