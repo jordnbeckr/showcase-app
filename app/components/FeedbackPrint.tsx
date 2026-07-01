@@ -37,19 +37,24 @@ function StudentSheet({ student }: { student: StudentFeedback }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
         <tbody>
           {student.heats.map(heat => {
-            const allComments: string[] = []
+            const judgeLines: { name: string; text: string }[] = []
             for (const judge of heat.judges) {
               const ups = judge.thumbs.filter(t => t.sentiment === 'up').map(t => getComment(t.categoryName, t.sentiment, student.studentId, heat.heatId, t.categoryId))
               const downs = judge.thumbs.filter(t => t.sentiment === 'down').map(t => getComment(t.categoryName, t.sentiment, student.studentId, heat.heatId, t.categoryId))
-              allComments.push(...ups, ...downs)
-              if (judge.note) allComments.push(`"${judge.note}"`)
+              const parts = [...ups, ...downs]
+              if (judge.note) parts.push(judge.note)
+              if (parts.length > 0) judgeLines.push({ name: judge.judgeName, text: parts.join(' · ') })
             }
-            if (allComments.length === 0) return null
+            if (judgeLines.length === 0) return null
             return (
               <tr key={heat.heatId} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
                 <td style={{ padding: '5px 8px 5px 0', fontWeight: 700, whiteSpace: 'nowrap', color: '#1a2744', width: 32 }}>{heat.heatNumber}</td>
                 <td style={{ padding: '5px 12px 5px 0', whiteSpace: 'nowrap', color: '#555', width: 140 }}>{heat.dance}</td>
-                <td style={{ padding: '5px 0', color: '#222', lineHeight: 1.5 }}>{allComments.join(' · ')}</td>
+                <td style={{ padding: '5px 0', color: '#222', lineHeight: 1.6 }}>
+                  {judgeLines.map((j, i) => (
+                    <div key={i}><span style={{ fontWeight: 600, color: '#1a2744', marginRight: 6 }}>{j.name}:</span>{j.text}</div>
+                  ))}
+                </td>
               </tr>
             )
           })}

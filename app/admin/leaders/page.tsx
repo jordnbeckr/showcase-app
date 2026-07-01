@@ -38,7 +38,7 @@ export default async function LeadersPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       <div>
-        <h1 className="text-xl font-bold">Leader Numbers</h1>
+        <h1 className="text-xl font-bold text-center">Leader Numbers</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
           Mark instructor roles, then auto-assign numbers: instructors start at 100, Leader students start at 200 — both sorted alphabetically by last name across <em>all</em> studios.
         </p>

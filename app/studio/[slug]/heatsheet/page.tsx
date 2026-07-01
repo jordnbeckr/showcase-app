@@ -124,31 +124,16 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         subtitle: `Instructor · ${studio.name}`,
         leaderNumber: instructor.leaderNumber,
         entryCount: entries.length,
-        headerColor: '#2d7d5a',
+        headerColor: '#608040',
         segments: buildSegments(entries as typeof studentEntries, instrHeatEventMap, false),
       }
     })
 
   return (
     <>
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          .sheet-section.printing-target { visibility: visible; position: fixed; top: 0; left: 0; width: 100%; padding: 16px; box-sizing: border-box; }
-          .sheet-section.printing-target * { visibility: visible; }
-          .sheet-accordion-header { display: none !important; }
-          .sheet-print-header { display: block !important; }
-          .sheet-table-content { display: block !important; }
-          .no-print { display: none !important; }
-          table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-          th, td { border: 1px solid #ccc; padding: 4px 6px; }
-        }
-        .sheet-print-header { display: none; }
-      `}</style>
-
       <div className="mb-4">
         <h1 className="text-xl font-bold mb-1">Heat Sheets — {studio.name}</h1>
-        <p className="text-sm no-print" style={{ color: 'var(--muted)' }}>Click a name to expand. Click "Print" to print their sheet.</p>
+        <p className="text-sm" style={{ color: 'var(--muted)' }}>Click a name to expand. Click PDF to open a print-ready sheet.</p>
       </div>
 
       {studentSheets.length > 0 && (

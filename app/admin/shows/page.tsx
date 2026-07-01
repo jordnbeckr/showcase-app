@@ -25,7 +25,7 @@ export default async function AdminShowsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-end justify-between">
-        <h1 className="text-xl font-bold">All Shows</h1>
+        <h1 className="text-xl font-bold text-center">All Shows</h1>
         <span className="text-sm" style={{ color: 'var(--muted)' }}>
           {totalPro} pro · {totalStudent} student
         </span>

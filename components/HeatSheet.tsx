@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 
 type Entry = {
   student: { firstName: string; lastName: string; leaderNumber: number | null; studio: { name: string } }
-  instructor: { name: string; leaderNumber: number | null; studio: { name: string } }
+  instructor: { name: string; leaderNumber: number | null; studio: { name: string } } | null
 }
 
 function studioAbbr(name: string): string {
@@ -103,8 +103,8 @@ export default function HeatSheet({
                   className="text-xs px-1.5 py-0.5"
                   style={{ backgroundColor: '#ebebeb', borderRadius: 3, border: '1px solid var(--border)' }}
                 >
-                  {(e.student.leaderNumber ?? e.instructor.leaderNumber) != null && (
-                    <strong className="mr-1">{e.student.leaderNumber ?? e.instructor.leaderNumber}</strong>
+                  {(e.student.leaderNumber ?? e.instructor?.leaderNumber) != null && (
+                    <strong className="mr-1">{e.student.leaderNumber ?? e.instructor?.leaderNumber}</strong>
                   )}
                   {e.student.firstName} {e.student.lastName}
                   <span className="ml-1" style={{ color: 'var(--muted)' }}>({studioAbbr(e.student.studio.name)})</span>

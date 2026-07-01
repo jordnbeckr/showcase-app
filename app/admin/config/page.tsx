@@ -36,7 +36,7 @@ export default async function ConfigPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-3">
-      <h1 className="text-xl font-bold mb-4">Configuration</h1>
+      <h1 className="text-xl font-bold mb-4 text-center">Configuration</h1>
 
       <CollapsibleSection title="Multi-Dance Events">
         <EventsConfig
