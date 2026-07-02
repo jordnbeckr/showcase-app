@@ -46,7 +46,7 @@ export default async function ConfigPage() {
             isAmateur: e.isAmateur,
             isCompetitive: e.isCompetitive,
             compRound: e.compRound ? { round: e.compRound.round, finalSize: e.compRound.finalSize, semiSize: e.compRound.semiSize } : null,
-            heats: e.heats.map(eh => ({ id: eh.heat.id, number: eh.heat.number })),
+            heats: e.heats.filter(eh => eh.heat != null).map(eh => ({ id: eh.heat.id, number: eh.heat.number })),
           }))}
           allHeats={allHeats.map(h => ({
             id: h.id,

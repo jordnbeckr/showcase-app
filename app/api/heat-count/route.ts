@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
     for (const heat of toRemove) {
       const entryCount = await db.heatEntry.count({ where: { heatId: heat.id } })
       if (entryCount > 0) return NextResponse.json({ error: `Heat #${heat.number} has entries` }, { status: 409 })
+      await db.eventHeat.deleteMany({ where: { heatId: heat.id } })
+      await db.heatFloorAssignment.deleteMany({ where: { heatId: heat.id } })
       await db.heat.delete({ where: { id: heat.id } })
     }
   }

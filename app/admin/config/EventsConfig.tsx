@@ -79,7 +79,10 @@ export default function EventsConfig({
   }
 
   function handleRemoveFromEvent(heatId: number, eventId: number) {
-    startTransition(async () => { await removeHeatFromEvent(heatId, eventId) })
+    startTransition(async () => {
+      const result = await removeHeatFromEvent(heatId, eventId)
+      if (result?.error) setError(result.error)
+    })
   }
 
   return (

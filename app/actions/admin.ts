@@ -63,10 +63,16 @@ export async function setHeatCount(danceTypeId: number, count: number) {
     for (const heat of toRemove) {
       const entryCount = await db.heatEntry.count({ where: { heatId: heat.id } })
       if (entryCount > 0) return { error: `Heat #${heat.number} has entries — remove them first` }
-      await db.eventHeat.deleteMany({ where: { heatId: heat.id } })
-      await db.heat.delete({ where: { id: heat.id } })
+      try {
+        await db.eventHeat.deleteMany({ where: { heatId: heat.id } })
+        await db.heatFloorAssignment.deleteMany({ where: { heatId: heat.id } })
+        await db.heat.delete({ where: { id: heat.id } })
+      } catch (e) {
+        return { error: `Failed to delete heat #${heat.number}: ${(e as Error).message}` }
+      }
     }
   }
+  revalidatePath('/admin/config')
 }
 
 export async function addHeat(danceTypeId: number) {
@@ -292,7 +298,11 @@ export async function addHeatToEvent(heatId: number, eventId: number) {
 
 export async function removeHeatFromEvent(heatId: number, eventId: number) {
   await requireAdmin()
-  await db.eventHeat.deleteMany({ where: { eventId, heatId } })
+  try {
+    await db.eventHeat.deleteMany({ where: { eventId, heatId } })
+  } catch (e) {
+    return { error: `Failed to remove heat from event: ${(e as Error).message}` }
+  }
   revalidatePath('/admin/config')
 }
 
