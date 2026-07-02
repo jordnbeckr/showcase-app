@@ -1,6 +1,6 @@
 'use client'
 
-import { addDanceType, deleteDanceType, reorderDanceTypes } from '@/app/actions/admin'
+import { addDanceType, deleteDanceType, reorderDanceTypes, setHeatCount } from '@/app/actions/admin'
 import { useTransition, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -20,9 +20,6 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
   const lastClickedIdx = useRef<number | null>(null)
   const dragId = useRef<number | null>(null)
   const router = useRouter()
-  // debounce heat count changes: { [danceTypeId]: { target, timer } }
-  const heatDebounce = useRef<Record<number, { target: number; timer: ReturnType<typeof setTimeout> }>>({})
-
 
   function toggleSelect(id: number, idx: number, e: React.MouseEvent) {
     setSelectedIds(prev => {
@@ -87,18 +84,13 @@ export default function DancesConfig({ danceTypes: initialDanceTypes }: { danceT
     if (!current) return
     const newCount = Math.max(0, current.heatCount + delta)
     setDanceTypes(prev => prev.map(d => d.id === danceTypeId ? { ...d, heatCount: newCount } : d))
-
-    const entry = heatDebounce.current[danceTypeId]
-    if (entry) clearTimeout(entry.timer)
-    const timer = setTimeout(() => {
-      fetch('/api/heat-count', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ danceTypeId, count: newCount }),
-      }).then(() => router.refresh())
-      delete heatDebounce.current[danceTypeId]
-    }, 800)
-    heatDebounce.current[danceTypeId] = { target: newCount, timer }
+    startTransition(async () => {
+      const result = await setHeatCount(danceTypeId, newCount)
+      if (result?.error) {
+        setError(result.error)
+        setDanceTypes(prev => prev.map(d => d.id === danceTypeId ? { ...d, heatCount: current.heatCount } : d))
+      }
+    })
   }
 
   function handleAddHeat(danceTypeId: number) { adjustHeatCount(danceTypeId, 1) }
