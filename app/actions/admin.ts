@@ -63,6 +63,7 @@ export async function setHeatCount(danceTypeId: number, count: number) {
     for (const heat of toRemove) {
       const entryCount = await db.heatEntry.count({ where: { heatId: heat.id } })
       if (entryCount > 0) return { error: `Heat #${heat.number} has entries — remove them first` }
+      await db.eventHeat.deleteMany({ where: { heatId: heat.id } })
       await db.heat.delete({ where: { id: heat.id } })
     }
   }
@@ -273,6 +274,8 @@ export async function renameEvent(eventId: number, formData: FormData) {
 
 export async function deleteEvent(eventId: number) {
   await requireAdmin()
+  await db.eventHeat.deleteMany({ where: { eventId } })
+  await db.studentEvent.deleteMany({ where: { eventId } })
   await db.event.delete({ where: { id: eventId } })
   revalidatePath('/admin/config')
 }
