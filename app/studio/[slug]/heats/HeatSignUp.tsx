@@ -67,6 +67,9 @@ export default function HeatSignUp({
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [removedEntryIds, setRemovedEntryIds] = useState<Set<number>>(new Set())
+  const [removedEventKeys, setRemovedEventKeys] = useState<Set<string>>(new Set())
+  const [removedAmateurKeys, setRemovedAmateurKeys] = useState<Set<string>>(new Set())
   const [filterText, setFilterText] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -162,17 +165,25 @@ export default function HeatSignUp({
   }
 
   function handleRemoveSingle(entryId: number) {
+    setRemovedEntryIds(prev => new Set(prev).add(entryId))
     startTransition(async () => {
       const result = await removeHeatEntry(slug, entryId)
-      if (result?.error) setError(result.error)
+      if (result?.error) {
+        setRemovedEntryIds(prev => { const s = new Set(prev); s.delete(entryId); return s })
+        setError(result.error)
+      }
     })
   }
 
   function handleRemoveEvent(eventId: number, studentId: number) {
-    if (!confirm('Remove this student from all heats in this event?')) return
+    const key = `${eventId}-${studentId}`
+    setRemovedEventKeys(prev => new Set(prev).add(key))
     startTransition(async () => {
       const result = await removeEventEntry(slug, eventId, studentId)
-      if (result?.error) setError(result.error)
+      if (result?.error) {
+        setRemovedEventKeys(prev => { const s = new Set(prev); s.delete(key); return s })
+        setError(result.error)
+      }
     })
   }
 
@@ -188,7 +199,8 @@ export default function HeatSignUp({
   }
 
   function handleRemoveAmateurPair(eventId: number, leaderId: number) {
-    if (!confirm('Remove this amateur pair from the event?')) return
+    const key = `${eventId}-${leaderId}`
+    setRemovedAmateurKeys(prev => new Set(prev).add(key))
     startTransition(async () => {
       await removeAmateurEventEntry(slug, eventId, leaderId)
     })
@@ -213,7 +225,11 @@ export default function HeatSignUp({
       ? `event-${opts.eventId}-heat-${heat.id}-${inst.id}`
       : `heat-${heat.id}-${inst.id}`
 
-    const allCellEntries = heat.myEntries.filter(e => e.instructorId === inst.id)
+    const allCellEntries = heat.myEntries.filter(e =>
+      e.instructorId === inst.id &&
+      !removedEntryIds.has(e.id) &&
+      !(opts.isEvent && opts.eventId != null && removedEventKeys.has(`${opts.eventId}-${e.studentId}`))
+    )
     const cellEntries = opts.isEvent && opts.eventId != null
       ? allCellEntries.filter(e => enrolledEvents.some(ev => ev.studentId === e.studentId && ev.eventId === opts.eventId))
       : allCellEntries
@@ -517,7 +533,7 @@ export default function HeatSignUp({
                   // Event segment — banner row + amateur pairs row + one row per heat
                   const { event, heats: eventHeats } = seg
                   const isStudentEnrolled = studentEnrolledInEvent(event.id)
-                  const eventPairs = amateurPairs.filter(p => p.eventId === event.id)
+                  const eventPairs = amateurPairs.filter(p => p.eventId === event.id && !removedAmateurKeys.has(`${p.eventId}-${p.leaderId}`))
                   const isAmateurFormOpen = amateurFormEventId === event.id
                   const leaders = students.filter(s => s.role === 'Leader')
                   const followers = students.filter(s => s.role === 'Follower')
