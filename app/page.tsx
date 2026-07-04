@@ -7,11 +7,11 @@ const entries = [
     href: '/login/admin',
     label: 'Admin',
     color: '#1a2744',
+    // ti-settings
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a3 3 0 0 1 3 3v1h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2V5a3 3 0 0 1 3-3z"/>
-        <circle cx="12" cy="13" r="2"/>
-        <path d="M12 15v2"/>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <circle cx="12" cy="12" r="3"/>
       </svg>
     ),
   },
@@ -19,20 +19,18 @@ const entries = [
     href: '/login/studio',
     label: 'Studio Login',
     color: '#608040',
+    // disco ball — sphere with grid, hanging cord, sparkle dots
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        {/* disco ball */}
-        <circle cx="12" cy="14" r="7"/>
-        <ellipse cx="12" cy="14" rx="3.5" ry="7"/>
-        <line x1="5" y1="14" x2="19" y2="14"/>
-        <path d="M6 11q3 1.5 6 1.5t6-1.5"/>
-        <path d="M6 17q3-1.5 6-1.5t6 1.5"/>
-        <line x1="12" y1="7" x2="12" y2="4"/>
-        <line x1="10" y1="4" x2="14" y2="4"/>
-        <circle cx="4" cy="6" r="0.7" fill="currentColor" stroke="none"/>
-        <circle cx="20" cy="8" r="0.7" fill="currentColor" stroke="none"/>
-        <circle cx="3" cy="10" r="0.7" fill="currentColor" stroke="none"/>
-        <circle cx="20" cy="5" r="0.7" fill="currentColor" stroke="none"/>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="14" r="6"/>
+        <line x1="6" y1="14" x2="18" y2="14"/>
+        <path d="M7 11q2.5 1.2 5 1.2t5-1.2"/>
+        <path d="M7 17q2.5-1.2 5-1.2t5 1.2"/>
+        <line x1="12" y1="8" x2="12" y2="5"/>
+        <line x1="10" y1="5" x2="14" y2="5"/>
+        <circle cx="4.5" cy="7" r="0.6" fill="currentColor" stroke="none"/>
+        <circle cx="19.5" cy="9" r="0.6" fill="currentColor" stroke="none"/>
+        <circle cx="3.5" cy="11" r="0.6" fill="currentColor" stroke="none"/>
       </svg>
     ),
   },
@@ -40,25 +38,27 @@ const entries = [
     href: '/login/judge',
     label: 'Judge Login',
     color: '#2d5fa3',
+    // ti-award
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="9" r="6"/>
+        <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
       </svg>
     ),
   },
   {
     href: '/view',
-    label: 'Read-Only Heat Sheet',
+    label: 'Heat Sheet (Read Only)',
     color: '#5a5a5a',
+    // ti-clipboard-list
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="5" y="3" width="14" height="18" rx="2"/>
-        <line x1="9" y1="8" x2="15" y2="8"/>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="2"/>
         <line x1="9" y1="12" x2="15" y2="12"/>
         <line x1="9" y1="16" x2="12" y2="16"/>
-        <line x1="5" y1="7" x2="3" y2="7"/>
-        <line x1="5" y1="11" x2="3" y2="11"/>
-        <line x1="5" y1="15" x2="3" y2="15"/>
+        <circle cx="9" cy="12" r="0.5" fill="currentColor" stroke="none"/>
+        <circle cx="9" cy="16" r="0.5" fill="currentColor" stroke="none"/>
       </svg>
     ),
   },
