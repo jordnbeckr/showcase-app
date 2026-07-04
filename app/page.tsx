@@ -19,18 +19,17 @@ const entries = [
     href: '/login/studio',
     label: 'Studio Login',
     color: '#608040',
-    // disco ball — sphere with grid, hanging cord, sparkle dots
+    // ti-building
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="14" r="6"/>
-        <line x1="6" y1="14" x2="18" y2="14"/>
-        <path d="M7 11q2.5 1.2 5 1.2t5-1.2"/>
-        <path d="M7 17q2.5-1.2 5-1.2t5 1.2"/>
-        <line x1="12" y1="8" x2="12" y2="5"/>
-        <line x1="10" y1="5" x2="14" y2="5"/>
-        <circle cx="4.5" cy="7" r="0.6" fill="currentColor" stroke="none"/>
-        <circle cx="19.5" cy="9" r="0.6" fill="currentColor" stroke="none"/>
-        <circle cx="3.5" cy="11" r="0.6" fill="currentColor" stroke="none"/>
+        <path d="M3 21l18 0"/>
+        <path d="M9 8l1 0"/>
+        <path d="M9 12l1 0"/>
+        <path d="M9 16l1 0"/>
+        <path d="M14 8l1 0"/>
+        <path d="M14 12l1 0"/>
+        <path d="M14 16l1 0"/>
+        <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/>
       </svg>
     ),
   },
