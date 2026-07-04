@@ -8,7 +8,7 @@ export const revalidate = 0
 
 export default async function StudioLogin() {
   await headers() // dynamic function — prevents any static/edge caching
-  const studios = await db.studio.findMany({ orderBy: { order: 'asc' } })
+  const studios = await db.studio.findMany({ orderBy: { name: 'asc' } })
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--surface)' }}>

@@ -114,7 +114,13 @@ export default async function PublicView() {
 
   const teacherData = [...instructorMap.values()]
     .filter(i => i.students.size > 0)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => {
+      const studioCmp = a.studioName.localeCompare(b.studioName)
+      if (studioCmp !== 0) return studioCmp
+      const aLast = a.name.split(' ').pop() ?? a.name
+      const bLast = b.name.split(' ').pop() ?? b.name
+      return aLast.localeCompare(bLast)
+    })
     .map(i => ({
       id: i.id,
       name: i.name,

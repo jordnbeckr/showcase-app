@@ -228,7 +228,7 @@ export default async function AdminResultsPage() {
 
   if (judges.length === 0) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-4xl mx-auto">
         <h1 className="text-xl font-bold text-center mb-4">Judge Results</h1>
         <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No judges configured yet.</p>
       </div>
@@ -255,132 +255,129 @@ export default async function AdminResultsPage() {
   const openHeats = heats.filter(h => h.category === 'open')
 
   return (
-    <div className="max-w-5xl space-y-10">
+    <div className="max-w-5xl mx-auto space-y-10">
       <h1 className="text-xl font-bold text-center">Judge Results</h1>
 
       {/* CLOSED HEATS */}
       {closedHeats.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Closed Heats — Placements</h2>
-          {closedHeats.map(heat => {
-            const allPlacements = ['Gold', 'Silver', 'Bronze']
-            // Group placements by student
-            const byStudent = heat.entries.map(entry => {
-              const display = getEntryDisplay(entry)
-              const scores = heat.closedScores.filter(s => s.studentId === entry.studentId)
-              const byJudge = judges.map(j => ({
-                judge: j.name,
-                placement: scores.find(s => s.judgeId === j.id)?.placement ?? null,
-              }))
-              return { ...display, studentId: entry.studentId, byJudge }
-            })
-
-            return (
-              <div key={heat.id} className="card overflow-hidden">
-                <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#fef9c3', borderBottom: '1px solid #fde68a' }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</span>
-                  <span className="font-semibold text-sm">{heat.danceType.name}</span>
-                </div>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Couple</th>
-                      {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Closed Heats — Placements</h2>
+          <div className="card overflow-hidden">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 44 }}>#</th>
+                  <th style={{ width: 130 }}>Dance</th>
+                  <th>Couple</th>
+                  {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {closedHeats.map(heat => {
+                  const rows = heat.entries.map(entry => {
+                    const display = getEntryDisplay(entry)
+                    const scores = heat.closedScores.filter(s => s.studentId === entry.studentId)
+                    const byJudge = judges.map(j => ({
+                      judge: j.name,
+                      placement: scores.find(s => s.judgeId === j.id)?.placement ?? null,
+                    }))
+                    return { ...display, studentId: entry.studentId, byJudge }
+                  })
+                  if (rows.length === 0) return (
+                    <tr key={heat.id}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
+                      <td colSpan={1 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {byStudent.map(row => (
-                      <tr key={row.studentId}>
-                        <td>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{row.num ?? '—'}</span>
-                          {row.personA}{row.personB ? ` & ${row.personB}` : ''}
+                  )
+                  return rows.map((row, ri) => (
+                    <tr key={`${heat.id}-${row.studentId}`} style={{ borderTop: ri === 0 && heat.id !== closedHeats[0].id ? '2px solid var(--border)' : undefined }}>
+                      {ri === 0 && <td rowSpan={rows.length} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', verticalAlign: 'top', paddingTop: 8 }}>#{heat.number}</td>}
+                      {ri === 0 && <td rowSpan={rows.length} style={{ fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
+                      <td>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{row.num ?? '—'}</span>
+                        {row.personA}{row.personB ? ` & ${row.personB}` : ''}
+                      </td>
+                      {row.byJudge.map(({ judge, placement }) => (
+                        <td key={judge} style={{ textAlign: 'center' }}>
+                          {placement
+                            ? <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 4, fontSize: '0.8rem', backgroundColor: placement === 'Gold' ? '#fde047' : placement === 'Silver' ? '#cbd5e1' : '#fdba74', color: '#1e1e1e' }}>{placement[0]}</span>
+                            : <span style={{ color: 'var(--muted)' }}>—</span>}
                         </td>
-                        {row.byJudge.map(({ judge, placement }) => (
-                          <td key={judge} style={{ textAlign: 'center', fontWeight: placement ? 700 : 400 }}>
-                            {placement
-                              ? <span style={{
-                                  display: 'inline-block',
-                                  padding: '1px 8px',
-                                  borderRadius: 4,
-                                  fontSize: '0.8rem',
-                                  backgroundColor: placement === 'Gold' ? '#fde047' : placement === 'Silver' ? '#cbd5e1' : '#fdba74',
-                                  color: '#1e1e1e',
-                                }}>{placement[0]}</span>
-                              : <span style={{ color: 'var(--muted)' }}>—</span>
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                    {heat.entries.length === 0 && (
-                      <tr><td colSpan={1 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No entries</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )
-          })}
+                      ))}
+                    </tr>
+                  ))
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
       {/* OPEN HEATS */}
       {openHeats.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Open Heats — Feedback</h2>
-          {openHeats.map(heat => (
-            <div key={heat.id} className="card overflow-hidden">
-              <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#eff6ff', borderBottom: '1px solid #93c5fd' }}>
-                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</span>
-                <span className="font-semibold text-sm">{heat.danceType.name}</span>
-              </div>
-              {heat.entries.map(entry => {
-                const display = getEntryDisplay(entry)
-                const thumbs = heat.openThumbs.filter(t => t.studentId === entry.studentId)
-                const notes = heat.openNotes.filter(n => n.studentId === entry.studentId)
-                const allCategories = [...new Set(thumbs.map(t => t.category.name))].sort()
-
-                return (
-                  <div key={entry.studentId} className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <div className="font-semibold text-sm mb-2">
-                      <span style={{ fontFamily: 'monospace', marginRight: 8, color: '#555' }}>{display.num ?? '—'}</span>
-                      {display.personA}{display.personB ? ` & ${display.personB}` : ''}
-                    </div>
-                    {thumbs.length === 0 && notes.length === 0 ? (
-                      <p className="text-xs italic" style={{ color: 'var(--muted)' }}>No feedback yet</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {judges.map(judge => {
-                          const judgeThumbsForEntry = thumbs.filter(t => t.judgeId === judge.id)
-                          const judgeNote = notes.find(n => n.judgeId === judge.id)
-                          if (judgeThumbsForEntry.length === 0 && !judgeNote) return null
-                          return (
-                            <div key={judge.id}>
-                              <div className="text-xs font-semibold mb-1" style={{ color: '#555' }}>{judge.name}</div>
-                              <div className="flex flex-wrap gap-2 mb-1">
-                                {judgeThumbsForEntry.map(t => (
-                                  <span key={t.categoryId} className="text-xs px-2 py-0.5" style={{
-                                    borderRadius: 4,
-                                    backgroundColor: t.sentiment === 'up' ? '#dcfce7' : '#fee2e2',
-                                    color: t.sentiment === 'up' ? '#14532d' : '#7f1d1d',
-                                    border: `1px solid ${t.sentiment === 'up' ? '#86efac' : '#fca5a5'}`,
-                                  }}>
-                                    {t.sentiment === 'up' ? '▲' : '▼'} {t.category.name}
-                                  </span>
-                                ))}
-                              </div>
-                              {judgeNote && (
-                                <p className="text-xs italic" style={{ color: '#444' }}>"{judgeNote.note}"</p>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Open Heats — Feedback</h2>
+          <div className="card overflow-hidden">
+            <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col style={{ width: 44 }} />
+                <col style={{ width: 130 }} />
+                <col style={{ width: 180 }} />
+                <col />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Dance</th>
+                  <th>Couple</th>
+                  <th>Feedback</th>
+                </tr>
+              </thead>
+              <tbody>
+                {openHeats.map(heat =>
+                  heat.entries.length === 0 ? (
+                    <tr key={heat.id}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
+                      <td colSpan={2} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
+                    </tr>
+                  ) : heat.entries.map((entry, ri) => {
+                    const display = getEntryDisplay(entry)
+                    const thumbs = heat.openThumbs.filter(t => t.studentId === entry.studentId)
+                    const notes = heat.openNotes.filter(n => n.studentId === entry.studentId)
+                    const feedbackLines: string[] = []
+                    for (const judge of judges) {
+                      const jThumbs = thumbs.filter(t => t.judgeId === judge.id)
+                      const jNote = notes.find(n => n.judgeId === judge.id)
+                      const parts = [
+                        ...jThumbs.filter(t => t.sentiment === 'up').map(t => t.category.name),
+                        ...jThumbs.filter(t => t.sentiment === 'down').map(t => `↓${t.category.name}`),
+                      ]
+                      if (jNote) parts.push(jNote.note)
+                      if (parts.length > 0) feedbackLines.push(`${judge.name}: ${parts.join(' · ')}`)
+                    }
+                    return (
+                      <tr key={`${heat.id}-${entry.studentId}`} style={{ borderTop: ri === 0 && heat.id !== openHeats[0].id ? '2px solid var(--border)' : undefined }}>
+                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', verticalAlign: 'top', paddingTop: 8 }}>#{heat.number}</td>}
+                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
+                        <td style={{ fontSize: '0.82rem', verticalAlign: 'top' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 6, color: '#555' }}>{display.num ?? '—'}</span>
+                          {display.personA}{display.personB ? ` & ${display.personB}` : ''}
+                        </td>
+                        <td style={{ fontSize: '0.78rem', verticalAlign: 'top' }}>
+                          {feedbackLines.length === 0
+                            ? <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No feedback yet</span>
+                            : feedbackLines.map((line, i) => <div key={i} style={{ color: '#444', lineHeight: 1.5 }}>{line}</div>)
+                          }
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 

@@ -26,7 +26,7 @@ export default async function AttendancePage() {
   const checkedIn = allStudents.filter((s: typeof allStudents[number]) => s.checkedIn).length
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="max-w-4xl mx-auto space-y-4">
       <div className="flex items-end gap-4">
         <div>
           <h1 className="text-xl font-bold text-center">Attendance</h1>

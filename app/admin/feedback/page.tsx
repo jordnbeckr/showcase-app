@@ -29,7 +29,7 @@ export default async function AdminFeedbackPage() {
   const studentData = buildStudentFeedback(students, heats, judges, openThumbs, openNotes)
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       <FeedbackPrint students={studentData} />
     </div>
   )

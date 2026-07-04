@@ -153,7 +153,7 @@ export default function ShowsManager({
   studentShows: StudentShowEntry[]
 }) {
   const [pending, startTransition] = useTransition()
-  const [tab, setTab] = useState<'pro' | 'student'>('pro')
+  const [tab, setTab] = useState<'pro' | 'student'>('student')
   const [formKey, setFormKey] = useState(0)
 
   function handleDeletePro(id: number) {
