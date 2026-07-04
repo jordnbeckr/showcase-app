@@ -285,15 +285,15 @@ export default async function AdminResultsPage() {
                   })
                   if (rows.length === 0) return (
                     <tr key={heat.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</td>
-                      <td style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
+                      <td style={{ background: '#fde68a', fontFamily: 'monospace', fontWeight: 700, color: '#92400e' }}>{heat.number}</td>
+                      <td style={{ background: '#fef3c7', color: '#78350f', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
                       <td colSpan={1 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
                     </tr>
                   )
                   return rows.map((row, ri) => (
                     <tr key={`${heat.id}-${row.studentId}`} style={{ borderTop: ri === 0 && heat.id !== closedHeats[0].id ? '2px solid var(--border)' : undefined }}>
-                      {ri === 0 && <td rowSpan={rows.length} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', verticalAlign: 'top', paddingTop: 8 }}>#{heat.number}</td>}
-                      {ri === 0 && <td rowSpan={rows.length} style={{ fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
+                      {ri === 0 && <td rowSpan={rows.length} style={{ background: '#fde68a', fontFamily: 'monospace', fontWeight: 700, color: '#92400e', verticalAlign: 'top', paddingTop: 8 }}>{heat.number}</td>}
+                      {ri === 0 && <td rowSpan={rows.length} style={{ background: '#fef3c7', color: '#78350f', fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
                       <td>
                         <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{row.num ?? '—'}</span>
                         {row.personA}{row.personB ? ` & ${row.personB}` : ''}
@@ -338,8 +338,8 @@ export default async function AdminResultsPage() {
                 {openHeats.map(heat =>
                   heat.entries.length === 0 ? (
                     <tr key={heat.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555' }}>#{heat.number}</td>
-                      <td style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
+                      <td style={{ background: '#93c5fd', fontFamily: 'monospace', fontWeight: 700, color: '#1e40af' }}>{heat.number}</td>
+                      <td style={{ background: '#dbeafe', color: '#1e3a8a', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
                       <td colSpan={2} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
                     </tr>
                   ) : heat.entries.map((entry, ri) => {
@@ -359,8 +359,8 @@ export default async function AdminResultsPage() {
                     }
                     return (
                       <tr key={`${heat.id}-${entry.studentId}`} style={{ borderTop: ri === 0 && heat.id !== openHeats[0].id ? '2px solid var(--border)' : undefined }}>
-                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', verticalAlign: 'top', paddingTop: 8 }}>#{heat.number}</td>}
-                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
+                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ background: '#93c5fd', fontFamily: 'monospace', fontWeight: 700, color: '#1e40af', verticalAlign: 'top', paddingTop: 8 }}>{heat.number}</td>}
+                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ background: '#dbeafe', color: '#1e3a8a', fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
                         <td style={{ fontSize: '0.82rem', verticalAlign: 'top' }}>
                           <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 6, color: '#555' }}>{display.num ?? '—'}</span>
                           {display.personA}{display.personB ? ` & ${display.personB}` : ''}
