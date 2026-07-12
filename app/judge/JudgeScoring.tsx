@@ -447,7 +447,7 @@ function EntryRow({
         <span style={{ fontSize: '0.9rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 28, flexShrink: 0 }}>
           {display.leaderNumber ?? '—'}
         </span>
-        <span className="text-sm font-medium" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="text-sm font-medium" style={{ minWidth: 0, lineHeight: 1.3 }}>
           {display.personA}{display.personB ? ` & ${display.personB}` : ''}
         </span>
       </div>
