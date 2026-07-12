@@ -540,7 +540,10 @@ function CompBlock({
               <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
                 {couple.leaderNumber ?? '—'}
               </span>
-              <div className="flex gap-1.5 flex-wrap flex-1 justify-start">
+              <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
+                {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
+              </span>
+              <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
                   {isSemi ? (
                     <button
                       onClick={() => onSemiMark(event.id, couple.studentId)}

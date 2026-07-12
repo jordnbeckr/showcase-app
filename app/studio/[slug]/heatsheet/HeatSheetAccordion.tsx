@@ -208,6 +208,81 @@ function AccordionSection({ sheet }: { sheet: Sheet }) {
   )
 }
 
+function printAll(sheets: Sheet[]) {
+  const pages = sheets.map(sheet => {
+    const rows = buildTableRows(sheet.segments)
+    const leaderBadge = sheet.leaderNumber
+      ? `<span class="leader-num">${sheet.leaderNumber}</span>`
+      : ''
+    return `<div class="page">
+<div class="header">
+  <div class="header-left">
+    <h1>${sheet.name}</h1>
+    <p>${sheet.subtitle} &nbsp;·&nbsp; ${sheet.entryCount} heat${sheet.entryCount !== 1 ? 's' : ''}</p>
+  </div>
+  ${leaderBadge}
+</div>
+<table>
+  <colgroup>
+    <col class="num"><col class="dance"><col><col class="floor">
+  </colgroup>
+  <thead>
+    <tr><th>#</th><th>Dance</th><th>Partner</th><th>Floor</th></tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+</div>`
+  }).join('')
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Heat Sheets — All</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: letter; margin: 12mm 14mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: avoid; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1a2744; }
+  .header-left h1 { font-size: 16px; font-weight: 700; color: #1a2744; }
+  .header-left p { font-size: 11px; color: #555; margin-top: 2px; }
+  .leader-num { font-size: 28px; font-weight: 900; color: #1a2744; line-height: 1; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+  th { background: #e8ecf0; border: 1px solid #c0c8d0; padding: 4px 6px; text-align: left; font-size: 10px; font-weight: 700; color: #2a3545; white-space: nowrap; }
+  td { border: 1px solid #d0d8e0; padding: 3px 6px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  .event-row td { background: #1a2744 !important; color: white; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; padding: 3px 6px; }
+  .event-entry td { background: #c8d9a8 !important; }
+  col.num { width: 36px; }
+  col.dance { width: 140px; }
+  col.floor { width: 44px; text-align: center; }
+</style>
+</head>
+<body>${pages}
+<script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+}
+
+export function PrintAllButton({ sheets, label }: { sheets: Sheet[]; label: string }) {
+  if (sheets.length === 0) return null
+  return (
+    <button
+      onClick={() => printAll(sheets)}
+      className="text-xs px-3 py-1.5 font-medium"
+      style={{ backgroundColor: 'var(--accent)', color: 'white', borderRadius: 4 }}
+    >
+      Print All {label}
+    </button>
+  )
+}
+
 export default function HeatSheetAccordion({ sheets }: { sheets: Sheet[] }) {
   return (
     <div className="space-y-2">

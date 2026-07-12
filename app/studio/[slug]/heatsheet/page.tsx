@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import HeatSheetAccordion from './HeatSheetAccordion'
+import HeatSheetAccordion, { PrintAllButton } from './HeatSheetAccordion'
 
 export default async function HeatSheetPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -137,15 +137,17 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       </div>
 
       {studentSheets.length > 0 && (
-        <div className="mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <p style={{ color: 'var(--muted)', letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 600 }}>Students</p>
+          <PrintAllButton sheets={studentSheets} label="Students" />
         </div>
       )}
       <HeatSheetAccordion sheets={studentSheets} />
 
       {instructorSheets.length > 0 && (
-        <div className="mt-6 mb-2" style={{ borderTop: '2px solid var(--border)', paddingTop: 16 }}>
+        <div className="mt-6 mb-2 flex items-center justify-between" style={{ borderTop: '2px solid var(--border)', paddingTop: 16 }}>
           <p style={{ color: 'var(--muted)', letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 600 }}>Instructors</p>
+          <PrintAllButton sheets={instructorSheets} label="Instructors" />
         </div>
       )}
       <HeatSheetAccordion sheets={instructorSheets} />

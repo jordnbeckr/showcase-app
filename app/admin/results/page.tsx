@@ -408,7 +408,16 @@ export default async function AdminResultsPage() {
                 }
                 return { studentId: student.id, leaderNumber, personA, personB }
               })
-              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+
+            // Sort by total score ascending (best first); fall back to leader number if no scores yet
+            const couplesSorted = couples.map(c => ({
+              ...c,
+              _total: evt.compScores.filter(s => s.studentId === c.studentId).reduce((sum, s) => sum + s.place, 0),
+              _scored: evt.compScores.filter(s => s.studentId === c.studentId).length,
+            })).sort((a, b) => {
+              if (!isSemi && a._scored > 0 && b._scored > 0) return a._total !== b._total ? a._total - b._total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
+              return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
+            })
 
             return (
               <div key={evt.id} className="card overflow-hidden">
@@ -427,7 +436,7 @@ export default async function AdminResultsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {couples.map(couple => {
+                    {couplesSorted.map(couple => {
                       const coupleScores = evt.compScores.filter(s => s.studentId === couple.studentId)
                       const total = coupleScores.reduce((sum, s) => sum + s.place, 0)
                       return (
@@ -467,15 +476,15 @@ export default async function AdminResultsPage() {
                       </tr>
                       )
                     })}
-                    {couples.length === 0 && (
+                    {couplesSorted.length === 0 && (
                       <tr><td colSpan={1 + judges.length + (isSemi ? 0 : 1)} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
                     )}
                   </tbody>
                 </table>
 
                 {/* Final tabulation: sum scores, rank lowest-total first */}
-                {!isSemi && couples.length > 0 && (() => {
-                  const scoredCouples = couples.map(couple => {
+                {!isSemi && couplesSorted.length > 0 && (() => {
+                  const scoredCouples = couplesSorted.map(couple => {
                     const scores = evt.compScores.filter(s => s.studentId === couple.studentId)
                     const total = scores.reduce((sum, s) => sum + s.place, 0)
                     const judgeCount = scores.length
