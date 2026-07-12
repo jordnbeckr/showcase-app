@@ -415,7 +415,7 @@ export default async function AdminResultsPage() {
               _total: evt.compScores.filter(s => s.studentId === c.studentId).reduce((sum, s) => sum + s.place, 0),
               _scored: evt.compScores.filter(s => s.studentId === c.studentId).length,
             })).sort((a, b) => {
-              if (!isSemi && a._scored > 0 && b._scored > 0) return a._total !== b._total ? b._total - a._total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
+              if (!isSemi && a._scored > 0 && b._scored > 0) return a._total !== b._total ? a._total - b._total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
               return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
             })
 
@@ -519,7 +519,7 @@ export default async function AdminResultsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {ranked.map(c => (
+                          {[...ranked].reverse().map(c => (
                             <tr key={c.studentId} style={{ backgroundColor: medalBg[c.rank] }}>
                               <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
                                 {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}

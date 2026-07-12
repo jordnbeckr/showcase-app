@@ -32,7 +32,7 @@ export default async function JudgeLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </header>
-      <main className="flex-1 p-4 max-w-2xl mx-auto w-full">{children}</main>
+      <main className="flex-1 p-4 max-w-3xl mx-auto w-full">{children}</main>
     </div>
   )
 }
