@@ -346,7 +346,7 @@ export default async function AdminResultsPage() {
                     const display = getEntryDisplay(entry)
                     const thumbs = heat.openThumbs.filter(t => t.studentId === entry.studentId)
                     const notes = heat.openNotes.filter(n => n.studentId === entry.studentId)
-                    const feedbackLines: string[] = []
+                    const feedbackLines: { name: string; text: string }[] = []
                     for (const judge of judges) {
                       const jThumbs = thumbs.filter(t => t.judgeId === judge.id)
                       const jNote = notes.find(n => n.judgeId === judge.id)
@@ -355,7 +355,7 @@ export default async function AdminResultsPage() {
                         ...jThumbs.filter(t => t.sentiment === 'down').map(t => `↓${t.category.name}`),
                       ]
                       if (jNote) parts.push(jNote.note)
-                      if (parts.length > 0) feedbackLines.push(`${judge.name}: ${parts.join(' · ')}`)
+                      if (parts.length > 0) feedbackLines.push({ name: judge.name, text: parts.join(' · ') })
                     }
                     return (
                       <tr key={`${heat.id}-${entry.studentId}`} style={{ borderTop: ri === 0 && heat.id !== openHeats[0].id ? '2px solid var(--border)' : undefined }}>
@@ -368,7 +368,11 @@ export default async function AdminResultsPage() {
                         <td style={{ fontSize: '0.78rem', verticalAlign: 'top' }}>
                           {feedbackLines.length === 0
                             ? <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No feedback yet</span>
-                            : feedbackLines.map((line, i) => <div key={i} style={{ color: '#444', lineHeight: 1.5 }}>{line}</div>)
+                            : feedbackLines.map((line, i) => (
+                                <div key={i} style={{ color: '#444', lineHeight: 1.6 }}>
+                                  <span style={{ fontWeight: 700, color: '#1a2744', marginRight: 4 }}>{line.name}:</span>{line.text}
+                                </div>
+                              ))
                           }
                         </td>
                       </tr>
@@ -502,38 +506,49 @@ export default async function AdminResultsPage() {
                     ranked.push({ ...scoredCouples[i], rank })
                   }
 
-                  const medalBg: Record<number, string> = { 1: '#fef9c3', 2: '#f1f5f9', 3: '#fff7ed' }
+                  const medalStyle: Record<number, { bg: string; color: string; border: string }> = {
+                    1: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
+                    2: { bg: '#cbd5e1', color: '#1e293b', border: '#94a3b8' },
+                    3: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
+                  }
 
                   return (
-                    <div style={{ borderTop: '2px solid #d8b4fe', backgroundColor: '#faf5ff' }}>
-                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b21a8', borderBottom: '1px solid #e9d5ff' }}>
-                        Final Standings
+                    <div style={{ borderTop: '4px solid #7c3aed', background: 'linear-gradient(180deg,#ede9fe 0%,#faf5ff 100%)' }}>
+                      <div className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '2px solid #c4b5fd' }}>
+                        <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>🏆</span>
+                        <div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#4c1d95', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Final Standings</div>
+                          <div style={{ fontSize: '0.7rem', color: '#7c3aed', fontWeight: 600, letterSpacing: '0.06em' }}>Read from bottom ↑ — 1st place announced last</div>
+                        </div>
                       </div>
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: 52, textAlign: 'center' }}>Place</th>
-                            <th>Couple</th>
-                            <th style={{ textAlign: 'center', width: 80 }}>Total pts</th>
-                            <th style={{ textAlign: 'center', width: 80 }}>Judges</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...ranked].reverse().map(c => (
-                            <tr key={c.studentId} style={{ backgroundColor: medalBg[c.rank] }}>
-                              <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
+                      <div className="divide-y" style={{ borderColor: '#ddd6fe' }}>
+                        {[...ranked].reverse().map(c => {
+                          const ms = medalStyle[c.rank]
+                          const isTop3 = c.rank <= 3
+                          return (
+                            <div key={c.studentId} className="flex items-center gap-4 px-4"
+                              style={{
+                                padding: isTop3 ? '14px 20px' : '10px 20px',
+                                backgroundColor: ms ? ms.bg : '#f5f3ff',
+                                borderLeft: isTop3 ? `6px solid ${ms.border}` : '6px solid #c4b5fd',
+                              }}>
+                              <div style={{ fontSize: isTop3 ? '2.2rem' : '1.1rem', fontWeight: 900, fontFamily: 'monospace', color: ms ? ms.color : '#6b21a8', minWidth: 48, textAlign: 'center', lineHeight: 1 }}>
                                 {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}
-                              </td>
-                              <td>
-                                <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{c.leaderNumber ?? '—'}</span>
-                                {c.personA}{c.personB ? ` & ${c.personB}` : ''}
-                              </td>
-                              <td style={{ textAlign: 'center', fontWeight: 700, color: '#6b21a8' }}>{c.total}</td>
-                              <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted)' }}>{c.judgeCount}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: isTop3 ? '1.05rem' : '0.9rem', fontWeight: isTop3 ? 800 : 600, color: ms ? ms.color : '#1e1e1e', lineHeight: 1.2 }}>
+                                  <span style={{ fontFamily: 'monospace', marginRight: 8, opacity: 0.7 }}>{c.leaderNumber ?? '—'}</span>
+                                  {c.personA}{c.personB ? ` & ${c.personB}` : ''}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: isTop3 ? '1.1rem' : '0.95rem', fontWeight: 900, color: ms ? ms.color : '#6b21a8' }}>{c.total} pts</div>
+                                <div style={{ fontSize: '0.68rem', color: ms ? ms.color : '#7c3aed', opacity: 0.75 }}>{c.judgeCount} judge{c.judgeCount !== 1 ? 's' : ''}</div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )
                 })()}

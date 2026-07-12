@@ -441,20 +441,20 @@ function EntryRow({
   }
 
   return (
-    <div className="px-3 pt-2 pb-1.5" style={{ backgroundColor: 'var(--card)' }}>
-      {/* Row 1: number + name */}
-      <div className="flex items-center gap-2 mb-1.5">
+    <div className="px-3 py-1.5 flex items-center gap-0" style={{ backgroundColor: 'var(--card)' }}>
+      {/* Identity: number + name, fixed width */}
+      <div className="flex items-center gap-2 flex-shrink-0" style={{ minWidth: 160, width: 160 }}>
         <span style={{ fontSize: '0.9rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 28, flexShrink: 0 }}>
           {display.leaderNumber ?? '—'}
         </span>
-        <span className="text-sm font-medium" style={{ minWidth: 0 }}>
+        <span className="text-sm font-medium" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {display.personA}{display.personB ? ` & ${display.personB}` : ''}
         </span>
       </div>
 
-      {/* Row 2: category buttons + note, indented */}
+      {/* Categories + note, flush left of identity column */}
       {isOpen && (
-        <div className="flex items-center gap-3 flex-wrap" style={{ paddingLeft: 36 }}>
+        <div className="flex items-center gap-2 flex-1 flex-wrap" style={{ borderLeft: '1px solid var(--border)', paddingLeft: 10 }}>
           {categories.map(cat => {
             const thumbKey = `${heat.id}-${entry.studentId}-${cat.id}`
             const sentiment = openThumbs[thumbKey]
