@@ -27,7 +27,20 @@ export default function HeatOrderConfig({ heats: initialHeats }: { heats: HeatIt
   const lastClickedIdx = useRef<number | null>(null)
   const dragId = useRef<number | null>(null)
 
-  useEffect(() => { setHeats(initialHeats) }, [initialHeats])
+  useEffect(() => {
+    setHeats(prev => {
+      const initialIds = new Set(initialHeats.map(h => h.id))
+      const localIds = new Set(prev.map(h => h.id))
+      const sameSet = initialIds.size === localIds.size && [...initialIds].every(id => localIds.has(id))
+      // If heats were added/removed, full reset. Otherwise only update non-order fields
+      // to avoid wiping unsaved drag reordering when a category action re-renders the server.
+      if (!sameSet) return initialHeats
+      return prev.map(h => {
+        const updated = initialHeats.find(ih => ih.id === h.id)
+        return updated ? { ...h, category: updated.category, entryCount: updated.entryCount } : h
+      })
+    })
+  }, [initialHeats])
 
   const filtered = filter
     ? heats.filter(h =>
