@@ -36,7 +36,7 @@ export default async function StudioLayout({
             { href: `/studio/${slug}`, label: 'Home' },
             { href: `/studio/${slug}/roster`, label: 'Roster' },
             { href: `/studio/${slug}/heats`, label: 'Heat Sign-Up' },
-            { href: `/studio/${slug}/shows`, label: 'Shows' },
+            // { href: `/studio/${slug}/shows`, label: 'Shows' },
             { href: `/studio/${slug}/breakdown`, label: 'Breakdown' },
             { href: `/studio/${slug}/heatsheet`, label: 'Heat Sheet' },
             { href: `/studio/${slug}/feedback`, label: 'Feedback' },
