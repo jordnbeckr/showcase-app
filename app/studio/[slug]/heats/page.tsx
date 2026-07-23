@@ -100,7 +100,10 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   }
 
   const totalHeatEntries = heats.reduce(
-    (s, h) => s + h.entries.filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId)).length,
+    (s, h) => s + h.entries.filter(e =>
+      (e.instructorId !== null && instructorIds.includes(e.instructorId)) ||
+      (e.instructorId === null && e.partnerStudentId !== null && studentIds.includes(e.studentId))
+    ).length,
     0
   )
   const totalShowEntries = Object.values(showCountByStudent).reduce((a, b) => a + b, 0)
@@ -125,7 +128,10 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
           totalEntries: h.entries.length,
           eventIds: h.events.map(eh => eh.eventId),
           myEntries: h.entries
-            .filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId))
+            .filter(e =>
+              (e.instructorId !== null && instructorIds.includes(e.instructorId)) ||
+              (e.instructorId === null && e.partnerStudentId !== null && studentIds.includes(e.studentId))
+            )
             .map(e => ({
               id: e.id,
               studentId: e.studentId,
