@@ -22,7 +22,7 @@ export default async function PublicView() {
     }),
     db.studio.findMany({
       include: { instructors: { orderBy: { name: 'asc' } } },
-      orderBy: { order: 'asc' },
+      orderBy: { name: 'asc' },
     }),
     db.event.findMany({
       include: { heats: { orderBy: { heat: { number: 'asc' } } } },
