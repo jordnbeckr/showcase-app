@@ -26,7 +26,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         danceType: true,
         events: { include: { event: true } },
         entries: {
-          include: { student: true, instructor: true },
+          include: { student: true, instructor: true, partnerStudent: true },
         },
       },
       orderBy: { number: 'asc' },
@@ -73,6 +73,32 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
     })
   }
 
+  // Amateur heat pairs: entries with no instructor, partnerStudentId set, student belongs to this studio
+  // Deduplicate by keeping only the leader's entry (role === 'Leader')
+  const amateurHeatPairs: { heatId: number; leaderId: number; leaderName: string; followerId: number; followerName: string }[] = []
+  const seenHeatPairs = new Set<string>()
+  for (const heat of heats) {
+    for (const entry of heat.entries) {
+      if (entry.instructorId !== null || entry.partnerStudentId === null) continue
+      if (!studentIds.includes(entry.studentId)) continue
+      const leader = studio.students.find(s => s.id === entry.studentId && s.role === 'Leader')
+      if (!leader) continue
+      const pairKey = `${heat.id}-${entry.studentId}-${entry.partnerStudentId}`
+      if (seenHeatPairs.has(pairKey)) continue
+      seenHeatPairs.add(pairKey)
+      const follower = studio.students.find(s => s.id === entry.partnerStudentId) ??
+        (entry.partnerStudent ? { firstName: entry.partnerStudent.firstName, lastName: entry.partnerStudent.lastName } : null)
+      if (!follower) continue
+      amateurHeatPairs.push({
+        heatId: heat.id,
+        leaderId: leader.id,
+        leaderName: `${leader.firstName} ${leader.lastName}`,
+        followerId: entry.partnerStudentId,
+        followerName: `${follower.firstName} ${follower.lastName}`,
+      })
+    }
+  }
+
   const totalHeatEntries = heats.reduce(
     (s, h) => s + h.entries.filter(e => e.instructorId !== null && instructorIds.includes(e.instructorId)).length,
     0
@@ -115,6 +141,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         }))}
         enrolledEvents={studentEvents.map(se => ({ studentId: se.studentId, eventId: se.eventId }))}
         amateurPairs={amateurPairs}
+        amateurHeatPairs={amateurHeatPairs}
         showCountByStudent={showCountByStudent}
       />
     </div>

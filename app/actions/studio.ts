@@ -238,6 +238,66 @@ export async function removeHeatEntry(studioSlug: string, entryId: number) {
   revalidatePath('/view')
 }
 
+export async function addAmateurHeatEntry(
+  studioSlug: string,
+  heatId: number,
+  leaderId: number,
+  followerId: number
+) {
+  const studio = await requireStudio(studioSlug)
+
+  const leader = await db.student.findFirst({ where: { id: leaderId, studioId: studio.id } })
+  const follower = await db.student.findFirst({ where: { id: followerId, studioId: studio.id } })
+  if (!leader || !follower) return { error: 'Students not found' }
+  if (leaderId === followerId) return { error: 'Leader and follower must be different students' }
+
+  const heat = await db.heat.findUnique({ where: { id: heatId }, include: { entries: true } })
+  if (!heat) return { error: 'Heat not found' }
+  if (heat.entries.length + 2 > heat.maxCapacity) return { error: 'Not enough capacity for both students' }
+
+  const alreadyLeader = await db.heatEntry.findFirst({ where: { heatId, studentId: leaderId } })
+  const alreadyFollower = await db.heatEntry.findFirst({ where: { heatId, studentId: followerId } })
+  if (alreadyLeader) return { error: `${leader.firstName} is already in this heat` }
+  if (alreadyFollower) return { error: `${follower.firstName} is already in this heat` }
+
+  await db.heatEntry.createMany({
+    data: [
+      { heatId, studentId: leaderId, partnerStudentId: followerId },
+      { heatId, studentId: followerId, partnerStudentId: leaderId },
+    ],
+  })
+
+  revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath('/admin/master')
+  revalidatePath('/view')
+}
+
+export async function removeAmateurHeatEntry(
+  studioSlug: string,
+  heatId: number,
+  leaderId: number
+) {
+  const studio = await requireStudio(studioSlug)
+
+  const leaderEntry = await db.heatEntry.findFirst({
+    where: { heatId, studentId: leaderId, student: { studioId: studio.id }, instructorId: null },
+  })
+  if (!leaderEntry) return { error: 'Entry not found' }
+  const partnerId = leaderEntry.partnerStudentId
+
+  await db.heatEntry.deleteMany({
+    where: {
+      heatId,
+      studentId: partnerId ? { in: [leaderId, partnerId] } : leaderId,
+      instructorId: null,
+    },
+  })
+
+  revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath('/admin/master')
+  revalidatePath('/view')
+}
+
 export async function reassignHeatEntry(
   studioSlug: string,
   entryId: number,

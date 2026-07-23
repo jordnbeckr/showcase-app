@@ -1,6 +1,6 @@
 'use client'
 
-import { addHeatEntry, removeHeatEntry, addEventEntry, removeEventEntry, addAmateurEventEntry, removeAmateurEventEntry } from '@/app/actions/studio'
+import { addHeatEntry, removeHeatEntry, addEventEntry, removeEventEntry, addAmateurEventEntry, removeAmateurEventEntry, addAmateurHeatEntry, removeAmateurHeatEntry } from '@/app/actions/studio'
 import { useState, useTransition, useMemo, useEffect, useRef, Fragment } from 'react'
 
 type HeatEntry = {
@@ -12,6 +12,14 @@ type HeatEntry = {
 
 type AmateurPair = {
   eventId: number
+  leaderId: number
+  leaderName: string
+  followerId: number
+  followerName: string
+}
+
+type AmateurHeatPair = {
+  heatId: number
   leaderId: number
   leaderName: string
   followerId: number
@@ -53,6 +61,7 @@ export default function HeatSignUp({
   events,
   enrolledEvents,
   amateurPairs,
+  amateurHeatPairs,
   showCountByStudent,
 }: {
   slug: string
@@ -63,6 +72,7 @@ export default function HeatSignUp({
   events: EventInfo[]
   enrolledEvents: { studentId: number; eventId: number }[]
   amateurPairs: AmateurPair[]
+  amateurHeatPairs: AmateurHeatPair[]
   showCountByStudent: Record<number, number>
 }) {
   const [pending, startTransition] = useTransition()
@@ -77,6 +87,10 @@ export default function HeatSignUp({
   const [amateurFormEventId, setAmateurFormEventId] = useState<number | null>(null)
   const [amateurLeaderId, setAmateurLeaderId] = useState('')
   const [amateurFollowerId, setAmateurFollowerId] = useState('')
+  const [amateurHeatFormId, setAmateurHeatFormId] = useState<number | null>(null)
+  const [amateurHeatLeaderId, setAmateurHeatLeaderId] = useState('')
+  const [amateurHeatFollowerId, setAmateurHeatFollowerId] = useState('')
+  const [removedAmateurHeatKeys, setRemovedAmateurHeatKeys] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selectedStudent = students.find(s => s.id.toString() === selectedStudentId)
@@ -195,6 +209,29 @@ export default function HeatSignUp({
       const result = await addAmateurEventEntry(slug, eventId, lid, fid)
       if (result?.error) setError(result.error)
       else { setAmateurFormEventId(null); setAmateurLeaderId(''); setAmateurFollowerId('') }
+    })
+  }
+
+  function handleAddAmateurHeatPair(heatId: number) {
+    const lid = parseInt(amateurHeatLeaderId)
+    const fid = parseInt(amateurHeatFollowerId)
+    if (!lid || !fid) { setError('Select both a leader and a follower'); return }
+    startTransition(async () => {
+      const result = await addAmateurHeatEntry(slug, heatId, lid, fid)
+      if (result?.error) setError(result.error)
+      else { setAmateurHeatFormId(null); setAmateurHeatLeaderId(''); setAmateurHeatFollowerId('') }
+    })
+  }
+
+  function handleRemoveAmateurHeatPair(heatId: number, leaderId: number) {
+    const key = `${heatId}-${leaderId}`
+    setRemovedAmateurHeatKeys(prev => new Set(prev).add(key))
+    startTransition(async () => {
+      const result = await removeAmateurHeatEntry(slug, heatId, leaderId)
+      if (result?.error) {
+        setRemovedAmateurHeatKeys(prev => { const s = new Set(prev); s.delete(key); return s })
+        setError(result.error)
+      }
     })
   }
 
@@ -483,9 +520,9 @@ export default function HeatSignUp({
       {/* Single table — heats in order, events grouped inline */}
       {(() => {
         const colW = 130
-        const W1 = 34, W2 = 145, W3 = 125
-        const baseW = W1 + W2 + W3 + instructors.length * colW
-        const colSpan = 3 + instructors.length
+        const W1 = 34, W2 = 145, W3 = 125, W4 = 150
+        const baseW = W1 + W2 + W3 + instructors.length * colW + W4
+        const colSpan = 3 + instructors.length + 1
         const stickyHead = (left: number, width: number, extra?: React.CSSProperties) => ({
           position: 'sticky' as const, top: 0, left, zIndex: 20, width,
           backgroundColor: 'var(--card)', ...extra,
@@ -506,6 +543,7 @@ export default function HeatSignUp({
                   {instructors.map(inst => (
                     <th key={inst.id} style={{ width: colW, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)' }}>{inst.name}</th>
                   ))}
+                  <th style={{ width: W4, textAlign: 'center', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--card)', color: '#185fa5' }}>Couple</th>
                 </tr>
               </thead>
               <tbody>
@@ -526,6 +564,55 @@ export default function HeatSignUp({
                           </span>
                         </td>
                         {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: false }))}
+                        {(() => {
+                          const heatPairs = amateurHeatPairs.filter(p => p.heatId === heat.id && !removedAmateurHeatKeys.has(`${p.heatId}-${p.leaderId}`))
+                          const isFormOpen = amateurHeatFormId === heat.id
+                          const leaders = students.filter(s => s.role === 'Leader')
+                          const followers = students.filter(s => s.role === 'Follower')
+                          return (
+                            <td style={{ textAlign: 'center', padding: '3px 6px', verticalAlign: 'middle' }}>
+                              <div className="flex flex-col gap-1 items-center">
+                                {heatPairs.map(pair => (
+                                  <span key={`${pair.leaderId}-${pair.followerId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, backgroundColor: '#e6f1fb', border: '1px solid #b5d4f4', borderRadius: 3, padding: '1px 6px', fontSize: '0.71rem', color: '#0c447c', whiteSpace: 'nowrap' }}>
+                                    {pair.leaderName.split(' ')[0]} &amp; {pair.followerName.split(' ')[0]}
+                                    <button
+                                      onClick={() => handleRemoveAmateurHeatPair(heat.id, pair.leaderId)}
+                                      disabled={pending}
+                                      style={{ color: '#94a3b8', fontWeight: 700, marginLeft: 2, fontSize: 10 }}
+                                    >×</button>
+                                  </span>
+                                ))}
+                                {!isFormOpen && (
+                                  <button
+                                    onClick={() => { setAmateurHeatFormId(heat.id); setAmateurHeatLeaderId(''); setAmateurHeatFollowerId('') }}
+                                    className="text-xs px-1.5 py-0.5"
+                                    style={{ color: '#185fa5', border: '1px solid #b5d4f4', borderRadius: 3, backgroundColor: '#e6f1fb', cursor: 'pointer' }}
+                                  >+ Add couple</button>
+                                )}
+                                {isFormOpen && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch', padding: '4px 2px' }}>
+                                    <select value={amateurHeatLeaderId} onChange={e => setAmateurHeatLeaderId(e.target.value)} style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: 3, border: '1px solid var(--border)' }}>
+                                      <option value="">Leader…</option>
+                                      {leaders.map(s => <option key={s.id} value={s.id}>{s.lastName}, {s.firstName}</option>)}
+                                    </select>
+                                    <select value={amateurHeatFollowerId} onChange={e => setAmateurHeatFollowerId(e.target.value)} style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: 3, border: '1px solid var(--border)' }}>
+                                      <option value="">Follower…</option>
+                                      {followers.map(s => <option key={s.id} value={s.id}>{s.lastName}, {s.firstName}</option>)}
+                                    </select>
+                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                      <button onClick={() => setAmateurHeatFormId(null)} style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--border)', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--muted)' }}>Cancel</button>
+                                      <button
+                                        onClick={() => handleAddAmateurHeatPair(heat.id)}
+                                        disabled={pending || !amateurHeatLeaderId || !amateurHeatFollowerId}
+                                        style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 3, backgroundColor: '#1a2744', color: 'white', border: 'none', cursor: 'pointer', opacity: pending || !amateurHeatLeaderId || !amateurHeatFollowerId ? 0.5 : 1 }}
+                                      >Add</button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          )
+                        })()}
                       </tr>
                     )
                   }
@@ -620,6 +707,7 @@ export default function HeatSignUp({
                               </span>
                             </td>
                             {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: true, eventId: event.id }))}
+                            <td style={{ backgroundColor: '#c8d9a8' }} />
                           </tr>
                         )
                       })}
