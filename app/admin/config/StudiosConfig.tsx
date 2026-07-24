@@ -1,7 +1,7 @@
 'use client'
 
-import { addStudio, addInstructor, removeInstructor, updateStudioPassword, deleteStudio } from '@/app/actions/admin'
-import { useTransition, useState } from 'react'
+import { addStudio, addInstructor, removeInstructor, renameInstructor, updateStudioPassword, deleteStudio } from '@/app/actions/admin'
+import { useTransition, useState, useRef } from 'react'
 
 type Studio = {
   id: number
@@ -14,6 +14,9 @@ export default function StudiosConfig({ studios }: { studios: Studio[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [editingInstructorId, setEditingInstructorId] = useState<number | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
 
   function handleAddInstructor(studioId: number) {
     return (formData: FormData) => {
@@ -38,6 +41,22 @@ export default function StudiosConfig({ studios }: { studios: Studio[] }) {
       const result = await addStudio(formData)
       if (result?.error) setError(result.error)
     })
+  }
+
+  function startEditing(inst: { id: number; name: string }) {
+    setEditingInstructorId(inst.id)
+    setEditingName(inst.name)
+    setTimeout(() => editInputRef.current?.select(), 0)
+  }
+
+  function commitRename(instructorId: number) {
+    const trimmed = editingName.trim()
+    if (!trimmed) { setEditingInstructorId(null); return }
+    startTransition(async () => {
+      const result = await renameInstructor(instructorId, trimmed)
+      if (result?.error) setError(result.error)
+    })
+    setEditingInstructorId(null)
   }
 
   function handleRemoveInstructor(instructorId: number, name: string) {
@@ -103,12 +122,34 @@ export default function StudiosConfig({ studios }: { studios: Studio[] }) {
                     <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No instructors yet</p>
                   )}
                   {studio.instructors.map(inst => (
-                    <div key={inst.id} className="flex items-center justify-between py-1.5">
-                      <span className="text-sm">{inst.name}</span>
+                    <div key={inst.id} className="flex items-center justify-between py-1.5 gap-2">
+                      {editingInstructorId === inst.id ? (
+                        <input
+                          ref={editInputRef}
+                          value={editingName}
+                          onChange={e => setEditingName(e.target.value)}
+                          onBlur={() => commitRename(inst.id)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') commitRename(inst.id)
+                            if (e.key === 'Escape') setEditingInstructorId(null)
+                          }}
+                          className="field flex-1 text-sm"
+                          style={{ padding: '2px 6px', height: 28 }}
+                        />
+                      ) : (
+                        <button
+                          className="text-sm text-left flex-1 hover:underline"
+                          style={{ color: 'var(--text)', cursor: 'text' }}
+                          onClick={() => startEditing(inst)}
+                          title="Click to rename"
+                        >
+                          {inst.name}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleRemoveInstructor(inst.id, inst.name)}
                         disabled={pending}
-                        className="text-xs disabled:opacity-40"
+                        className="text-xs disabled:opacity-40 flex-shrink-0"
                         style={{ color: '#dc2626' }}
                       >
                         Remove

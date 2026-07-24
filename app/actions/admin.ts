@@ -138,6 +138,16 @@ export async function addInstructor(studioId: number, formData: FormData) {
   revalidatePath('/admin/master')
 }
 
+export async function renameInstructor(instructorId: number, name: string) {
+  await requireAdmin()
+  const trimmed = name.trim()
+  if (!trimmed) return { error: 'Name cannot be empty' }
+  await db.instructor.update({ where: { id: instructorId }, data: { name: trimmed } })
+  revalidatePath('/admin/config')
+  revalidatePath('/admin/master')
+  revalidatePath('/view')
+}
+
 export async function removeInstructor(instructorId: number) {
   await requireAdmin()
   const entries = await db.heatEntry.count({ where: { instructorId } })
