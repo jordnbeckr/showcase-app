@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 
 type Entry = {
+  studentId: number
   student: { firstName: string; lastName: string; leaderNumber: number | null; studio: { name: string } }
   instructor: { name: string; leaderNumber: number | null; studio: { name: string } } | null
 }
@@ -36,11 +37,13 @@ export default function HeatSheet({
   heats,
   studios,
   events = [],
+  eventStudentIds,
   adminView = false,
 }: {
   heats: Heat[]
   studios: Studio[]
   events?: EventInfo[]
+  eventStudentIds?: Record<number, number[]>
   adminView?: boolean
 }) {
   const colCount = adminView ? 4 : 3 + studios.length
@@ -76,10 +79,12 @@ export default function HeatSheet({
     }
   }
 
-  function renderHeatRow(heat: Heat, inEvent = false) {
+  function renderHeatRow(heat: Heat, inEvent = false, eventId?: number) {
+    const enrolledIds = eventId != null && eventStudentIds ? new Set(eventStudentIds[eventId] ?? []) : null
+    const visibleEntries = enrolledIds ? heat.entries.filter(e => enrolledIds.has(e.studentId)) : heat.entries
     const { label, color } = statusInfo(heat.entries.length, heat.maxCapacity)
     return (
-      <tr key={heat.id} style={{ backgroundColor: inEvent ? '#c8d9a8' : undefined }}>
+      <tr key={`${heat.id}-${eventId ?? 'standalone'}`} style={{ backgroundColor: inEvent ? '#c8d9a8' : undefined }}>
         <td style={{
           color: inEvent ? '#aaa' : 'var(--muted)',
           fontFamily: 'monospace',
@@ -97,7 +102,7 @@ export default function HeatSheet({
         {adminView ? (
           <td>
             <div className="flex flex-wrap gap-1">
-              {heat.entries.map((e, i) => (
+              {visibleEntries.map((e, i) => (
                 <span
                   key={i}
                   className="text-xs px-1.5 py-0.5"
@@ -114,7 +119,7 @@ export default function HeatSheet({
           </td>
         ) : (
           studios.map(studio => {
-            const studioEntries = heat.entries.filter(e =>
+            const studioEntries = visibleEntries.filter(e =>
               e.instructor ? e.instructor.studio.name === studio.name : e.student.studio.name === studio.name
             )
             return (
@@ -180,7 +185,7 @@ export default function HeatSheet({
                     </span>
                   </td>
                 </tr>
-                {evtHeats.map(h => renderHeatRow(h, true))}
+                {evtHeats.map(h => renderHeatRow(h, true, event.id))}
               </Fragment>
             )
           })}

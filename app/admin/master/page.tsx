@@ -4,7 +4,7 @@ import HeatSheet from '@/components/HeatSheet'
 export const dynamic = 'force-dynamic'
 
 export default async function MasterView() {
-  const [heats, studios, events] = await Promise.all([
+  const [heats, studios, events, studentEvents] = await Promise.all([
     db.heat.findMany({
       include: {
         danceType: true,
@@ -25,7 +25,15 @@ export default async function MasterView() {
       include: { heats: { orderBy: { heat: { number: 'asc' } } } },
       orderBy: { name: 'asc' },
     }),
+    db.studentEvent.findMany({ select: { studentId: true, eventId: true } }),
   ])
+
+  // eventId → Set of studentIds enrolled in that event
+  const eventStudentIds: Record<number, number[]> = {}
+  for (const se of studentEvents) {
+    if (!eventStudentIds[se.eventId]) eventStudentIds[se.eventId] = []
+    eventStudentIds[se.eventId].push(se.studentId)
+  }
 
   return (
     <div className="space-y-4">
@@ -35,6 +43,7 @@ export default async function MasterView() {
         heats={heats}
         studios={studios}
         events={events.map(e => ({ id: e.id, name: e.name, heatIds: e.heats.map(eh => eh.heatId) }))}
+        eventStudentIds={eventStudentIds}
         adminView
       />
     </div>
