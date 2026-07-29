@@ -40,6 +40,7 @@ function capacityColor(count: number, max: number) {
 // ---- By Studio Tab ----
 function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: Studio[]; events: EventInfo[] }) {
   const colSpan = 3 + studios.length
+  const totalEntries = studios.reduce((s, st) => s + st.total, 0)
 
   // Build segments in heat-number order (same logic as sign-up grid)
   type Seg =
@@ -73,6 +74,28 @@ function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: 
   }
 
   return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3">
+        {studios.map(s => (
+          <div
+            key={s.id}
+            className="flex flex-col"
+            style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}
+          >
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>{s.name}</span>
+            <span style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{s.total}</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>entries</span>
+          </div>
+        ))}
+        <div
+          className="flex flex-col"
+          style={{ backgroundColor: '#1a2744', border: '1px solid #1a2744', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}
+        >
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)' }}>Total</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{totalEntries}</span>
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>entries</span>
+        </div>
+      </div>
     <div style={{ overflowX: 'auto' }}>
       <table className="data-table" style={{ minWidth: 400 + studios.length * 100 }}>
         <thead>
@@ -159,6 +182,7 @@ function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: 
         </tbody>
       </table>
     </div>
+    </div>
   )
 }
 
@@ -174,101 +198,118 @@ function ByTeacherView({ teacherData }: { teacherData: TeacherData[] }) {
     })
   }
 
-  function toggleAll() {
-    if (expanded.size === teacherData.length) setExpanded(new Set())
-    else setExpanded(new Set(teacherData.map(t => t.id)))
-  }
-
   if (teacherData.length === 0) {
     return <p className="text-sm py-4" style={{ color: 'var(--muted)' }}>No entries yet.</p>
   }
 
+  // Group by studio, studios ordered by first appearance (already sorted by studioName from server)
+  const studioGroups: { studioName: string; totalEntries: number; teachers: TeacherData[] }[] = []
+  for (const teacher of teacherData) {
+    let group = studioGroups.find(g => g.studioName === teacher.studioName)
+    if (!group) {
+      group = { studioName: teacher.studioName, totalEntries: 0, teachers: [] }
+      studioGroups.push(group)
+    }
+    group.teachers.push(teacher)
+    group.totalEntries += teacher.totalEntries
+  }
+  // Sort teachers within each studio by descending entry count
+  for (const group of studioGroups) {
+    group.teachers.sort((a, b) => b.totalEntries - a.totalEntries)
+  }
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs" style={{ color: 'var(--muted)' }}>
-          Sorted by studio, then by teacher last name. Expand to see per-student breakdowns.
-        </p>
-        <button
-          onClick={toggleAll}
-          className="text-xs px-3 py-1.5 font-medium text-white"
-          style={{ backgroundColor: '#444', borderRadius: 4 }}
+    <div className="space-y-3">
+      {studioGroups.map(group => (
+        <div
+          key={group.studioName}
+          className="overflow-hidden"
+          style={{ border: '1px solid var(--border)', borderRadius: 6 }}
         >
-          {expanded.size === teacherData.length ? 'Collapse All' : 'Expand All'}
-        </button>
-      </div>
+          <div
+            className="flex items-center justify-between px-4 py-2.5"
+            style={{ backgroundColor: '#eef2e8', borderBottom: '1px solid var(--border)' }}
+          >
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#3a5020' }}>
+              {group.studioName}
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3a5020', fontVariantNumeric: 'tabular-nums' }}>
+              {group.totalEntries}
+              <span style={{ fontSize: '0.7rem', fontWeight: 500, marginLeft: 4, opacity: 0.7 }}>entries</span>
+            </span>
+          </div>
 
-      <div className="card overflow-hidden">
-        {teacherData.map((teacher, i) => {
-          const isOpen = expanded.has(teacher.id)
-          return (
-            <div key={teacher.id} style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
-              <button
-                onClick={() => toggle(teacher.id)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-              >
-                <span className="w-4 text-xs" style={{ color: 'var(--muted)' }}>{isOpen ? '▾' : '›'}</span>
-                <span className="font-semibold text-sm flex-1">{teacher.name}</span>
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>{teacher.studioName}</span>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 ml-2"
-                  style={{ backgroundColor: '#333', color: 'white', borderRadius: 3 }}
+          {group.teachers.map((teacher, i) => {
+            const isOpen = expanded.has(teacher.id)
+            return (
+              <div key={teacher.id} style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
+                <button
+                  onClick={() => toggle(teacher.id)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                  style={{ backgroundColor: 'var(--card)' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--card)')}
                 >
-                  {teacher.totalEntries}
-                </span>
-              </button>
+                  <span className="w-4 text-xs" style={{ color: 'var(--muted)' }}>{isOpen ? '▾' : '›'}</span>
+                  <span className="font-semibold text-sm flex-1">{teacher.name}</span>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5"
+                    style={{ backgroundColor: '#1a2744', color: 'white', borderRadius: 3, fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {teacher.totalEntries}
+                  </span>
+                </button>
 
-              {isOpen && (
-                <div style={{ backgroundColor: '#f9f9f9', borderTop: '1px solid var(--border)' }}>
-                  <table className="data-table" style={{ fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 200 }}>Student</th>
-                        <th style={{ width: 60, textAlign: 'center' }}>Total</th>
-                        <th>Dances</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teacher.students.map(student => (
-                        <tr key={student.studentId}>
-                          <td style={{ fontWeight: 500 }}>{student.studentName}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 700 }}>{student.totalEntries}</td>
-                          <td>
-                            <div className="flex flex-wrap gap-1">
-                              {/* Event enrollments shown as dark pill groups */}
-                              {student.eventNames.map(evtName => (
-                                <span
-                                  key={evtName}
-                                  className="text-xs px-1.5 py-0.5"
-                                  style={{ backgroundColor: 'var(--header)', color: 'white', borderRadius: 3 }}
-                                >
-                                  ◆ {evtName}
-                                </span>
-                              ))}
-                              {/* Solo dances (not in events) */}
-                              {Object.entries(student.byDance)
-                                .sort(([a], [b]) => a.localeCompare(b))
-                                .map(([dance, count]) => (
+                {isOpen && (
+                  <div style={{ backgroundColor: '#f9f9f7', borderTop: '1px solid var(--border)' }}>
+                    <table className="data-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: 200 }}>Student</th>
+                          <th style={{ width: 60, textAlign: 'center' }}>Total</th>
+                          <th>Dances</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacher.students.map(student => (
+                          <tr key={student.studentId}>
+                            <td style={{ fontWeight: 500 }}>{student.studentName}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700 }}>{student.totalEntries}</td>
+                            <td>
+                              <div className="flex flex-wrap gap-1">
+                                {student.eventNames.map(evtName => (
                                   <span
-                                    key={dance}
+                                    key={evtName}
                                     className="text-xs px-1.5 py-0.5"
-                                    style={{ backgroundColor: '#e8e8e8', borderRadius: 3, border: '1px solid var(--border)' }}
+                                    style={{ backgroundColor: 'var(--header)', color: 'white', borderRadius: 3 }}
                                   >
-                                    {dance} ×{count}
+                                    ◆ {evtName}
                                   </span>
                                 ))}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+                                {Object.entries(student.byDance)
+                                  .sort(([a], [b]) => a.localeCompare(b))
+                                  .map(([dance, count]) => (
+                                    <span
+                                      key={dance}
+                                      className="text-xs px-1.5 py-0.5"
+                                      style={{ backgroundColor: '#e8e8e8', borderRadius: 3, border: '1px solid var(--border)' }}
+                                    >
+                                      {dance} ×{count}
+                                    </span>
+                                  ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }
