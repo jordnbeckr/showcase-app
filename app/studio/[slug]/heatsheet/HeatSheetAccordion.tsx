@@ -25,7 +25,7 @@ type Sheet = {
 }
 
 function buildTableRows(segments: Seg[]): string {
-  return segments.map((seg, i) => {
+  return segments.map((seg) => {
     if (seg.type === 'solo') {
       const e = seg.entry
       return `<tr>
@@ -36,7 +36,7 @@ function buildTableRows(segments: Seg[]): string {
       </tr>`
     }
     const eventRow = `<tr class="event-row">
-      <td colspan="4">◆ ${seg.eventName}</td>
+      <td colspan="4">◆ ${seg.eventName} <span class="event-count">${seg.entries.length} dance${seg.entries.length !== 1 ? 's' : ''}</span></td>
     </tr>`
     const entryRows = seg.entries.map(e => `<tr class="event-entry">
       <td>${e.heatNumber}</td>
@@ -44,7 +44,8 @@ function buildTableRows(segments: Seg[]): string {
       <td>${e.partnerName}</td>
       <td>${e.floorLabel ?? '—'}</td>
     </tr>`).join('')
-    return eventRow + entryRows
+    const closeRow = `<tr class="event-close"><td colspan="4"></td></tr>`
+    return eventRow + entryRows + closeRow
   }).join('')
 }
 
@@ -70,8 +71,10 @@ function openPdfWindow(sheet: Sheet) {
   th { background: #e8ecf0; border: 1px solid #c0c8d0; padding: 4px 6px; text-align: left; font-size: 10px; font-weight: 700; color: #2a3545; white-space: nowrap; }
   td { border: 1px solid #d0d8e0; padding: 3px 6px; vertical-align: top; }
   tr:nth-child(even) td { background: #f8f9fa; }
-  .event-row td { background: #1a2744 !important; color: white; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; padding: 3px 6px; }
-  .event-entry td { background: #c8d9a8 !important; }
+  .event-row td { background: #dce7f3 !important; color: #1a2744; font-weight: 800; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-top: 3px solid #1a2744 !important; border-bottom: 1px solid #a0b4c8 !important; }
+  .event-count { font-weight: 400; font-size: 8.5px; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+  .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
+  .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 36px; }
   col.dance { width: 140px; }
   col.floor { width: 44px; text-align: center; }
@@ -139,22 +142,28 @@ function SheetTable({ segments }: { segments: Seg[] }) {
           }
           return [
             <tr key={`evt-${seg.eventName}-${i}`}>
-              <td colSpan={4} style={{ backgroundColor: 'var(--header)', color: 'white', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '4px 8px', borderTop: '2px solid #1a1a1a', textTransform: 'uppercase' }}>
+              <td colSpan={4} style={{ backgroundColor: '#dce7f3', color: '#1a2744', fontWeight: 800, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '5px 8px', borderTop: '3px solid #1a2744', borderBottom: '1px solid #a0b4c8', textTransform: 'uppercase' }}>
                 ◆ {seg.eventName}
+                <span style={{ fontWeight: 400, fontSize: '0.65rem', letterSpacing: 0, textTransform: 'none', marginLeft: 6, opacity: 0.7 }}>
+                  {seg.entries.length} dance{seg.entries.length !== 1 ? 's' : ''}
+                </span>
               </td>
             </tr>,
             ...seg.entries.map(e => (
-              <tr key={e.id} style={{ backgroundColor: '#c8d9a8' }}>
-                <td style={{ fontFamily: 'monospace', textAlign: 'center', borderLeft: '3px solid #555' }}>{e.heatNumber}</td>
-                <td style={{ fontSize: '0.8rem' }}>{e.dance}</td>
-                <td style={{ fontSize: '0.8rem' }}>{e.partnerName}</td>
-                <td style={{ textAlign: 'center' }}>
+              <tr key={e.id} style={{ backgroundColor: '#f0f5fb' }}>
+                <td style={{ fontFamily: 'monospace', textAlign: 'center', borderColor: '#bfcfdd' }}>{e.heatNumber}</td>
+                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.dance}</td>
+                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.partnerName}</td>
+                <td style={{ textAlign: 'center', borderColor: '#bfcfdd' }}>
                   {e.floorLabel
                     ? <span style={{ fontWeight: 800, color: '#1e1e1e' }}>{e.floorLabel}</span>
                     : <span style={{ color: 'var(--muted)' }}>—</span>}
                 </td>
               </tr>
             )),
+            <tr key={`evt-close-${seg.eventName}-${i}`}>
+              <td colSpan={4} style={{ backgroundColor: '#dce7f3', borderBottom: '3px solid #1a2744', borderTop: 'none', height: 5, padding: 0, fontSize: 0, lineHeight: 0 }} />
+            </tr>,
           ]
         })}
       </tbody>
@@ -253,8 +262,10 @@ function printAll(sheets: Sheet[]) {
   th { background: #e8ecf0; border: 1px solid #c0c8d0; padding: 4px 6px; text-align: left; font-size: 10px; font-weight: 700; color: #2a3545; white-space: nowrap; }
   td { border: 1px solid #d0d8e0; padding: 3px 6px; vertical-align: top; }
   tr:nth-child(even) td { background: #f8f9fa; }
-  .event-row td { background: #1a2744 !important; color: white; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; padding: 3px 6px; }
-  .event-entry td { background: #c8d9a8 !important; }
+  .event-row td { background: #dce7f3 !important; color: #1a2744; font-weight: 800; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-top: 3px solid #1a2744 !important; border-bottom: 1px solid #a0b4c8 !important; }
+  .event-count { font-weight: 400; font-size: 8.5px; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+  .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
+  .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 36px; }
   col.dance { width: 140px; }
   col.floor { width: 44px; text-align: center; }
