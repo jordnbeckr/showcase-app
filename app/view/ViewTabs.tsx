@@ -75,26 +75,12 @@ function ByStudioView({ heats, studios, events }: { heats: HeatData[]; studios: 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        {studios.map(s => (
-          <div
-            key={s.id}
-            className="flex flex-col"
-            style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}
-          >
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>{s.name}</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{s.total}</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>entries</span>
-          </div>
-        ))}
-        <div
-          className="flex flex-col"
-          style={{ backgroundColor: '#1a2744', border: '1px solid #1a2744', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}
-        >
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)' }}>Total</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{totalEntries}</span>
-          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>entries</span>
-        </div>
+      <div
+        className="flex items-center gap-3"
+        style={{ backgroundColor: '#1a2744', border: '1px solid #1a2744', borderRadius: 6, padding: '10px 16px', alignSelf: 'flex-start' }}
+      >
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.55)' }}>Total entries</span>
+        <span style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{totalEntries}</span>
       </div>
     <div style={{ overflowX: 'auto' }}>
       <table className="data-table" style={{ minWidth: 400 + studios.length * 100 }}>
