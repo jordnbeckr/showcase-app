@@ -16,6 +16,15 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
   })
   if (!studio) return <p>Studio not found</p>
 
+  // Shared students from other studios who can enter via this studio
+  const sharedAccess = await db.studentStudioAccess.findMany({
+    where: { studioId: studio.id },
+    include: { student: true },
+  })
+  const sharedStudents = sharedAccess.map(a => a.student)
+  const allVisibleStudents = [...studio.students, ...sharedStudents]
+  const allVisibleStudentIds = allVisibleStudents.map(s => s.id)
+
   const [entries, allEvents, studentEvents, studentShows] = await Promise.all([
     db.heatEntry.findMany({
       where: { instructor: { studioId: studio.id } },
@@ -31,7 +40,7 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
       orderBy: { order: 'asc' },
     }),
     db.studentEvent.findMany({
-      where: { student: { studioId: studio.id } },
+      where: { studentId: { in: allVisibleStudentIds } },
     }),
     db.studentShow.findMany({
       where: {
@@ -114,7 +123,7 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
     return rows
   }
 
-  const byStudent = studio.students.map(student => {
+  const byStudent = allVisibleStudents.map(student => {
     const studentEntries = entries.filter(e => e.studentId === student.id)
     const byInstructor = studio.instructors
       .map(inst => {
@@ -138,7 +147,7 @@ export default async function BreakdownPage({ params }: { params: Promise<{ slug
   const byInstructor = studio.instructors.map(inst => {
     const instEntries = entries.filter(e => e.instructorId === inst.id)
     const instLastName = inst.name.trim().split(' ').pop() ?? inst.name
-    const byStudentRows = studio.students
+    const byStudentRows = allVisibleStudents
       .map(student => {
         const se = instEntries.filter(e => e.studentId === student.id)
         return {
