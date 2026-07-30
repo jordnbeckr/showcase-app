@@ -101,6 +101,7 @@ export default function HeatSignUp({
 
   const selectedStudent = students.find(s => s.id.toString() === selectedStudentId)
     ?? sharedStudents.find(s => s.id.toString() === selectedStudentId)
+  const selectedStudentIdNum = selectedStudentId ? parseInt(selectedStudentId) : null
 
   // Pre-compute: studentId → Set of heatIds with foreign (other-studio) entries
   const foreignHeatsByStudent = new Map<number, Set<number>>()
@@ -305,9 +306,6 @@ export default function HeatSignUp({
       ? !!studId && !isFull && !studentInThisContext && !cellOccupied
       : !!studId && !isFull && !studentInHeat && !cellOccupied
 
-    // Foreign entries for this heat (entries made by other studios) — shown as dashed chips
-    const foreignInHeat = foreignEntries.filter(fe => fe.heatId === heat.id)
-
     // Students available in the per-cell dropdown, sorted by last name
     const addableOwn = isFull ? [] : students
       .filter(s => {
@@ -384,26 +382,6 @@ export default function HeatSignUp({
             )
           })}
 
-          {foreignInHeat.map((fe, i) => (
-            <span
-              key={`${fe.studentId}-${i}`}
-              className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5"
-              style={{
-                backgroundColor: '#ede9e4',
-                border: '1px dashed #c4b8aa',
-                borderRadius: 3,
-                color: '#7a6b5a',
-                whiteSpace: 'nowrap',
-                cursor: 'default',
-              }}
-              title={`${fe.firstName} ${fe.lastName} is already entered in this heat by ${fe.studioName}`}
-            >
-              <span style={{ fontSize: 9, fontWeight: 800, backgroundColor: '#c4b8aa', color: '#3d2e22', borderRadius: 2, padding: '0 3px', letterSpacing: '.04em' }}>
-                {studioAbbr(fe.studioName)}
-              </span>
-              {fe.firstName} {fe.lastName}
-            </span>
-          ))}
 
           {canAddSelected && (
             <span className="text-xs" style={{ color: '#ccc', pointerEvents: 'none' }}>+ add</span>
@@ -614,8 +592,9 @@ export default function HeatSignUp({
                   if (seg.type === 'heat') {
                     const heat = seg.heat
                     const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
+                    const rowBlockedByForeign = selectedStudentIdNum ? foreignHeatsByStudent.get(selectedStudentIdNum)?.has(heat.id) ?? false : false
                     return (
-                      <tr key={`heat-${heat.id}`}>
+                      <tr key={`heat-${heat.id}`} style={rowBlockedByForeign ? { backgroundColor: '#f0f0f0', opacity: 0.55 } : undefined}>
                         <td style={{ ...stickyCell(0, W1), color: 'var(--muted)', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem' }}>{heat.number}</td>
                         <td style={{ ...stickyCell(W1, W2), fontSize: '0.82rem' }}>{heat.dance}</td>
                         <td style={stickyCell(W1 + W2, W3)}>
@@ -757,17 +736,19 @@ export default function HeatSignUp({
                       </tr>}
                       {eventHeats.map(heat => {
                         const { text: statusText, bg: statusBg, fg: statusFg } = capacityLabel(heat.totalEntries, heat.maxCapacity)
+                        const evtRowBlockedByForeign = selectedStudentIdNum ? foreignHeatsByStudent.get(selectedStudentIdNum)?.has(heat.id) ?? false : false
+                        const evtRowBg = evtRowBlockedByForeign ? '#d8d8d8' : '#c8d9a8'
                         return (
-                          <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: '#c8d9a8' }}>
-                            <td style={{ ...stickyCell(0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: '#c8d9a8' }}>{heat.number}</td>
-                            <td style={{ ...stickyCell(W1, W2), fontSize: '0.8rem', backgroundColor: '#c8d9a8' }}>{heat.dance}</td>
-                            <td style={{ ...stickyCell(W1 + W2, W3), backgroundColor: '#c8d9a8' }}>
+                          <tr key={`event-heat-${heat.id}`} style={{ backgroundColor: evtRowBg, opacity: evtRowBlockedByForeign ? 0.55 : undefined }}>
+                            <td style={{ ...stickyCell(0, W1), color: '#555', fontFamily: 'monospace', textAlign: 'center', fontSize: '0.72rem', backgroundColor: evtRowBg }}>{heat.number}</td>
+                            <td style={{ ...stickyCell(W1, W2), fontSize: '0.8rem', backgroundColor: evtRowBg }}>{heat.dance}</td>
+                            <td style={{ ...stickyCell(W1 + W2, W3), backgroundColor: evtRowBg }}>
                               <span style={{ background: statusBg, color: statusFg, fontSize: '0.68rem', fontWeight: 500, padding: '2px 6px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                                 {statusText} · {heat.totalEntries}/{heat.maxCapacity}
                               </span>
                             </td>
                             {instructors.map(inst => renderInstructorCell(heat, inst, { isEvent: true, eventId: event.id }))}
-                            <td style={{ backgroundColor: '#c8d9a8' }} />
+                            <td style={{ backgroundColor: evtRowBg }} />
                           </tr>
                         )
                       })}
