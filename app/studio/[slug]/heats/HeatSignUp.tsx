@@ -45,6 +45,7 @@ type EventInfo = {
 
 type Student = { id: number; firstName: string; lastName: string; role: string }
 type Instructor = { id: number; name: string }
+type SharedStudent = { id: number; firstName: string; lastName: string; role: string; homeStudioName: string; takenHeatIds: number[] }
 
 function capacityLabel(count: number, max: number) {
   if (count >= max) return { text: 'Full', bg: '#fee2e2', fg: '#991b1b' }
@@ -63,6 +64,7 @@ export default function HeatSignUp({
   amateurPairs,
   amateurHeatPairs,
   showCountByStudent,
+  sharedStudents = [],
 }: {
   slug: string
   studio: { id: number; name: string }
@@ -74,6 +76,7 @@ export default function HeatSignUp({
   amateurPairs: AmateurPair[]
   amateurHeatPairs: AmateurHeatPair[]
   showCountByStudent: Record<number, number>
+  sharedStudents?: SharedStudent[]
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -94,6 +97,15 @@ export default function HeatSignUp({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selectedStudent = students.find(s => s.id.toString() === selectedStudentId)
+    ?? sharedStudents.find(s => s.id.toString() === selectedStudentId)
+
+  // Pre-compute: shared student → Set of heatIds they're already in
+  const sharedTakenMap = new Map<number, Set<number>>()
+  for (const ss of sharedStudents) sharedTakenMap.set(ss.id, new Set(ss.takenHeatIds))
+
+  function studioAbbr(name: string) {
+    return name.split(/\s+/).map(w => w[0]).join('').toUpperCase()
+  }
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -286,14 +298,26 @@ export default function HeatSignUp({
       ? !!studId && !isFull && !studentInThisContext && !cellOccupied
       : !!studId && !isFull && !studentInHeat && !cellOccupied
 
+    // Shared students taken in this heat (show as read-only chip)
+    const takenShared = sharedStudents.filter(ss => sharedTakenMap.get(ss.id)?.has(heat.id))
+
     // Students available in the per-cell dropdown, sorted by last name
-    const addableStudents = isFull ? [] : students
+    const addableOwn = isFull ? [] : students
       .filter(s => {
         if (opts.isEvent && opts.eventId != null) {
           return !enrolledEvents.some(ev => ev.studentId === s.id && ev.eventId === opts.eventId)
         }
         return !heat.myEntries.some(e => e.studentId === s.id)
       })
+    const addableShared = isFull ? [] : sharedStudents
+      .filter(ss => !sharedTakenMap.get(ss.id)?.has(heat.id))
+      .filter(ss => {
+        if (opts.isEvent && opts.eventId != null) {
+          return !enrolledEvents.some(ev => ev.studentId === ss.id && ev.eventId === opts.eventId)
+        }
+        return !heat.myEntries.some(e => e.studentId === ss.id)
+      })
+    const addableStudents = [...addableOwn, ...addableShared]
       .sort((a, b) => a.lastName.localeCompare(b.lastName))
 
     const isOpen = openDropdown === dropKey
@@ -351,6 +375,27 @@ export default function HeatSignUp({
               </span>
             )
           })}
+
+          {takenShared.map(ss => (
+            <span
+              key={ss.id}
+              className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5"
+              style={{
+                backgroundColor: '#ede9e4',
+                border: '1px dashed #c4b8aa',
+                borderRadius: 3,
+                color: '#7a6b5a',
+                whiteSpace: 'nowrap',
+                cursor: 'default',
+              }}
+              title={`${ss.firstName} ${ss.lastName} is already entered in this heat by ${ss.homeStudioName}`}
+            >
+              <span style={{ fontSize: 9, fontWeight: 800, backgroundColor: '#c4b8aa', color: '#3d2e22', borderRadius: 2, padding: '0 3px', letterSpacing: '.04em' }}>
+                {studioAbbr(ss.homeStudioName)}
+              </span>
+              {ss.firstName} {ss.lastName}
+            </span>
+          ))}
 
           {canAddSelected && (
             <span className="text-xs" style={{ color: '#ccc', pointerEvents: 'none' }}>+ add</span>
@@ -463,6 +508,13 @@ export default function HeatSignUp({
                 ))}
               </optgroup>
             ))}
+            {sharedStudents.length > 0 && (
+              <optgroup label="Guest Students">
+                {sharedStudents.map(s => (
+                  <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({studioAbbr(s.homeStudioName)})</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 

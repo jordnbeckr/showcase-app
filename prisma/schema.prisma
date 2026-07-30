@@ -7,16 +7,27 @@ datasource db {
 }
 
 model Studio {
-  id           Int           @id @default(autoincrement())
-  name         String        @unique
-  slug         String        @unique
-  passwordHash String
-  order        Int           @default(0)
-  instructors  Instructor[]
-  students     Student[]
-  proShows     ProShow[]
-  studentShows StudentShow[]
-  studioBudget StudioBudget?
+  id             Int                    @id @default(autoincrement())
+  name           String                 @unique
+  slug           String                 @unique
+  passwordHash   String
+  order          Int                    @default(0)
+  instructors    Instructor[]
+  students       Student[]
+  proShows       ProShow[]
+  studentShows   StudentShow[]
+  studioBudget   StudioBudget?
+  guestStudents  StudentStudioAccess[]
+}
+
+model StudentStudioAccess {
+  id        Int     @id @default(autoincrement())
+  studentId Int
+  studioId  Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studio    Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, studioId])
 }
 
 model Instructor {
@@ -89,24 +100,25 @@ model Heat {
 }
 
 model Student {
-  id              Int                   @id @default(autoincrement())
-  firstName       String
-  lastName        String
-  role            String
-  studioId        Int
-  studio          Studio                @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  heatEntries     HeatEntry[]           @relation("HeatEntryStudent")
-  partnerEntries  HeatEntry[]           @relation("HeatEntryPartner")
-  studentShows    StudentShow[]         @relation("StudentShowStudents")
-  leaderNumber    Int?
-  checkedIn       Boolean               @default(false)
-  studentEvents   StudentEvent[]
-  closedScores    ClosedScore[]
-  openThumbs      OpenThumb[]
-  openNotes       OpenNote[]
-  compScores      CompScore[]
-  semiMarks       SemiMark[]
+  id               Int                    @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  role             String
+  studioId         Int
+  studio           Studio                 @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  heatEntries      HeatEntry[]            @relation("HeatEntryStudent")
+  partnerEntries   HeatEntry[]            @relation("HeatEntryPartner")
+  studentShows     StudentShow[]          @relation("StudentShowStudents")
+  leaderNumber     Int?
+  checkedIn        Boolean                @default(false)
+  studentEvents    StudentEvent[]
+  closedScores     ClosedScore[]
+  openThumbs       OpenThumb[]
+  openNotes        OpenNote[]
+  compScores       CompScore[]
+  semiMarks        SemiMark[]
   floorAssignments HeatFloorAssignment[]
+  studioAccess     StudentStudioAccess[]
 }
 
 model BudgetItem {

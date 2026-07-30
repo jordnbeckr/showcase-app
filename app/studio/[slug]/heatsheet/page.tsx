@@ -19,9 +19,29 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
 
+  // Students from other studios shared into this studio (need unified heat sheets)
+  const sharedAccess = await db.studentStudioAccess.findMany({ where: { studioId: studio.id }, select: { studentId: true } })
+  const sharedStudentIds = sharedAccess.map(a => a.studentId)
+
+  // Students home to this studio who are shared OUT to other studios (also need unified sheets)
+  const sharedOutAccess = await db.studentStudioAccess.findMany({
+    where: { studentId: { in: studentIds } },
+    select: { studentId: true },
+  })
+  const sharedOutStudentIds = sharedOutAccess.map(a => a.studentId)
+
+  // All student IDs that need unified (all-studio) entries
+  const unifiedStudentIds = new Set([...sharedStudentIds, ...sharedOutStudentIds])
+
   const [studentEntries, instructorEntries, studentEvents, allEvents, floorAssignments, floors] = await Promise.all([
     db.heatEntry.findMany({
-      where: { student: { studioId: studio.id } },
+      // Home students + shared-in students (by studentId), filtered to exclude cross-studio entries for non-unified students
+      where: {
+        OR: [
+          { student: { studioId: studio.id } },
+          { studentId: { in: sharedStudentIds } },
+        ],
+      },
       include: { heat: { include: { danceType: true } }, instructor: true, student: true, partnerStudent: true },
       orderBy: { heat: { number: 'asc' } },
     }),
@@ -30,7 +50,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       include: { heat: { include: { danceType: true } }, student: true, instructor: true },
       orderBy: { heat: { number: 'asc' } },
     }),
-    db.studentEvent.findMany({ where: { studentId: { in: studentIds } }, include: { event: true } }),
+    db.studentEvent.findMany({ where: { studentId: { in: [...studentIds, ...sharedStudentIds] } }, include: { event: true } }),
     db.event.findMany({ include: { heats: true }, orderBy: { order: 'asc' } }),
     db.heatFloorAssignment.findMany({ where: { studentId: { in: studentIds } }, include: { floor: true } }),
     db.floor.findMany({ orderBy: { order: 'asc' } }),
@@ -87,8 +107,14 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     return segs
   }
 
-  const studentMap = new Map<number, { student: typeof studio.students[number]; entries: typeof studentEntries }>()
+  const studentMap = new Map<number, { student: { id: number; firstName: string; lastName: string; role: string; leaderNumber: number | null }; entries: typeof studentEntries }>()
   for (const s of studio.students) studentMap.set(s.id, { student: s, entries: [] })
+  // Also add shared-in students (from other studios) to the map
+  for (const e of studentEntries) {
+    if (!studentMap.has(e.studentId) && sharedStudentIds.includes(e.studentId)) {
+      studentMap.set(e.studentId, { student: e.student, entries: [] })
+    }
+  }
   for (const e of studentEntries) studentMap.get(e.studentId)?.entries.push(e)
 
   const instructorMap = new Map<number, { instructor: typeof studio.instructors[number]; entries: typeof instructorEntries }>()
@@ -100,7 +126,9 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     .map(({ student, entries }) => ({
       sheetId: `sheet-student-${student.id}`,
       name: `${student.firstName} ${student.lastName}`,
-      subtitle: `${student.role} · ${studio.name}`,
+      subtitle: sharedStudentIds.includes(student.id)
+        ? `${student.role} · Guest (${studio.name})`
+        : `${student.role} · ${studio.name}`,
       leaderNumber: student.leaderNumber,
       entryCount: entries.length,
       headerColor: '#1a2744',

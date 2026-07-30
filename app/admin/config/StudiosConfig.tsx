@@ -1,6 +1,6 @@
 'use client'
 
-import { addStudio, addInstructor, removeInstructor, renameInstructor, updateStudioPassword, deleteStudio } from '@/app/actions/admin'
+import { addStudio, addInstructor, removeInstructor, renameInstructor, updateStudioPassword, deleteStudio, addStudentStudioAccess, removeStudentStudioAccess } from '@/app/actions/admin'
 import { useTransition, useState, useRef } from 'react'
 
 type Studio = {
@@ -8,9 +8,12 @@ type Studio = {
   name: string
   slug: string
   instructors: { id: number; name: string }[]
+  guestStudents: { studentId: number; name: string; homeStudio: string }[]
 }
 
-export default function StudiosConfig({ studios }: { studios: Studio[] }) {
+type AllStudent = { id: number; name: string; studioId: number; studioName: string }
+
+export default function StudiosConfig({ studios, allStudents }: { studios: Studio[]; allStudents: AllStudent[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
@@ -162,6 +165,47 @@ export default function StudiosConfig({ studios }: { studios: Studio[] }) {
                       Add
                     </button>
                   </form>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Cross-Studio Students</div>
+                  <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>Students from other studios who can sign up in this studio's login.</p>
+                  {studio.guestStudents.length === 0 && (
+                    <p className="text-sm italic mb-2" style={{ color: 'var(--muted)' }}>None</p>
+                  )}
+                  {studio.guestStudents.map(g => (
+                    <div key={g.studentId} className="flex items-center justify-between py-1 gap-2">
+                      <span className="text-sm">{g.name} <span className="text-xs" style={{ color: 'var(--muted)' }}>({g.homeStudio})</span></span>
+                      <button
+                        onClick={() => startTransition(async () => { await removeStudentStudioAccess(g.studentId, studio.id) })}
+                        disabled={pending}
+                        className="text-xs disabled:opacity-40 flex-shrink-0"
+                        style={{ color: '#dc2626' }}
+                      >Remove</button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 mt-2">
+                    <select
+                      className="field flex-1 text-sm"
+                      defaultValue=""
+                      onChange={e => {
+                        const sid = parseInt(e.target.value)
+                        if (!sid) return
+                        e.target.value = ''
+                        startTransition(async () => {
+                          const result = await addStudentStudioAccess(sid, studio.id)
+                          if (result?.error) setError(result.error)
+                        })
+                      }}
+                    >
+                      <option value="">Add student from another studio…</option>
+                      {allStudents
+                        .filter(s => s.studioId !== studio.id && !studio.guestStudents.some(g => g.studentId === s.id))
+                        .map(s => (
+                          <option key={s.id} value={s.id}>{s.name} ({s.studioName})</option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>

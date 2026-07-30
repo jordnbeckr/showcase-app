@@ -10,13 +10,16 @@ import CollapsibleSection from './CollapsibleSection'
 export const dynamic = 'force-dynamic'
 
 export default async function ConfigPage() {
-  const [danceTypes, studios, events, allHeats, judges, feedbackCategories] = await Promise.all([
+  const [danceTypes, studios, events, allHeats, judges, feedbackCategories, allStudents] = await Promise.all([
     db.danceType.findMany({
       include: { heats: { include: { entries: true } } },
       orderBy: { order: 'asc' },
     }),
     db.studio.findMany({
-      include: { instructors: true },
+      include: {
+        instructors: true,
+        guestStudents: { include: { student: { include: { studio: true } } } },
+      },
       orderBy: { order: 'asc' },
     }),
     db.event.findMany({
@@ -32,6 +35,7 @@ export default async function ConfigPage() {
     }),
     db.judge.findMany({ orderBy: { name: 'asc' }, include: { floorRanges: { include: { floor: true }, orderBy: { heatFrom: 'asc' } } } }),
     db.feedbackCategory.findMany({ orderBy: { order: 'asc' } }),
+    db.student.findMany({ include: { studio: true }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] }),
   ])
 
   return (
@@ -86,6 +90,17 @@ export default async function ConfigPage() {
             name: s.name,
             slug: s.slug,
             instructors: s.instructors.map(i => ({ id: i.id, name: i.name })),
+            guestStudents: s.guestStudents.map(g => ({
+              studentId: g.studentId,
+              name: `${g.student.firstName} ${g.student.lastName}`,
+              homeStudio: g.student.studio.name,
+            })),
+          }))}
+          allStudents={allStudents.map(s => ({
+            id: s.id,
+            name: `${s.firstName} ${s.lastName}`,
+            studioId: s.studioId,
+            studioName: s.studio.name,
           }))}
         />
       </CollapsibleSection>

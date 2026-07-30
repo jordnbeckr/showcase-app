@@ -20,6 +20,20 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
 
+  // Shared students: students from other studios granted access to this studio
+  const sharedAccess = await db.studentStudioAccess.findMany({
+    where: { studioId: studio.id },
+    include: { student: { include: { studio: true, heatEntries: { select: { heatId: true } } } } },
+  })
+  const sharedStudents = sharedAccess.map(a => ({
+    id: a.student.id,
+    firstName: a.student.firstName,
+    lastName: a.student.lastName,
+    role: a.student.role,
+    homeStudioName: a.student.studio.name,
+    takenHeatIds: new Set(a.student.heatEntries.map(e => e.heatId)),
+  }))
+
   const [heats, events, studentEvents, studentShows] = await Promise.all([
     db.heat.findMany({
       include: {
@@ -149,6 +163,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         amateurPairs={amateurPairs}
         amateurHeatPairs={amateurHeatPairs}
         showCountByStudent={showCountByStudent}
+        sharedStudents={sharedStudents.map(s => ({ ...s, takenHeatIds: [...s.takenHeatIds] }))}
       />
     </div>
   )

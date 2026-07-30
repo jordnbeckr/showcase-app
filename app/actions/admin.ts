@@ -138,6 +138,22 @@ export async function addInstructor(studioId: number, formData: FormData) {
   revalidatePath('/admin/master')
 }
 
+export async function addStudentStudioAccess(studentId: number, studioId: number) {
+  await requireAdmin()
+  try {
+    await db.studentStudioAccess.create({ data: { studentId, studioId } })
+  } catch {
+    return { error: 'Already linked' }
+  }
+  revalidatePath('/admin/config')
+}
+
+export async function removeStudentStudioAccess(studentId: number, studioId: number) {
+  await requireAdmin()
+  await db.studentStudioAccess.deleteMany({ where: { studentId, studioId } })
+  revalidatePath('/admin/config')
+}
+
 export async function renameInstructor(instructorId: number, name: string) {
   await requireAdmin()
   const trimmed = name.trim()
