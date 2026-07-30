@@ -20,18 +20,36 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
 
-  // Shared students: students from other studios granted access to this studio
+  // Shared-in guest students (for the selector dropdown only)
   const sharedAccess = await db.studentStudioAccess.findMany({
     where: { studioId: studio.id },
-    include: { student: { include: { studio: true, heatEntries: { select: { heatId: true } } } } },
+    include: { student: { include: { studio: true } } },
   })
+  const sharedStudentIds = sharedAccess.map(a => a.studentId)
   const sharedStudents = sharedAccess.map(a => ({
     id: a.student.id,
     firstName: a.student.firstName,
     lastName: a.student.lastName,
     role: a.student.role,
     homeStudioName: a.student.studio.name,
-    takenHeatIds: new Set(a.student.heatEntries.map(e => e.heatId)),
+  }))
+
+  // Foreign entries: entries for any visible student (home or guest) made by another studio's instructor
+  const allVisibleStudentIds = [...studentIds, ...sharedStudentIds]
+  const rawForeignEntries = allVisibleStudentIds.length > 0 ? await db.heatEntry.findMany({
+    where: {
+      studentId: { in: allVisibleStudentIds },
+      instructorId: { not: null },
+      instructor: { studioId: { not: studio.id } },
+    },
+    include: { student: true, instructor: { include: { studio: true } } },
+  }) : []
+  const foreignEntries = rawForeignEntries.map(e => ({
+    heatId: e.heatId,
+    studentId: e.studentId,
+    firstName: e.student.firstName,
+    lastName: e.student.lastName,
+    studioName: e.instructor!.studio.name,
   }))
 
   const [heats, events, studentEvents, studentShows] = await Promise.all([
@@ -163,7 +181,8 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         amateurPairs={amateurPairs}
         amateurHeatPairs={amateurHeatPairs}
         showCountByStudent={showCountByStudent}
-        sharedStudents={sharedStudents.map(s => ({ ...s, takenHeatIds: [...s.takenHeatIds] }))}
+        sharedStudents={sharedStudents}
+        foreignEntries={foreignEntries}
       />
     </div>
   )

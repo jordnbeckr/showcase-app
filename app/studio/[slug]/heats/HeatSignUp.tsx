@@ -45,7 +45,8 @@ type EventInfo = {
 
 type Student = { id: number; firstName: string; lastName: string; role: string }
 type Instructor = { id: number; name: string }
-type SharedStudent = { id: number; firstName: string; lastName: string; role: string; homeStudioName: string; takenHeatIds: number[] }
+type SharedStudent = { id: number; firstName: string; lastName: string; role: string; homeStudioName: string }
+type ForeignEntry = { heatId: number; studentId: number; firstName: string; lastName: string; studioName: string }
 
 function capacityLabel(count: number, max: number) {
   if (count >= max) return { text: 'Full', bg: '#fee2e2', fg: '#991b1b' }
@@ -65,6 +66,7 @@ export default function HeatSignUp({
   amateurHeatPairs,
   showCountByStudent,
   sharedStudents = [],
+  foreignEntries = [],
 }: {
   slug: string
   studio: { id: number; name: string }
@@ -77,6 +79,7 @@ export default function HeatSignUp({
   amateurHeatPairs: AmateurHeatPair[]
   showCountByStudent: Record<number, number>
   sharedStudents?: SharedStudent[]
+  foreignEntries?: ForeignEntry[]
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -99,9 +102,12 @@ export default function HeatSignUp({
   const selectedStudent = students.find(s => s.id.toString() === selectedStudentId)
     ?? sharedStudents.find(s => s.id.toString() === selectedStudentId)
 
-  // Pre-compute: shared student → Set of heatIds they're already in
-  const sharedTakenMap = new Map<number, Set<number>>()
-  for (const ss of sharedStudents) sharedTakenMap.set(ss.id, new Set(ss.takenHeatIds))
+  // Pre-compute: studentId → Set of heatIds with foreign (other-studio) entries
+  const foreignHeatsByStudent = new Map<number, Set<number>>()
+  for (const fe of foreignEntries) {
+    if (!foreignHeatsByStudent.has(fe.studentId)) foreignHeatsByStudent.set(fe.studentId, new Set())
+    foreignHeatsByStudent.get(fe.studentId)!.add(fe.heatId)
+  }
 
   function studioAbbr(name: string) {
     return name.split(/\s+/).map(w => w[0]).join('').toUpperCase()
@@ -292,25 +298,27 @@ export default function HeatSignUp({
       : false
 
     const isFull = heat.totalEntries >= heat.maxCapacity
-    const studentInHeat = studId ? heat.myEntries.some(e => e.studentId === studId) : false
+    const studentHasForeignEntry = studId ? foreignHeatsByStudent.get(studId)?.has(heat.id) ?? false : false
+    const studentInHeat = studId ? heat.myEntries.some(e => e.studentId === studId) || studentHasForeignEntry : false
     const cellOccupied = cellEntries.length > 0
     const canAddSelected = opts.isEvent
       ? !!studId && !isFull && !studentInThisContext && !cellOccupied
       : !!studId && !isFull && !studentInHeat && !cellOccupied
 
-    // Shared students taken in this heat (show as read-only chip)
-    const takenShared = sharedStudents.filter(ss => sharedTakenMap.get(ss.id)?.has(heat.id))
+    // Foreign entries for this heat (entries made by other studios) — shown as dashed chips
+    const foreignInHeat = foreignEntries.filter(fe => fe.heatId === heat.id)
 
     // Students available in the per-cell dropdown, sorted by last name
     const addableOwn = isFull ? [] : students
       .filter(s => {
+        if (foreignHeatsByStudent.get(s.id)?.has(heat.id)) return false
         if (opts.isEvent && opts.eventId != null) {
           return !enrolledEvents.some(ev => ev.studentId === s.id && ev.eventId === opts.eventId)
         }
         return !heat.myEntries.some(e => e.studentId === s.id)
       })
     const addableShared = isFull ? [] : sharedStudents
-      .filter(ss => !sharedTakenMap.get(ss.id)?.has(heat.id))
+      .filter(ss => !foreignHeatsByStudent.get(ss.id)?.has(heat.id))
       .filter(ss => {
         if (opts.isEvent && opts.eventId != null) {
           return !enrolledEvents.some(ev => ev.studentId === ss.id && ev.eventId === opts.eventId)
@@ -376,9 +384,9 @@ export default function HeatSignUp({
             )
           })}
 
-          {takenShared.map(ss => (
+          {foreignInHeat.map((fe, i) => (
             <span
-              key={ss.id}
+              key={`${fe.studentId}-${i}`}
               className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5"
               style={{
                 backgroundColor: '#ede9e4',
@@ -388,12 +396,12 @@ export default function HeatSignUp({
                 whiteSpace: 'nowrap',
                 cursor: 'default',
               }}
-              title={`${ss.firstName} ${ss.lastName} is already entered in this heat by ${ss.homeStudioName}`}
+              title={`${fe.firstName} ${fe.lastName} is already entered in this heat by ${fe.studioName}`}
             >
               <span style={{ fontSize: 9, fontWeight: 800, backgroundColor: '#c4b8aa', color: '#3d2e22', borderRadius: 2, padding: '0 3px', letterSpacing: '.04em' }}>
-                {studioAbbr(ss.homeStudioName)}
+                {studioAbbr(fe.studioName)}
               </span>
-              {ss.firstName} {ss.lastName}
+              {fe.firstName} {fe.lastName}
             </span>
           ))}
 
