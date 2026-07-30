@@ -495,7 +495,7 @@ export default function HeatSignUp({
               </optgroup>
             ))}
             {sharedStudents.length > 0 && (
-              <optgroup label="Guest Students">
+              <optgroup label="Shared Students">
                 {sharedStudents.map(s => (
                   <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({studioAbbr(s.homeStudioName)})</option>
                 ))}

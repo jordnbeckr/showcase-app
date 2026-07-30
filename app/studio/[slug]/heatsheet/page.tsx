@@ -127,7 +127,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       sheetId: `sheet-student-${student.id}`,
       name: `${student.firstName} ${student.lastName}`,
       subtitle: sharedStudentIds.includes(student.id)
-        ? `${student.role} · Guest (${studio.name})`
+        ? `${student.role} · Shared (${studio.name})`
         : `${student.role} · ${studio.name}`,
       leaderNumber: student.leaderNumber,
       entryCount: entries.length,
