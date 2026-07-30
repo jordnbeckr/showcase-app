@@ -58,8 +58,10 @@ export async function addHeatEntry(
 ) {
   const studio = await requireStudio(studioSlug)
 
-  // Verify student belongs to this studio
-  const student = await db.student.findFirst({ where: { id: studentId, studioId: studio.id } })
+  // Verify student belongs to this studio or is a shared guest
+  const student = await db.student.findFirst({
+    where: { id: studentId, OR: [{ studioId: studio.id }, { studioAccess: { some: { studioId: studio.id } } }] },
+  })
   if (!student) return { error: 'Student not found' }
 
   // Verify instructor belongs to this studio
@@ -90,7 +92,9 @@ export async function addEventEntry(
 ) {
   const studio = await requireStudio(studioSlug)
 
-  const student = await db.student.findFirst({ where: { id: studentId, studioId: studio.id } })
+  const student = await db.student.findFirst({
+    where: { id: studentId, OR: [{ studioId: studio.id }, { studioAccess: { some: { studioId: studio.id } } }] },
+  })
   if (!student) return { error: 'Student not found' }
 
   const instructor = await db.instructor.findFirst({ where: { id: instructorId, studioId: studio.id } })
@@ -229,7 +233,10 @@ export async function removeAmateurEventEntry(
 export async function removeHeatEntry(studioSlug: string, entryId: number) {
   const studio = await requireStudio(studioSlug)
   const entry = await db.heatEntry.findFirst({
-    where: { id: entryId, student: { studioId: studio.id } },
+    where: {
+      id: entryId,
+      student: { OR: [{ studioId: studio.id }, { studioAccess: { some: { studioId: studio.id } } }] },
+    },
   })
   if (!entry) return { error: 'Entry not found' }
   await db.heatEntry.delete({ where: { id: entryId } })
