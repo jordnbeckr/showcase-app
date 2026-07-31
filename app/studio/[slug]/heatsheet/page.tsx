@@ -70,7 +70,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     for (const eh of evt.heats) studentHeatEventName.get(se.studentId)!.set(eh.heatId, se.event.name)
   }
 
-  type SimpleEntry = { id: number; heatNumber: number; dance: string; partnerName: string; floorLabel: string | null }
+  type SimpleEntry = { id: number; heatNumber: number; dance: string; category: string; partnerName: string; floorLabel: string | null }
   type SimpleSeg = { type: 'event'; eventName: string; entries: SimpleEntry[] } | { type: 'solo'; entry: SimpleEntry }
 
   function buildSegments(entries: typeof studentEntries, heatEventMap: Map<number, string>, partnerIsInstructor: boolean, ownStudentId?: number): SimpleSeg[] {
@@ -81,6 +81,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         id: e.id,
         heatNumber: e.heat.number,
         dance: e.heat.danceType.name,
+        category: e.heat.category,
         partnerName: partnerIsInstructor
           ? e.instructor?.name ?? (e.partnerStudent ? `${e.partnerStudent.firstName} ${e.partnerStudent.lastName}` : '—')
           : `${(e as typeof instructorEntries[number]).student.firstName} ${(e as typeof instructorEntries[number]).student.lastName}`,
