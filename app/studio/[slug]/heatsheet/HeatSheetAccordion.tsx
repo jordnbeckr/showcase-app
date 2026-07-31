@@ -6,6 +6,7 @@ type Entry = {
   id: number
   heatNumber: number
   dance: string
+  category: string
   partnerName: string
   floorLabel: string | null
 }
@@ -24,6 +25,12 @@ type Sheet = {
   headerColor: string
 }
 
+function categoryBadgeHtml(category: string): string {
+  if (category === 'open') return `<span class="cat-open">Open</span>`
+  if (category === 'closed') return `<span class="cat-closed">Closed</span>`
+  return ''
+}
+
 function buildTableRows(segments: Seg[]): string {
   return segments.map((seg) => {
     if (seg.type === 'solo') {
@@ -31,20 +38,22 @@ function buildTableRows(segments: Seg[]): string {
       return `<tr>
         <td>${e.heatNumber}</td>
         <td>${e.dance}</td>
+        <td>${categoryBadgeHtml(e.category)}</td>
         <td>${e.partnerName}</td>
         <td>${e.floorLabel ?? '—'}</td>
       </tr>`
     }
     const eventRow = `<tr class="event-row">
-      <td colspan="4">◆ ${seg.eventName} <span class="event-count">${seg.entries.length} dance${seg.entries.length !== 1 ? 's' : ''}</span></td>
+      <td colspan="5">◆ ${seg.eventName} <span class="event-count">${seg.entries.length} dance${seg.entries.length !== 1 ? 's' : ''}</span></td>
     </tr>`
     const entryRows = seg.entries.map(e => `<tr class="event-entry">
       <td>${e.heatNumber}</td>
       <td>${e.dance}</td>
+      <td>${categoryBadgeHtml(e.category)}</td>
       <td>${e.partnerName}</td>
       <td>${e.floorLabel ?? '—'}</td>
     </tr>`).join('')
-    const closeRow = `<tr class="event-close"><td colspan="4"></td></tr>`
+    const closeRow = `<tr class="event-close"><td colspan="5"></td></tr>`
     return eventRow + entryRows + closeRow
   }).join('')
 }
@@ -76,8 +85,11 @@ function openPdfWindow(sheet: Sheet) {
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 36px; }
-  col.dance { width: 140px; }
+  col.dance { width: 130px; }
+  col.cat { width: 52px; }
   col.floor { width: 44px; text-align: center; }
+  .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -90,10 +102,10 @@ function openPdfWindow(sheet: Sheet) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="dance"><col><col class="floor">
+    <col class="num"><col class="dance"><col class="cat"><col><col class="floor">
   </colgroup>
   <thead>
-    <tr><th>#</th><th>Dance</th><th>Partner</th><th>Floor</th></tr>
+    <tr><th>#</th><th>Dance</th><th>Type</th><th>Partner</th><th>Floor</th></tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>
@@ -106,12 +118,19 @@ function openPdfWindow(sheet: Sheet) {
   win.document.close()
 }
 
+function CategoryBadge({ category }: { category: string }) {
+  if (category === 'open') return <span style={{ background: '#E1F5EE', color: '#085041', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>Open</span>
+  if (category === 'closed') return <span style={{ background: '#FAEEDA', color: '#633806', fontSize: '0.7rem', fontWeight: 700, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>Closed</span>
+  return null
+}
+
 function SheetTable({ segments }: { segments: Seg[] }) {
   return (
     <table className="data-table" style={{ fontSize: '0.8rem' }}>
       <colgroup>
         <col style={{ width: 36 }} />
-        <col style={{ width: 150 }} />
+        <col style={{ width: 140 }} />
+        <col style={{ width: 52 }} />
         <col />
         <col style={{ width: 52 }} />
       </colgroup>
@@ -119,6 +138,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
         <tr>
           <th style={{ textAlign: 'center' }}>#</th>
           <th>Dance</th>
+          <th>Type</th>
           <th>Partner</th>
           <th style={{ textAlign: 'center' }}>Floor</th>
         </tr>
@@ -131,6 +151,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
               <tr key={e.id}>
                 <td style={{ fontFamily: 'monospace', textAlign: 'center' }}>{e.heatNumber}</td>
                 <td>{e.dance}</td>
+                <td><CategoryBadge category={e.category} /></td>
                 <td style={{ fontSize: '0.85rem' }}>{e.partnerName}</td>
                 <td style={{ textAlign: 'center' }}>
                   {e.floorLabel
@@ -142,7 +163,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
           }
           return [
             <tr key={`evt-${seg.eventName}-${i}`}>
-              <td colSpan={4} style={{ backgroundColor: '#dce7f3', color: '#1a2744', fontWeight: 800, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '5px 8px', borderTop: '3px solid #1a2744', borderBottom: '1px solid #a0b4c8', textTransform: 'uppercase' }}>
+              <td colSpan={5} style={{ backgroundColor: '#dce7f3', color: '#1a2744', fontWeight: 800, fontSize: '0.7rem', letterSpacing: '0.06em', padding: '5px 8px', borderTop: '3px solid #1a2744', borderBottom: '1px solid #a0b4c8', textTransform: 'uppercase' }}>
                 ◆ {seg.eventName}
                 <span style={{ fontWeight: 400, fontSize: '0.65rem', letterSpacing: 0, textTransform: 'none', marginLeft: 6, opacity: 0.7 }}>
                   {seg.entries.length} dance{seg.entries.length !== 1 ? 's' : ''}
@@ -153,6 +174,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
               <tr key={e.id} style={{ backgroundColor: '#f0f5fb' }}>
                 <td style={{ fontFamily: 'monospace', textAlign: 'center', borderColor: '#bfcfdd' }}>{e.heatNumber}</td>
                 <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.dance}</td>
+                <td style={{ borderColor: '#bfcfdd' }}><CategoryBadge category={e.category} /></td>
                 <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.partnerName}</td>
                 <td style={{ textAlign: 'center', borderColor: '#bfcfdd' }}>
                   {e.floorLabel
@@ -162,7 +184,7 @@ function SheetTable({ segments }: { segments: Seg[] }) {
               </tr>
             )),
             <tr key={`evt-close-${seg.eventName}-${i}`}>
-              <td colSpan={4} style={{ backgroundColor: '#dce7f3', borderBottom: '3px solid #1a2744', borderTop: 'none', height: 5, padding: 0, fontSize: 0, lineHeight: 0 }} />
+              <td colSpan={5} style={{ backgroundColor: '#dce7f3', borderBottom: '3px solid #1a2744', borderTop: 'none', height: 5, padding: 0, fontSize: 0, lineHeight: 0 }} />
             </tr>,
           ]
         })}
@@ -233,10 +255,10 @@ function printAll(sheets: Sheet[]) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="dance"><col><col class="floor">
+    <col class="num"><col class="dance"><col class="cat"><col><col class="floor">
   </colgroup>
   <thead>
-    <tr><th>#</th><th>Dance</th><th>Partner</th><th>Floor</th></tr>
+    <tr><th>#</th><th>Dance</th><th>Type</th><th>Partner</th><th>Floor</th></tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>
@@ -267,8 +289,11 @@ function printAll(sheets: Sheet[]) {
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 36px; }
-  col.dance { width: 140px; }
+  col.dance { width: 130px; }
+  col.cat { width: 52px; }
   col.floor { width: 44px; text-align: center; }
+  .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
 </head>
 <body>${pages}
