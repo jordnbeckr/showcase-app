@@ -1,6 +1,6 @@
 'use client'
 
-import { upsertBudgetItem, deleteBudgetItem, setEntryFee, setStudioAttendees, setStudioPaid } from '@/app/actions/budget'
+import { upsertBudgetItem, deleteBudgetItem, setEntryFee, setStudioPaid } from '@/app/actions/budget'
 import { useState, useTransition } from 'react'
 
 type BudgetItem = {
@@ -39,17 +39,12 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
   const [newCost, setNewCost] = useState('')
   const [newQty, setNewQty] = useState('1')
 
-  // Per-studio spectator inputs (studioId → string)
-  const [spectatorInputs, setSpectatorInputs] = useState<Record<number, string>>(
-    Object.fromEntries(studios.map(s => [s.id, s.attendees.toString()]))
-  )
-
   // Derived totals
   const participationPool = budgetItems.filter(i => i.category === 'participation').reduce((s, i) => s + i.unitCost * i.quantity, 0)
   const spectatorPool = budgetItems.filter(i => i.category === 'attendee').reduce((s, i) => s + i.unitCost * i.quantity, 0)
 
   const totalParticipants = studios.reduce((s, s2) => s + s2.participantCount, 0)
-  const totalSpectators = studios.reduce((s, s2) => s + (parseInt(spectatorInputs[s2.id] ?? '0') || 0), 0)
+  const totalSpectators = studios.reduce((s, s2) => s + s2.attendees, 0)
   const totalHeadcount = totalParticipants + totalSpectators
 
   // Participant fee = (participation pool + spectator pool) / participants
@@ -78,11 +73,6 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
   function handleDeleteItem(id: number, name: string) {
     if (!confirm(`Delete "${name}"?`)) return
     startTransition(async () => { await deleteBudgetItem(id) })
-  }
-
-  function handleSaveSpectators(studioId: number) {
-    const n = parseInt(spectatorInputs[studioId] ?? '0') || 0
-    startTransition(async () => { await setStudioAttendees(studioId, n) })
   }
 
   function handleTogglePaid(studioId: number, current: boolean) {
@@ -297,7 +287,7 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
           </thead>
           <tbody>
             {studios.map(studio => {
-              const spectators = parseInt(spectatorInputs[studio.id] ?? '0') || 0
+              const spectators = studio.attendees
               const entryCost = studio.entryCount * entryFee
               const participantCost = studio.participantCount * participantFee
               const spectatorCost = spectators * spectatorFee
@@ -332,18 +322,8 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
                     )}
                   </td>
                   <td style={{ textAlign: 'center', color: 'var(--muted)' }}>{studio.participantCount}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="flex items-center gap-1 justify-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={spectatorInputs[studio.id] ?? '0'}
-                        onChange={e => setSpectatorInputs(prev => ({ ...prev, [studio.id]: e.target.value }))}
-                        onBlur={() => handleSaveSpectators(studio.id)}
-                        className="field"
-                        style={{ width: 64, textAlign: 'center', padding: '2px 6px' }}
-                      />
-                    </div>
+                  <td style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.85rem' }}>
+                    {studio.attendees}
                   </td>
                   <td style={{ textAlign: 'right', color: 'var(--muted)', fontSize: '0.85rem' }}>
                     {studio.entryCount} × {fmt(entryFee)}
@@ -383,10 +363,7 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
             {studios.length > 0 && (() => {
               const totalEntryCost = studios.reduce((s, studio) => s + studio.entryCount * entryFee, 0)
               const totalParticipantCost = studios.reduce((s, studio) => s + studio.participantCount * participantFee, 0)
-              const totalSpectatorCost = studios.reduce((s, studio) => {
-                const n = parseInt(spectatorInputs[studio.id] ?? '0') || 0
-                return s + n * spectatorFee
-              }, 0)
+              const totalSpectatorCost = studios.reduce((s, studio) => s + studio.attendees * spectatorFee, 0)
               const grandTotal = totalEntryCost + totalParticipantCost + totalSpectatorCost
               return (
                 <tr style={{ backgroundColor: '#f5f5f5', fontWeight: 700 }}>

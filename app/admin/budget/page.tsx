@@ -9,7 +9,7 @@ export default async function BudgetPage() {
     db.showcaseSettings.findFirst(),
     db.studio.findMany({
       orderBy: { name: 'asc' },
-      include: { studioBudget: true },
+      include: { studioBudget: true, spectators: { select: { id: true } } },
     }),
     db.heatEntry.findMany({
       select: { studentId: true, instructorId: true, student: { select: { studioId: true } }, instructor: { select: { studioId: true } } },
@@ -19,13 +19,13 @@ export default async function BudgetPage() {
   const studioData = studios.map(studio => {
     const entries = allEntries.filter(e => e.student.studioId === studio.id)
     const studentIds = new Set(entries.map(e => e.studentId))
-    const instructorIds = new Set(entries.map(e => e.instructorId))
+    const instructorIds = new Set(entries.filter(e => e.instructorId != null).map(e => e.instructorId!))
     return {
       id: studio.id,
       name: studio.name,
       participantCount: studentIds.size + instructorIds.size,
       entryCount: entries.length,
-      attendees: studio.studioBudget?.attendees ?? 0,
+      attendees: studio.spectators.length,
       paid: studio.studioBudget?.paid ?? false,
     }
   })
