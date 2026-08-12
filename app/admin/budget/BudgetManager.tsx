@@ -39,6 +39,28 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
   const [newCost, setNewCost] = useState('')
   const [newQty, setNewQty] = useState('1')
 
+  // Inline editing state for existing items
+  type EditFields = { name: string; category: 'participation' | 'attendee'; unitCost: string; quantity: string }
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editFields, setEditFields] = useState<EditFields>({ name: '', category: 'participation', unitCost: '', quantity: '1' })
+
+  function startEdit(item: BudgetItem) {
+    setEditingId(item.id)
+    setEditFields({ name: item.name, category: item.category, unitCost: item.unitCost.toString(), quantity: item.quantity.toString() })
+  }
+
+  function cancelEdit() { setEditingId(null) }
+
+  function handleSaveEdit() {
+    const cost = parseFloat(editFields.unitCost)
+    const qty = parseInt(editFields.quantity)
+    if (!editFields.name.trim() || isNaN(cost) || isNaN(qty) || editingId == null) return
+    startTransition(async () => {
+      await upsertBudgetItem({ id: editingId, name: editFields.name.trim(), category: editFields.category, unitCost: cost, quantity: qty })
+      setEditingId(null)
+    })
+  }
+
   // Derived totals
   const participationPool = budgetItems.filter(i => i.category === 'participation').reduce((s, i) => s + i.unitCost * i.quantity, 0)
   const spectatorPool = budgetItems.filter(i => i.category === 'attendee').reduce((s, i) => s + i.unitCost * i.quantity, 0)
@@ -166,33 +188,99 @@ export default function BudgetManager({ budgetItems, entryFee, studios }: Props)
             {budgetItems.length === 0 && (
               <tr><td colSpan={6} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No cost items yet</td></tr>
             )}
-            {budgetItems.map(item => (
-              <tr key={item.id}>
-                <td className="font-medium">{item.name}</td>
-                <td>
-                  <span
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      padding: '2px 7px',
-                      borderRadius: 10,
-                      backgroundColor: item.category === 'participation' ? '#dbeafe' : '#ede9fe',
-                      color: item.category === 'participation' ? '#1d4ed8' : '#7c3aed',
-                    }}
-                  >
-                    {item.category === 'participation' ? 'Participation' : 'Attendance'}
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(item.unitCost)}</td>
-                <td style={{ textAlign: 'center', color: 'var(--muted)' }}>×{item.quantity}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(item.unitCost * item.quantity)}</td>
-                <td>
-                  <button onClick={() => handleDeleteItem(item.id, item.name)} disabled={pending} className="text-xs" style={{ color: '#dc2626' }}>
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {budgetItems.map(item => {
+              const isEditing = editingId === item.id
+              if (isEditing) {
+                return (
+                  <tr key={item.id} style={{ backgroundColor: '#fffbeb' }}>
+                    <td>
+                      <input
+                        value={editFields.name}
+                        onChange={e => setEditFields(f => ({ ...f, name: e.target.value }))}
+                        className="field"
+                        style={{ width: '100%' }}
+                        autoFocus
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={editFields.category}
+                        onChange={e => setEditFields(f => ({ ...f, category: e.target.value as 'participation' | 'attendee' }))}
+                        className="field"
+                        style={{ width: '100%' }}
+                      >
+                        <option value="participation">Participation</option>
+                        <option value="attendee">Attendance</option>
+                      </select>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1 justify-end">
+                        <span className="text-xs" style={{ color: 'var(--muted)' }}>$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editFields.unitCost}
+                          onChange={e => setEditFields(f => ({ ...f, unitCost: e.target.value }))}
+                          className="field"
+                          style={{ width: 80, textAlign: 'right' }}
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1 justify-center">
+                        <span className="text-xs" style={{ color: 'var(--muted)' }}>×</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editFields.quantity}
+                          onChange={e => setEditFields(f => ({ ...f, quantity: e.target.value }))}
+                          className="field"
+                          style={{ width: 54, textAlign: 'center' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--muted)' }}>
+                      {fmt((parseFloat(editFields.unitCost) || 0) * (parseInt(editFields.quantity) || 0))}
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button onClick={handleSaveEdit} disabled={pending} className="text-xs font-semibold" style={{ color: '#16a34a' }}>Save</button>
+                        <button onClick={cancelEdit} disabled={pending} className="text-xs" style={{ color: 'var(--muted)' }}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              }
+              return (
+                <tr key={item.id}>
+                  <td className="font-medium">{item.name}</td>
+                  <td>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        padding: '2px 7px',
+                        borderRadius: 10,
+                        backgroundColor: item.category === 'participation' ? '#dbeafe' : '#ede9fe',
+                        color: item.category === 'participation' ? '#1d4ed8' : '#7c3aed',
+                      }}
+                    >
+                      {item.category === 'participation' ? 'Participation' : 'Attendance'}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{fmt(item.unitCost)}</td>
+                  <td style={{ textAlign: 'center', color: 'var(--muted)' }}>×{item.quantity}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(item.unitCost * item.quantity)}</td>
+                  <td>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(item)} disabled={pending} className="text-xs" style={{ color: '#1d4ed8' }}>Edit</button>
+                      <button onClick={() => handleDeleteItem(item.id, item.name)} disabled={pending} className="text-xs" style={{ color: '#dc2626' }}>Remove</button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
 
