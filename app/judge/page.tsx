@@ -90,6 +90,8 @@ export default async function JudgePage() {
         category: h.category as 'none' | 'closed' | 'open',
         eventIds: h.events.map(e => e.eventId),
         entries: h.entries.filter(e => {
+          // For amateur couples (no instructor, has partnerStudentId), only keep the Leader entry
+          if (e.instructorId === null && e.partnerStudentId !== null && e.student.role !== 'Leader') return false
           if (!hasFloorFilter) return true
           const floorIdsForThisHeat = judgeFloorIdsForHeat(h.number)
           if (floorIdsForThisHeat.size === 0) return true // no range covers this heat — show all
