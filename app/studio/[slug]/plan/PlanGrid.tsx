@@ -297,7 +297,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
                         style={{
                           padding: '4px 4px', textAlign: 'center', verticalAlign: 'middle', height: 36,
                           background: isUnavailable
-                            ? '#f8fafc'
+                            ? '#c8cdd5'
                             : cat === 'closed' ? (idx % 2 === 0 ? '#eff6ff' : '#f5f9ff') : (idx % 2 === 0 ? '#f0fdf4' : '#f5fdf7'),
                           borderRight: isLast ? '2px solid #3b82f6' : `1px solid ${cat === 'closed' ? '#dbeafe' : '#dcfce7'}`,
                           cursor: (canPlace || canRemove) ? 'pointer' : 'default',
@@ -307,7 +307,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = '' }}
                       >
                         {isUnavailable ? (
-                          <span style={{ color: '#e2e8f0', fontSize: '0.7rem', userSelect: 'none' }}>—</span>
+                          <span style={{ color: '#6b7280', fontSize: '0.7rem', userSelect: 'none' }}>—</span>
                         ) : entry ? (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 3,
