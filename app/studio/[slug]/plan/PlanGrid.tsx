@@ -16,17 +16,23 @@ type PlanEntry = {
   isPublished: boolean
 }
 
+type HeatCount = { danceTypeId: number; category: 'closed' | 'open'; count: number }
+
 interface Props {
   slug: string
   instructors: Instructor[]
   students: Student[]
   danceTypes: DanceType[]
   planEntries: PlanEntry[]
+  heatCounts: HeatCount[]
 }
 
 const SLOTS = [1, 2, 3, 4, 5, 6]
 
-export default function PlanGrid({ slug, instructors, students, danceTypes, planEntries }: Props) {
+export default function PlanGrid({ slug, instructors, students, danceTypes, planEntries, heatCounts }: Props) {
+  function availableSlots(danceTypeId: number, category: 'closed' | 'open') {
+    return heatCounts.find(h => h.danceTypeId === danceTypeId && h.category === category)?.count ?? 0
+  }
   const [activeInstructorId, setActiveInstructorId] = useState(instructors[0]?.id ?? 0)
   const [activeStudentId, setActiveStudentId] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -270,21 +276,29 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
                 }}>
                   {dance.name}
                 </td>
-                {(['closed', 'open'] as const).map(cat =>
-                  SLOTS.map(slot => {
+                {(['closed', 'open'] as const).map(cat => {
+                  const available = availableSlots(dance.id, cat)
+                  return SLOTS.map(slot => {
                     const entry = getEntry(dance.id, cat, slot)
                     const isLast = slot === 6 && cat === 'closed'
-                    const canPlace = !entry && activeStudentId !== null
+                    const isUnavailable = slot > available
+                    const canPlace = !entry && !isUnavailable && activeStudentId !== null
                     const canRemove = entry && !entry.isPublished
 
                     return (
                       <td
                         key={`${cat}-${slot}`}
-                        onClick={() => handleCellClick(dance.id, cat, slot)}
-                        title={entry ? (entry.isPublished ? 'Already published' : 'Click to remove') : (activeStudentId ? 'Click to place' : 'Select a student first')}
+                        onClick={() => !isUnavailable && handleCellClick(dance.id, cat, slot)}
+                        title={
+                          isUnavailable ? `No heat ${slot} for this dance` :
+                          entry ? (entry.isPublished ? 'Already published' : 'Click to remove') :
+                          activeStudentId ? 'Click to place' : 'Select a student first'
+                        }
                         style={{
                           padding: '4px 4px', textAlign: 'center', verticalAlign: 'middle', height: 36,
-                          background: cat === 'closed' ? (idx % 2 === 0 ? '#eff6ff' : '#f5f9ff') : (idx % 2 === 0 ? '#f0fdf4' : '#f5fdf7'),
+                          background: isUnavailable
+                            ? '#f8fafc'
+                            : cat === 'closed' ? (idx % 2 === 0 ? '#eff6ff' : '#f5f9ff') : (idx % 2 === 0 ? '#f0fdf4' : '#f5fdf7'),
                           borderRight: isLast ? '2px solid #3b82f6' : `1px solid ${cat === 'closed' ? '#dbeafe' : '#dcfce7'}`,
                           cursor: (canPlace || canRemove) ? 'pointer' : 'default',
                           transition: 'filter 0.1s',
@@ -292,7 +306,9 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
                         onMouseEnter={e => { if (canPlace || canRemove) (e.currentTarget as HTMLElement).style.filter = 'brightness(0.93)' }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = '' }}
                       >
-                        {entry ? (
+                        {isUnavailable ? (
+                          <span style={{ color: '#e2e8f0', fontSize: '0.7rem', userSelect: 'none' }}>—</span>
+                        ) : entry ? (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 3,
                             background: entry.isPublished ? '#f1f5f9' : (cat === 'closed' ? '#dbeafe' : '#dcfce7'),
@@ -312,7 +328,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
                       </td>
                     )
                   })
-                )}
+                })}
               </tr>
             ))}
           </tbody>

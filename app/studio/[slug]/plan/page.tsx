@@ -21,6 +21,13 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
 
   const danceTypes = await db.danceType.findMany({ orderBy: { order: 'asc' } })
 
+  // Count available heats per dance+category so the grid shows only real slots
+  const heatCounts = await db.heat.groupBy({
+    by: ['danceTypeId', 'category'],
+    _count: { id: true },
+    where: { category: { in: ['closed', 'open'] } },
+  })
+
   const planEntries = await db.planEntry.findMany({
     where: { studioId: studio.id },
     include: {
@@ -41,6 +48,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
         lastName: s.lastName,
       }))}
       danceTypes={danceTypes.map(d => ({ id: d.id, name: d.name }))}
+      heatCounts={heatCounts.map(h => ({ danceTypeId: h.danceTypeId, category: h.category as 'closed' | 'open', count: h._count.id }))}
       planEntries={planEntries.map(e => ({
         id: e.id,
         instructorId: e.instructorId,
