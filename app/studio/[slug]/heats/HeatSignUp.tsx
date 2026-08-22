@@ -67,6 +67,7 @@ export default function HeatSignUp({
   showCountByStudent,
   sharedStudents = [],
   foreignEntries = [],
+  duplicateFirstNames = new Set<string>(),
 }: {
   slug: string
   studio: { id: number; name: string }
@@ -80,6 +81,7 @@ export default function HeatSignUp({
   showCountByStudent: Record<number, number>
   sharedStudents?: SharedStudent[]
   foreignEntries?: ForeignEntry[]
+  duplicateFirstNames?: Set<string>
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -364,7 +366,7 @@ export default function HeatSignUp({
                 }}
               >
                 {isSelectedStudent
-                  ? <strong>{selectedStudent.firstName}</strong>
+                  ? <strong>{duplicateFirstNames.has(selectedStudent.firstName.toLowerCase()) ? `${selectedStudent.firstName} ${selectedStudent.lastName[0]}.` : selectedStudent.firstName}</strong>
                   : entry.studentName.split(' ')[0]}
                 <button
                   onClick={ev => {

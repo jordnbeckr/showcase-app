@@ -87,10 +87,16 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
     return instrEntries.find(e => e.danceTypeId === danceTypeId && e.category === category && e.slotIndex === slotIndex) ?? null
   }
 
+  const duplicateFirstNames = new Set(
+    students.map(s => s.firstName.toLowerCase()).filter((n, _, arr) => arr.filter(x => x === n).length > 1)
+  )
+
   function studentLabel(id: number, short = false) {
     const s = students.find(s => s.id === id)
     if (!s) return '?'
-    return short ? `${s.firstName} ${s.lastName[0]}.` : `${s.firstName} ${s.lastName}`
+    const isDupe = duplicateFirstNames.has(s.firstName.toLowerCase())
+    if (short || isDupe) return isDupe ? `${s.firstName} ${s.lastName[0]}.` : s.firstName
+    return `${s.firstName} ${s.lastName}`
   }
 
   function handleCellClick(danceTypeId: number, category: 'closed' | 'open', slotIndex: number) {
