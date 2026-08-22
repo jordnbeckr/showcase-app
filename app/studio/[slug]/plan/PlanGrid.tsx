@@ -19,7 +19,6 @@ type PlanEntry = {
 type HeatCount = { danceTypeId: number; category: 'closed' | 'open'; count: number }
 type CompEvent = { id: number; name: string; heatCount: number; isAmateur: boolean }
 
-// Rotating palette for pro-am events; amateur gets its own muted treatment
 const EVENT_PALETTE = [
   { bg: '#ede9fe', border: '#7c3aed', chip: '#ddd6fe', chipText: '#4c1d95' }, // violet
   { bg: '#fce7f3', border: '#be185d', chip: '#fbcfe8', chipText: '#831843' }, // rose
@@ -29,6 +28,22 @@ const EVENT_PALETTE = [
   { bg: '#fef9c3', border: '#a16207', chip: '#fef08a', chipText: '#713f12' }, // yellow
 ]
 const AMATEUR_PALETTE = { bg: '#f9fafb', border: '#9ca3af', chip: '#f3f4f6', chipText: '#374151' }
+
+// Strip trailing " A", " B", " 1", " 2" etc. to group related events together
+function eventGroupKey(name: string) {
+  return name.replace(/\s+[A-Z\d]$/i, '').trim()
+}
+
+function buildEventPaletteMap(events: CompEvent[]) {
+  const map = new Map<string, typeof EVENT_PALETTE[number]>()
+  let idx = 0
+  for (const evt of events) {
+    if (evt.isAmateur) continue
+    const key = eventGroupKey(evt.name)
+    if (!map.has(key)) { map.set(key, EVENT_PALETTE[idx % EVENT_PALETTE.length]); idx++ }
+  }
+  return map
+}
 type PlanEventEntry = { id: number; instructorId: number; studentId: number; eventId: number; isPublished: boolean }
 
 interface Props {
@@ -396,11 +411,10 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
               </thead>
               <tbody>
                 {(() => {
-                  let proAmIdx = 0
+                  const palMap = buildEventPaletteMap(events)
                   let amateurSectionShown = false
                   return events.map((evt, idx) => {
-                  const pal = evt.isAmateur ? AMATEUR_PALETTE : EVENT_PALETTE[proAmIdx % EVENT_PALETTE.length]
-                  if (!evt.isAmateur) proAmIdx++
+                  const pal = evt.isAmateur ? AMATEUR_PALETTE : palMap.get(eventGroupKey(evt.name))!
                   const evtEntries = localEventEntries.filter(e => e.instructorId === activeInstructorId && e.eventId === evt.id)
                   const assignedIds = new Set(evtEntries.map(e => e.studentId))
                   const isPickerOpen = openEventPicker === evt.id
