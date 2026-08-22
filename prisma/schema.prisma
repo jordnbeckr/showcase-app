@@ -19,6 +19,7 @@ model Studio {
   studioBudget   StudioBudget?
   guestStudents  StudentStudioAccess[]
   spectators     Spectator[]
+  planEntries    PlanEntry[]
 }
 
 model Spectator {
@@ -50,13 +51,15 @@ model Instructor {
   leaderNumber  Int?
   studentEvents StudentEvent[]
   studentShows  StudentShow[]  @relation("StudentShowInstructors")
+  planEntries   PlanEntry[]
 }
 
 model DanceType {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  order Int    @default(0)
-  heats Heat[]
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
+  order       Int         @default(0)
+  heats       Heat[]
+  planEntries PlanEntry[]
 }
 
 model Event {
@@ -129,6 +132,22 @@ model Student {
   semiMarks        SemiMark[]
   floorAssignments HeatFloorAssignment[]
   studioAccess     StudentStudioAccess[]
+  planEntries      PlanEntry[]
+}
+
+model PlanEntry {
+  id           Int        @id @default(autoincrement())
+  studioId     Int
+  studio       Studio     @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  instructorId Int
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  danceTypeId  Int
+  danceType    DanceType  @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
+  category     String     // "closed" | "open"
+  isPublished  Boolean    @default(false)
+  createdAt    DateTime   @default(now())
 }
 
 model BudgetItem {
