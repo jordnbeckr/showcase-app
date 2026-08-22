@@ -12,26 +12,24 @@ async function requireStudio(slug: string) {
   return studio
 }
 
-export async function addPlanEntry(
+export async function setPlanEntry(
   slug: string,
   instructorId: number,
   studentId: number,
   danceTypeId: number,
-  category: 'closed' | 'open'
+  category: 'closed' | 'open',
+  slotIndex: number
 ) {
   const studio = await requireStudio(slug)
-  // Don't allow duplicates (same instructor+student+dance+category)
-  const existing = await db.planEntry.findFirst({
-    where: { studioId: studio.id, instructorId, studentId, danceTypeId, category },
-  })
-  if (existing) return
-  await db.planEntry.create({
-    data: { studioId: studio.id, instructorId, studentId, danceTypeId, category },
+  await db.planEntry.upsert({
+    where: { instructorId_danceTypeId_category_slotIndex: { instructorId, danceTypeId, category, slotIndex } },
+    create: { studioId: studio.id, instructorId, studentId, danceTypeId, category, slotIndex },
+    update: { studentId, isPublished: false },
   })
   revalidatePath(`/studio/${slug}/plan`)
 }
 
-export async function removePlanEntry(slug: string, id: number) {
+export async function clearPlanEntry(slug: string, id: number) {
   await requireStudio(slug)
   await db.planEntry.delete({ where: { id } })
   revalidatePath(`/studio/${slug}/plan`)
@@ -42,34 +40,29 @@ export async function publishPlanEntries(slug: string) {
 
   const unpublished = await db.planEntry.findMany({
     where: { studioId: studio.id, isPublished: false },
-    include: { danceType: true },
+    orderBy: { slotIndex: 'asc' },
   })
 
   let published = 0
   let skipped = 0
 
   for (const entry of unpublished) {
-    // Find matching heat by danceType + category
-    const heat = await db.heat.findFirst({
+    // Find the Nth heat for this dance+category (slotIndex 1 = first heat, 2 = second, etc.)
+    const heats = await db.heat.findMany({
       where: { danceTypeId: entry.danceTypeId, category: entry.category },
       orderBy: { number: 'asc' },
     })
+    const heat = heats[entry.slotIndex - 1]
     if (!heat) { skipped++; continue }
 
-    // Skip if entry already exists
     const exists = await db.heatEntry.findUnique({
       where: { heatId_studentId: { heatId: heat.id, studentId: entry.studentId } },
     })
     if (exists) { skipped++; continue }
 
     await db.heatEntry.create({
-      data: {
-        heatId: heat.id,
-        studentId: entry.studentId,
-        instructorId: entry.instructorId,
-      },
+      data: { heatId: heat.id, studentId: entry.studentId, instructorId: entry.instructorId },
     })
-
     await db.planEntry.update({ where: { id: entry.id }, data: { isPublished: true } })
     published++
   }

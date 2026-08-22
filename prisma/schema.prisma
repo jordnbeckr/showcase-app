@@ -146,8 +146,11 @@ model PlanEntry {
   danceTypeId  Int
   danceType    DanceType  @relation(fields: [danceTypeId], references: [id], onDelete: Cascade)
   category     String     // "closed" | "open"
+  slotIndex    Int        // 1–6
   isPublished  Boolean    @default(false)
   createdAt    DateTime   @default(now())
+
+  @@unique([instructorId, danceTypeId, category, slotIndex])
 }
 
 model BudgetItem {
