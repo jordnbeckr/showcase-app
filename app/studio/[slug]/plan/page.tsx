@@ -23,7 +23,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
     db.danceType.findMany({ orderBy: { order: 'asc' } }),
     db.event.findMany({
       where: { isCompetitive: true },
-      orderBy: { order: 'asc' },
+      orderBy: [{ isAmateur: 'asc' }, { order: 'asc' }],
       include: { heats: { include: { heat: true } } },
     }),
     db.heat.groupBy({
@@ -47,7 +47,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
       instructors={studio.instructors.map(i => ({ id: i.id, name: i.name }))}
       students={studio.students.map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName }))}
       danceTypes={danceTypes.map(d => ({ id: d.id, name: d.name }))}
-      events={events.map(e => ({ id: e.id, name: e.name, heatCount: e.heats.length }))}
+      events={events.map(e => ({ id: e.id, name: e.name, heatCount: e.heats.length, isAmateur: e.isAmateur }))}
       heatCounts={heatCounts.map(h => ({ danceTypeId: h.danceTypeId, category: h.category as 'closed' | 'open', count: h._count.id }))}
       planEntries={planEntries.map(e => ({
         id: e.id,

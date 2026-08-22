@@ -17,7 +17,18 @@ type PlanEntry = {
 }
 
 type HeatCount = { danceTypeId: number; category: 'closed' | 'open'; count: number }
-type CompEvent = { id: number; name: string; heatCount: number }
+type CompEvent = { id: number; name: string; heatCount: number; isAmateur: boolean }
+
+// Rotating palette for pro-am events; amateur gets its own muted treatment
+const EVENT_PALETTE = [
+  { bg: '#ede9fe', border: '#7c3aed', chip: '#ddd6fe', chipText: '#4c1d95' }, // violet
+  { bg: '#fce7f3', border: '#be185d', chip: '#fbcfe8', chipText: '#831843' }, // rose
+  { bg: '#fff7ed', border: '#c2410c', chip: '#fed7aa', chipText: '#7c2d12' }, // orange
+  { bg: '#ecfdf5', border: '#065f46', chip: '#a7f3d0', chipText: '#064e3b' }, // emerald
+  { bg: '#eff6ff', border: '#1d4ed8', chip: '#bfdbfe', chipText: '#1e3a8a' }, // blue
+  { bg: '#fef9c3', border: '#a16207', chip: '#fef08a', chipText: '#713f12' }, // yellow
+]
+const AMATEUR_PALETTE = { bg: '#f9fafb', border: '#9ca3af', chip: '#f3f4f6', chipText: '#374151' }
 type PlanEventEntry = { id: number; instructorId: number; studentId: number; eventId: number; isPublished: boolean }
 
 interface Props {
@@ -384,7 +395,12 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                 </tr>
               </thead>
               <tbody>
-                {events.map((evt, idx) => {
+                {(() => {
+                  let proAmIdx = 0
+                  let amateurSectionShown = false
+                  return events.map((evt, idx) => {
+                  const pal = evt.isAmateur ? AMATEUR_PALETTE : EVENT_PALETTE[proAmIdx % EVENT_PALETTE.length]
+                  if (!evt.isAmateur) proAmIdx++
                   const evtEntries = localEventEntries.filter(e => e.instructorId === activeInstructorId && e.eventId === evt.id)
                   const assignedIds = new Set(evtEntries.map(e => e.studentId))
                   const isPickerOpen = openEventPicker === evt.id
@@ -392,22 +408,32 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                     !assignedIds.has(s.id) &&
                     `${s.firstName} ${s.lastName}`.toLowerCase().includes(eventStudentSearch.toLowerCase())
                   )
+                  const showAmateurDivider = evt.isAmateur && !amateurSectionShown
+                  if (showAmateurDivider) amateurSectionShown = true
 
                   return (
-                    <tr key={evt.id} style={{ borderBottom: idx < events.length - 1 ? '1px solid #e2e8f0' : undefined, background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                      <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>
+                    <>
+                      {showAmateurDivider && (
+                        <tr key={`divider-${evt.id}`}>
+                          <td colSpan={2} style={{ padding: '6px 14px', background: '#f1f5f9', borderTop: '2px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8' }}>Amateur</span>
+                          </td>
+                        </tr>
+                      )}
+                    <tr key={evt.id} style={{ borderBottom: idx < events.length - 1 ? '1px solid #e2e8f0' : undefined, background: pal.bg }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap', borderRight: `2px solid ${pal.border}`, verticalAlign: 'top', borderLeft: `4px solid ${pal.border}` }}>
                         {evt.name}
                         <div style={{ fontSize: '0.7rem', fontWeight: 400, color: '#94a3b8', marginTop: 2 }}>
                           {evt.heatCount} heat{evt.heatCount !== 1 ? 's' : ''}
                         </div>
                       </td>
-                      <td style={{ padding: '8px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '8px 10px', verticalAlign: 'middle', background: '#fff' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                           {evtEntries.map(e => (
                             <span key={e.id} style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4,
-                              background: e.isPublished ? '#f1f5f9' : '#e0e7ff',
-                              color: e.isPublished ? '#94a3b8' : '#3730a3',
+                              background: e.isPublished ? '#f1f5f9' : pal.chip,
+                              color: e.isPublished ? '#94a3b8' : pal.chipText,
                               borderRadius: 4, padding: '3px 8px',
                               fontSize: '0.78rem', fontWeight: 600,
                             }}>
@@ -465,8 +491,10 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                         </div>
                       </td>
                     </tr>
+                    </>
                   )
-                })}
+                })
+                })()}
               </tbody>
             </table>
           </div>
