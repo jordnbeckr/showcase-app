@@ -13,7 +13,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
   const studio = await db.studio.findUnique({
     where: { slug },
     include: {
-      instructors: { orderBy: { name: 'asc' } },
+      instructors: true,
       students: { orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] },
     },
   })
@@ -44,7 +44,12 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
   return (
     <PlanGrid
       slug={slug}
-      instructors={studio.instructors.map(i => ({ id: i.id, name: i.name }))}
+      instructors={[...studio.instructors]
+        .sort((a, b) => {
+          const lastName = (n: string) => n.trim().split(' ').slice(-1)[0].toLowerCase()
+          return lastName(a.name).localeCompare(lastName(b.name))
+        })
+        .map(i => ({ id: i.id, name: i.name }))}
       students={studio.students.map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName }))}
       danceTypes={danceTypes.map(d => ({ id: d.id, name: d.name }))}
       events={events.map(e => ({ id: e.id, name: e.name, heatCount: e.heats.length, isAmateur: e.isAmateur }))}

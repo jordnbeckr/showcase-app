@@ -198,7 +198,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
           const active = inst.id === activeInstructorId
           return (
             <button key={inst.id} onClick={() => setActiveInstructorId(inst.id)} style={{
-              padding: '7px 16px', border: 'none', background: 'none',
+              padding: '7px 11px', border: 'none', background: 'none',
               borderBottom: active ? '2px solid #3b82f6' : '2px solid transparent',
               marginBottom: -2, fontWeight: active ? 700 : 500,
               color: active ? '#3b82f6' : '#64748b',
