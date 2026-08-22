@@ -47,8 +47,8 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
         studentId: e.studentId,
         danceTypeId: e.danceTypeId,
         category: e.category as 'closed' | 'open',
+        slotIndex: e.slotIndex,
         isPublished: e.isPublished,
-        studentName: `${e.student.firstName} ${e.student.lastName}`,
       }))}
     />
   )
