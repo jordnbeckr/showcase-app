@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { setPlanEntry, clearPlanEntry, publishPlanEntries } from '@/app/actions/plan'
+import { setPlanEntry, clearPlanEntry, publishPlanEntries, addPlanEventEntry, removePlanEventEntry } from '@/app/actions/plan'
 
 type Instructor = { id: number; name: string }
 type Student = { id: number; firstName: string; lastName: string }
@@ -17,19 +17,23 @@ type PlanEntry = {
 }
 
 type HeatCount = { danceTypeId: number; category: 'closed' | 'open'; count: number }
+type CompEvent = { id: number; name: string; heatCount: number }
+type PlanEventEntry = { id: number; instructorId: number; studentId: number; eventId: number; isPublished: boolean }
 
 interface Props {
   slug: string
   instructors: Instructor[]
   students: Student[]
   danceTypes: DanceType[]
+  events: CompEvent[]
   planEntries: PlanEntry[]
+  planEventEntries: PlanEventEntry[]
   heatCounts: HeatCount[]
 }
 
 const SLOTS = [1, 2, 3, 4, 5, 6]
 
-export default function PlanGrid({ slug, instructors, students, danceTypes, planEntries, heatCounts }: Props) {
+export default function PlanGrid({ slug, instructors, students, danceTypes, events, planEntries, planEventEntries, heatCounts }: Props) {
   function availableSlots(danceTypeId: number, category: 'closed' | 'open') {
     return heatCounts.find(h => h.danceTypeId === danceTypeId && h.category === category)?.count ?? 0
   }
@@ -39,11 +43,18 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
   const [publishResult, setPublishResult] = useState<{ published: number; skipped: number } | null>(null)
   const [studentSearch, setStudentSearch] = useState('')
 
-  // Local optimistic copy — updates immediately on click, syncs from server after revalidation
+  // Local optimistic copies — update immediately on click, sync from server after revalidation
   const [localEntries, setLocalEntries] = useState<PlanEntry[]>(planEntries)
   useEffect(() => { setLocalEntries(planEntries) }, [planEntries])
 
-  const unpublishedCount = localEntries.filter(e => !e.isPublished).length
+  const [localEventEntries, setLocalEventEntries] = useState<PlanEventEntry[]>(planEventEntries)
+  useEffect(() => { setLocalEventEntries(planEventEntries) }, [planEventEntries])
+
+  // Event picker state
+  const [openEventPicker, setOpenEventPicker] = useState<number | null>(null) // eventId
+  const [eventStudentSearch, setEventStudentSearch] = useState('')
+
+  const unpublishedCount = localEntries.filter(e => !e.isPublished).length + localEventEntries.filter(e => !e.isPublished).length
   const instrEntries = localEntries.filter(e => e.instructorId === activeInstructorId)
 
   function getEntry(danceTypeId: number, category: 'closed' | 'open', slotIndex: number) {
@@ -81,6 +92,25 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
         await setPlanEntry(slug, activeInstructorId, activeStudentId, danceTypeId, category, slotIndex)
       })
     }
+  }
+
+  function handleAddEventEntry(studentId: number, eventId: number) {
+    const tempEntry: PlanEventEntry = {
+      id: -(Date.now()),
+      instructorId: activeInstructorId,
+      studentId,
+      eventId,
+      isPublished: false,
+    }
+    setLocalEventEntries(prev => [...prev, tempEntry])
+    setOpenEventPicker(null)
+    setEventStudentSearch('')
+    startTransition(async () => { await addPlanEventEntry(slug, activeInstructorId, studentId, eventId) })
+  }
+
+  function handleRemoveEventEntry(id: number) {
+    setLocalEventEntries(prev => prev.filter(e => e.id !== id))
+    startTransition(async () => { await removePlanEventEntry(slug, id) })
   }
 
   function handlePublish() {
@@ -334,6 +364,114 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, plan
           </tbody>
         </table>
       </div>
+
+      {/* ── Competitive Events section ── */}
+      {events.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Competitive Events</h2>
+            <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+              Assign students to events — publish creates the entry and adds them to all component heats.
+            </span>
+          </div>
+
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                  <th style={{ ...thSlot, textAlign: 'left', paddingLeft: 14, width: 220 }}>Event</th>
+                  <th style={{ ...thSlot, textAlign: 'left', paddingLeft: 10 }}>Students</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((evt, idx) => {
+                  const evtEntries = localEventEntries.filter(e => e.instructorId === activeInstructorId && e.eventId === evt.id)
+                  const assignedIds = new Set(evtEntries.map(e => e.studentId))
+                  const isPickerOpen = openEventPicker === evt.id
+                  const filtered = students.filter(s =>
+                    !assignedIds.has(s.id) &&
+                    `${s.firstName} ${s.lastName}`.toLowerCase().includes(eventStudentSearch.toLowerCase())
+                  )
+
+                  return (
+                    <tr key={evt.id} style={{ borderBottom: idx < events.length - 1 ? '1px solid #e2e8f0' : undefined, background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' }}>
+                        {evt.name}
+                        <div style={{ fontSize: '0.7rem', fontWeight: 400, color: '#94a3b8', marginTop: 2 }}>
+                          {evt.heatCount} heat{evt.heatCount !== 1 ? 's' : ''}
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                          {evtEntries.map(e => (
+                            <span key={e.id} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              background: e.isPublished ? '#f1f5f9' : '#e0e7ff',
+                              color: e.isPublished ? '#94a3b8' : '#3730a3',
+                              borderRadius: 4, padding: '3px 8px',
+                              fontSize: '0.78rem', fontWeight: 600,
+                            }}>
+                              {e.isPublished && <span style={{ fontSize: '0.6rem' }}>✓</span>}
+                              {studentLabel(e.studentId)}
+                              {!e.isPublished && (
+                                <button onClick={() => handleRemoveEventEntry(e.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.5, fontSize: '0.8rem', lineHeight: 1 }}>×</button>
+                              )}
+                            </span>
+                          ))}
+
+                          {isPickerOpen ? (
+                            <div style={{ position: 'relative' }}>
+                              <input
+                                autoFocus
+                                placeholder="Search student…"
+                                value={eventStudentSearch}
+                                onChange={e => setEventStudentSearch(e.target.value)}
+                                onBlur={() => setTimeout(() => { setOpenEventPicker(null); setEventStudentSearch('') }, 150)}
+                                style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: '0.8rem', width: 160 }}
+                              />
+                              {(
+                                <div style={{
+                                  position: 'absolute', top: '100%', left: 0, zIndex: 50,
+                                  background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6,
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                  maxHeight: 180, overflowY: 'auto', minWidth: 180,
+                                }}>
+                                  {filtered.length === 0
+                                    ? <div style={{ padding: '8px 12px', fontSize: '0.8rem', color: '#94a3b8' }}>No students found</div>
+                                    : filtered.slice(0, 20).map(s => (
+                                      <button key={s.id} onMouseDown={() => handleAddEventEntry(s.id, evt.id)} style={{
+                                        display: 'block', width: '100%', textAlign: 'left',
+                                        padding: '6px 12px', border: 'none', background: 'transparent',
+                                        cursor: 'pointer', fontSize: '0.8rem', color: '#0f172a',
+                                      }}>
+                                        {s.firstName} {s.lastName}
+                                      </button>
+                                    ))
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setOpenEventPicker(evt.id); setEventStudentSearch('') }}
+                              style={{
+                                background: 'none', border: '1px dashed #cbd5e1', borderRadius: 4,
+                                color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', padding: '3px 10px',
+                              }}
+                            >
+                              + Add
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

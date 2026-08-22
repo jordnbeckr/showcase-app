@@ -35,6 +35,75 @@ export async function clearPlanEntry(slug: string, id: number) {
   revalidatePath(`/studio/${slug}/plan`)
 }
 
+export async function addPlanEventEntry(
+  slug: string,
+  instructorId: number,
+  studentId: number,
+  eventId: number
+) {
+  const studio = await requireStudio(slug)
+  await db.planEventEntry.upsert({
+    where: { instructorId_studentId_eventId: { instructorId, studentId, eventId } },
+    create: { studioId: studio.id, instructorId, studentId, eventId },
+    update: {},
+  })
+  revalidatePath(`/studio/${slug}/plan`)
+}
+
+export async function removePlanEventEntry(slug: string, id: number) {
+  await requireStudio(slug)
+  await db.planEventEntry.delete({ where: { id } })
+  revalidatePath(`/studio/${slug}/plan`)
+}
+
+export async function publishPlanEventEntries(slug: string) {
+  const studio = await requireStudio(slug)
+
+  const unpublished = await db.planEventEntry.findMany({
+    where: { studioId: studio.id, isPublished: false },
+  })
+
+  let published = 0
+  let skipped = 0
+
+  for (const entry of unpublished) {
+    // Create StudentEvent if it doesn't exist
+    const existingSE = await db.studentEvent.findUnique({
+      where: { studentId_eventId: { studentId: entry.studentId, eventId: entry.eventId } },
+    })
+    if (existingSE) { skipped++; continue }
+
+    await db.studentEvent.create({
+      data: { studentId: entry.studentId, eventId: entry.eventId, instructorId: entry.instructorId },
+    })
+
+    // Create HeatEntry for every heat linked to this event
+    const eventHeats = await db.eventHeat.findMany({
+      where: { eventId: entry.eventId },
+      include: { heat: true },
+    })
+    for (const eh of eventHeats) {
+      const existingHE = await db.heatEntry.findUnique({
+        where: { heatId_studentId: { heatId: eh.heatId, studentId: entry.studentId } },
+      })
+      if (!existingHE) {
+        await db.heatEntry.create({
+          data: { heatId: eh.heatId, studentId: entry.studentId, instructorId: entry.instructorId },
+        })
+      }
+    }
+
+    await db.planEventEntry.update({ where: { id: entry.id }, data: { isPublished: true } })
+    published++
+  }
+
+  revalidatePath(`/studio/${slug}/plan`)
+  revalidatePath(`/studio/${slug}/heats`)
+  revalidatePath(`/studio/${slug}/heatsheet`)
+
+  return { published, skipped }
+}
+
 export async function publishPlanEntries(slug: string) {
   const studio = await requireStudio(slug)
 
@@ -47,7 +116,6 @@ export async function publishPlanEntries(slug: string) {
   let skipped = 0
 
   for (const entry of unpublished) {
-    // Find the Nth heat for this dance+category (slotIndex 1 = first heat, 2 = second, etc.)
     const heats = await db.heat.findMany({
       where: { danceTypeId: entry.danceTypeId, category: entry.category },
       orderBy: { number: 'asc' },
@@ -66,6 +134,11 @@ export async function publishPlanEntries(slug: string) {
     await db.planEntry.update({ where: { id: entry.id }, data: { isPublished: true } })
     published++
   }
+
+  // Also publish event entries
+  const eventResult = await publishPlanEventEntries(slug)
+  published += eventResult.published
+  skipped += eventResult.skipped
 
   revalidatePath(`/studio/${slug}/plan`)
   revalidatePath(`/studio/${slug}/heats`)

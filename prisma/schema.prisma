@@ -7,19 +7,20 @@ datasource db {
 }
 
 model Studio {
-  id             Int                    @id @default(autoincrement())
-  name           String                 @unique
-  slug           String                 @unique
-  passwordHash   String
-  order          Int                    @default(0)
-  instructors    Instructor[]
-  students       Student[]
-  proShows       ProShow[]
-  studentShows   StudentShow[]
-  studioBudget   StudioBudget?
-  guestStudents  StudentStudioAccess[]
-  spectators     Spectator[]
-  planEntries    PlanEntry[]
+  id              Int                    @id @default(autoincrement())
+  name            String                 @unique
+  slug            String                 @unique
+  passwordHash    String
+  order           Int                    @default(0)
+  instructors     Instructor[]
+  students        Student[]
+  proShows        ProShow[]
+  studentShows    StudentShow[]
+  studioBudget    StudioBudget?
+  guestStudents   StudentStudioAccess[]
+  spectators      Spectator[]
+  planEntries     PlanEntry[]
+  planEventEntries PlanEventEntry[]
 }
 
 model Spectator {
@@ -49,9 +50,10 @@ model Instructor {
   heatEntries   HeatEntry[]
   role          String         @default("Neither")
   leaderNumber  Int?
-  studentEvents StudentEvent[]
-  studentShows  StudentShow[]  @relation("StudentShowInstructors")
-  planEntries   PlanEntry[]
+  studentEvents    StudentEvent[]
+  studentShows     StudentShow[]  @relation("StudentShowInstructors")
+  planEntries      PlanEntry[]
+  planEventEntries PlanEventEntry[]
 }
 
 model DanceType {
@@ -63,16 +65,17 @@ model DanceType {
 }
 
 model Event {
-  id             Int            @id @default(autoincrement())
-  name           String
-  order          Int            @default(0)
-  isAmateur      Boolean        @default(false)
-  isCompetitive  Boolean        @default(false)
-  heats          EventHeat[]
-  studentEvents  StudentEvent[]
-  compRound      CompRound?
-  compScores     CompScore[]
-  semiMarks      SemiMark[]
+  id               Int              @id @default(autoincrement())
+  name             String
+  order            Int              @default(0)
+  isAmateur        Boolean          @default(false)
+  isCompetitive    Boolean          @default(false)
+  heats            EventHeat[]
+  studentEvents    StudentEvent[]
+  compRound        CompRound?
+  compScores       CompScore[]
+  semiMarks        SemiMark[]
+  planEventEntries PlanEventEntry[]
 }
 
 model StudentEvent {
@@ -133,6 +136,7 @@ model Student {
   floorAssignments HeatFloorAssignment[]
   studioAccess     StudentStudioAccess[]
   planEntries      PlanEntry[]
+  planEventEntries PlanEventEntry[]
 }
 
 model PlanEntry {
@@ -151,6 +155,22 @@ model PlanEntry {
   createdAt    DateTime   @default(now())
 
   @@unique([instructorId, danceTypeId, category, slotIndex])
+}
+
+model PlanEventEntry {
+  id           Int        @id @default(autoincrement())
+  studioId     Int
+  studio       Studio     @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  instructorId Int
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  eventId      Int
+  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  isPublished  Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@unique([instructorId, studentId, eventId])
 }
 
 model BudgetItem {
