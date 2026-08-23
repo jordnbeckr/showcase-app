@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import HeatSignUp from './HeatSignUp'
+import { studentDisplayName } from '@/lib/studentDisplay'
 
 export default async function HeatsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -152,6 +153,13 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
         studio={{ id: studio.id, name: studio.name }}
         students={studio.students}
         instructors={studio.instructors}
+        duplicateFirstNames={
+          new Set(
+            studio.students
+              .map(s => s.firstName.toLowerCase())
+              .filter((n, _, arr) => arr.filter(x => x === n).length > 1)
+          )
+        }
         heats={heats.map(h => ({
           id: h.id,
           number: h.number,
@@ -167,7 +175,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
             .map(e => ({
               id: e.id,
               studentId: e.studentId,
-              studentName: `${e.student.firstName} ${e.student.lastName}`,
+              studentName: studentDisplayName(e.student, studio.students),
               instructorId: e.instructorId,
             })),
         }))}

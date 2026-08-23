@@ -304,9 +304,9 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
       <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
         <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%', tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: 150 }} />
-            {SLOTS.map(s => <col key={`c-${s}`} style={{ width: 82 }} />)}
-            {SLOTS.map(s => <col key={`o-${s}`} style={{ width: 82 }} />)}
+            <col style={{ width: 180 }} />
+            {SLOTS.map(s => <col key={`c-${s}`} style={{ width: 96 }} />)}
+            {SLOTS.map(s => <col key={`o-${s}`} style={{ width: 96 }} />)}
           </colgroup>
           <thead>
             <tr>
