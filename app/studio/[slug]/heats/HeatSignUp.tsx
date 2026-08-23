@@ -367,7 +367,7 @@ export default function HeatSignUp({
               >
                 {isSelectedStudent
                   ? <strong>{duplicateFirstNames.has(selectedStudent.firstName.toLowerCase()) ? `${selectedStudent.firstName} ${selectedStudent.lastName[0]}.` : selectedStudent.firstName}</strong>
-                  : entry.studentName.split(' ')[0]}
+                  : entry.studentName}
                 <button
                   onClick={ev => {
                     ev.stopPropagation()
