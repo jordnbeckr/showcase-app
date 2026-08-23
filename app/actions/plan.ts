@@ -35,6 +35,38 @@ export async function clearPlanEntry(slug: string, id: number) {
   revalidatePath(`/studio/${slug}/plan`)
 }
 
+export async function unpublishPlanEntry(slug: string, id: number) {
+  await requireStudio(slug)
+  const entry = await db.planEntry.findUnique({ where: { id } })
+  if (!entry) return
+  // Find the Nth heat (1-indexed slotIndex) for this dance+category
+  const heats = await db.heat.findMany({
+    where: { danceTypeId: entry.danceTypeId, category: entry.category },
+    orderBy: { number: 'asc' },
+  })
+  const heat = heats[entry.slotIndex - 1]
+  if (heat) {
+    await db.heatEntry.deleteMany({ where: { heatId: heat.id, studentId: entry.studentId } })
+  }
+  await db.planEntry.delete({ where: { id } })
+  revalidatePath(`/studio/${slug}/plan`)
+  revalidatePath(`/studio/${slug}/heats`)
+}
+
+export async function unpublishPlanEventEntry(slug: string, id: number) {
+  await requireStudio(slug)
+  const entry = await db.planEventEntry.findUnique({ where: { id } })
+  if (!entry) return
+  const eventHeats = await db.eventHeat.findMany({ where: { eventId: entry.eventId } })
+  for (const eh of eventHeats) {
+    await db.heatEntry.deleteMany({ where: { heatId: eh.heatId, studentId: entry.studentId } })
+  }
+  await db.studentEvent.deleteMany({ where: { studentId: entry.studentId, eventId: entry.eventId } })
+  await db.planEventEntry.delete({ where: { id } })
+  revalidatePath(`/studio/${slug}/plan`)
+  revalidatePath(`/studio/${slug}/heats`)
+}
+
 export async function addPlanEventEntry(
   slug: string,
   instructorId: number,

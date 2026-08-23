@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { setPlanEntry, clearPlanEntry, publishPlanEntries, addPlanEventEntry, removePlanEventEntry } from '@/app/actions/plan'
+import { setPlanEntry, clearPlanEntry, publishPlanEntries, addPlanEventEntry, removePlanEventEntry, unpublishPlanEntry, unpublishPlanEventEntry } from '@/app/actions/plan'
 
 type Instructor = { id: number; name: string }
 type Student = { id: number; firstName: string; lastName: string }
@@ -102,10 +102,13 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
   function handleCellClick(danceTypeId: number, category: 'closed' | 'open', slotIndex: number) {
     const existing = getEntry(danceTypeId, category, slotIndex)
     if (existing) {
-      if (existing.isPublished) return
       // Optimistic remove
       setLocalEntries(prev => prev.filter(e => e.id !== existing.id))
-      startTransition(async () => { await clearPlanEntry(slug, existing.id) })
+      if (existing.isPublished) {
+        startTransition(async () => { await unpublishPlanEntry(slug, existing.id) })
+      } else {
+        startTransition(async () => { await clearPlanEntry(slug, existing.id) })
+      }
     } else {
       if (!activeStudentId) return
       const tempId = -(Date.now())
@@ -140,9 +143,13 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
     startTransition(async () => { await addPlanEventEntry(slug, activeInstructorId, studentId, eventId) })
   }
 
-  function handleRemoveEventEntry(id: number) {
+  function handleRemoveEventEntry(id: number, isPublished: boolean) {
     setLocalEventEntries(prev => prev.filter(e => e.id !== id))
-    startTransition(async () => { await removePlanEventEntry(slug, id) })
+    if (isPublished) {
+      startTransition(async () => { await unpublishPlanEventEntry(slug, id) })
+    } else {
+      startTransition(async () => { await removePlanEventEntry(slug, id) })
+    }
   }
 
   function handlePublish() {
@@ -356,7 +363,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                     const isLast = slot === 6 && cat === 'closed'
                     const isUnavailable = slot > available
                     const canPlace = !entry && !isUnavailable && activeStudentId !== null
-                    const canRemove = entry && !entry.isPublished
+                    const canRemove = !!entry
 
                     return (
                       <td
@@ -364,7 +371,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                         onClick={() => !isUnavailable && handleCellClick(dance.id, cat, slot)}
                         title={
                           isUnavailable ? `No heat ${slot} for this dance` :
-                          entry ? (entry.isPublished ? 'Already published' : 'Click to remove') :
+                          entry ? (entry.isPublished ? 'Click to unpublish + remove from Heat Sign-Up' : 'Click to remove') :
                           activeStudentId ? 'Click to place' : 'Select a student first'
                         }
                         style={{
@@ -470,9 +477,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                             }}>
                               {e.isPublished && <span style={{ fontSize: '0.6rem' }}>✓</span>}
                               {studentLabel(e.studentId)}
-                              {!e.isPublished && (
-                                <button onClick={() => handleRemoveEventEntry(e.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.5, fontSize: '0.8rem', lineHeight: 1 }}>×</button>
-                              )}
+                              <button onClick={() => handleRemoveEventEntry(e.id, e.isPublished)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', opacity: 0.5, fontSize: '0.8rem', lineHeight: 1 }}>×</button>
                             </span>
                           ))}
 
