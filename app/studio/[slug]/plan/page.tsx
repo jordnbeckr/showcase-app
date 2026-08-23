@@ -61,7 +61,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
           }, {})
         ).map(([key, count]) => {
           const [danceTypeId, category] = key.split(':')
-          return { danceTypeId: parseInt(danceTypeId), category: category as 'closed' | 'open', count }
+          return { danceTypeId: parseInt(danceTypeId), category: category as 'closed' | 'open', count: count as number }
         })
       }
       planEntries={planEntries.map(e => ({
