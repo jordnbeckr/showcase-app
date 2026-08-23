@@ -96,14 +96,14 @@ export async function publishPlanEventEntries(slug: string) {
   })
 
   let published = 0
-  let skipped = 0
+  const skipReasons: string[] = []
 
   for (const entry of unpublished) {
     // Create StudentEvent if it doesn't exist
     const existingSE = await db.studentEvent.findUnique({
       where: { studentId_eventId: { studentId: entry.studentId, eventId: entry.eventId } },
     })
-    if (existingSE) { skipped++; continue }
+    if (existingSE) { skipReasons.push(`event already exists: studentId=${entry.studentId} eventId=${entry.eventId}`); continue }
 
     await db.studentEvent.create({
       data: { studentId: entry.studentId, eventId: entry.eventId, instructorId: entry.instructorId },
@@ -133,7 +133,7 @@ export async function publishPlanEventEntries(slug: string) {
   revalidatePath(`/studio/${slug}/heats`)
   revalidatePath(`/studio/${slug}/heatsheet`)
 
-  return { published, skipped }
+  return { published, skipped: skipReasons.length, skipReasons }
 }
 
 export async function publishPlanEntries(slug: string) {
@@ -145,7 +145,7 @@ export async function publishPlanEntries(slug: string) {
   })
 
   let published = 0
-  let skipped = 0
+  const skipReasons: string[] = []
 
   for (const entry of unpublished) {
     const heats = await db.heat.findMany({
@@ -153,12 +153,18 @@ export async function publishPlanEntries(slug: string) {
       orderBy: { number: 'asc' },
     })
     const heat = heats[entry.slotIndex - 1]
-    if (!heat) { skipped++; continue }
+    if (!heat) {
+      skipReasons.push(`no heat: danceTypeId=${entry.danceTypeId} category=${entry.category} slot=${entry.slotIndex} (found ${heats.length} heats)`)
+      continue
+    }
 
     const exists = await db.heatEntry.findUnique({
       where: { heatId_studentId: { heatId: heat.id, studentId: entry.studentId } },
     })
-    if (exists) { skipped++; continue }
+    if (exists) {
+      skipReasons.push(`already exists: heatId=${heat.id} studentId=${entry.studentId}`)
+      continue
+    }
 
     await db.heatEntry.create({
       data: { heatId: heat.id, studentId: entry.studentId, instructorId: entry.instructorId },
@@ -170,11 +176,11 @@ export async function publishPlanEntries(slug: string) {
   // Also publish event entries
   const eventResult = await publishPlanEventEntries(slug)
   published += eventResult.published
-  skipped += eventResult.skipped
+  skipReasons.push(...eventResult.skipReasons)
 
   revalidatePath(`/studio/${slug}/plan`)
   revalidatePath(`/studio/${slug}/heats`)
   revalidatePath(`/studio/${slug}/heatsheet`)
 
-  return { published, skipped }
+  return { published, skipped: skipReasons.length, skipReasons }
 }

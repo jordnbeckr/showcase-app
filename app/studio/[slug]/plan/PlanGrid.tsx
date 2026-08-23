@@ -66,7 +66,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
   const [activeInstructorId, setActiveInstructorId] = useState(instructors[0]?.id ?? 0)
   const [activeStudentId, setActiveStudentId] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [publishResult, setPublishResult] = useState<{ published: number; skipped: number } | null>(null)
+  const [publishResult, setPublishResult] = useState<{ published: number; skipped: number; skipReasons: string[] } | null>(null)
   const [studentSearch, setStudentSearch] = useState('')
 
   // Local optimistic copies — update immediately on click, sync from server after revalidation
@@ -178,8 +178,9 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {publishResult && (
-            <span style={{ fontSize: '0.78rem', color: '#15803d' }}>
-              ✓ {publishResult.published} added{publishResult.skipped > 0 ? `, ${publishResult.skipped} skipped` : ''}
+            <span style={{ fontSize: '0.78rem', color: publishResult.skipped > 0 ? '#b45309' : '#15803d' }}
+              title={publishResult.skipReasons.length > 0 ? publishResult.skipReasons.join('\n') : undefined}>
+              ✓ {publishResult.published} added{publishResult.skipped > 0 ? ` · ${publishResult.skipped} skipped (hover for details)` : ''}
             </span>
           )}
           <button
