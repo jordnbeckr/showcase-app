@@ -200,10 +200,12 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
       {/* Instructor tabs */}
       <div style={{ display: 'flex', gap: 2, borderBottom: '2px solid #e2e8f0', marginBottom: 14, overflowX: 'auto' }}>
         {instructors.map(inst => {
+          const eventHeatCount = (entries: typeof localEventEntries) =>
+            entries.reduce((sum, e) => sum + (events.find(ev => ev.id === e.eventId)?.heatCount ?? 1), 0)
           const totalCount = localEntries.filter(e => e.instructorId === inst.id).length
-            + localEventEntries.filter(e => e.instructorId === inst.id).length
+            + eventHeatCount(localEventEntries.filter(e => e.instructorId === inst.id))
           const unpubCount = localEntries.filter(e => e.instructorId === inst.id && !e.isPublished).length
-            + localEventEntries.filter(e => e.instructorId === inst.id && !e.isPublished).length
+            + eventHeatCount(localEventEntries.filter(e => e.instructorId === inst.id && !e.isPublished))
           const active = inst.id === activeInstructorId
           return (
             <button key={inst.id} onClick={() => setActiveInstructorId(inst.id)} style={{
