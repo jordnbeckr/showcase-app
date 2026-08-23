@@ -26,10 +26,9 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
       orderBy: [{ isAmateur: 'asc' }, { order: 'asc' }],
       include: { heats: { include: { heat: true } } },
     }),
-    db.heat.groupBy({
-      by: ['danceTypeId', 'category'],
-      _count: { id: true },
+    db.heat.findMany({
       where: { category: { in: ['closed', 'open'] } },
+      select: { danceTypeId: true, category: true },
     }),
     db.planEntry.findMany({
       where: { studioId: studio.id },
@@ -53,7 +52,18 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
       students={studio.students.map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName }))}
       danceTypes={danceTypes.map(d => ({ id: d.id, name: d.name }))}
       events={events.map(e => ({ id: e.id, name: e.name, heatCount: e.heats.length, isAmateur: e.isAmateur }))}
-      heatCounts={heatCounts.map(h => ({ danceTypeId: h.danceTypeId, category: h.category as 'closed' | 'open', count: h._count.id }))}
+      heatCounts={
+        Object.entries(
+          heatCounts.reduce((acc, h) => {
+            const key = `${h.danceTypeId}:${h.category}`
+            acc[key] = (acc[key] ?? 0) + 1
+            return acc
+          }, {} as Record<string, number>)
+        ).map(([key, count]) => {
+          const [danceTypeId, category] = key.split(':')
+          return { danceTypeId: parseInt(danceTypeId), category: category as 'closed' | 'open', count }
+        })
+      }
       planEntries={planEntries.map(e => ({
         id: e.id,
         instructorId: e.instructorId,
