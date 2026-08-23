@@ -200,7 +200,10 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
       {/* Instructor tabs */}
       <div style={{ display: 'flex', gap: 2, borderBottom: '2px solid #e2e8f0', marginBottom: 14, overflowX: 'auto' }}>
         {instructors.map(inst => {
-          const count = localEntries.filter(e => e.instructorId === inst.id && !e.isPublished).length
+          const totalCount = localEntries.filter(e => e.instructorId === inst.id).length
+            + localEventEntries.filter(e => e.instructorId === inst.id).length
+          const unpubCount = localEntries.filter(e => e.instructorId === inst.id && !e.isPublished).length
+            + localEventEntries.filter(e => e.instructorId === inst.id && !e.isPublished).length
           const active = inst.id === activeInstructorId
           return (
             <button key={inst.id} onClick={() => setActiveInstructorId(inst.id)} style={{
@@ -212,9 +215,14 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
               {inst.name}
-              {count > 0 && (
+              {totalCount > 0 && (
+                <span style={{ background: '#e2e8f0', color: '#475569', borderRadius: 10, fontSize: '0.65rem', padding: '1px 6px', fontWeight: 700 }}>
+                  {totalCount}
+                </span>
+              )}
+              {unpubCount > 0 && (
                 <span style={{ background: '#3b82f6', color: '#fff', borderRadius: 10, fontSize: '0.65rem', padding: '1px 6px', fontWeight: 700 }}>
-                  {count}
+                  {unpubCount}
                 </span>
               )}
             </button>
