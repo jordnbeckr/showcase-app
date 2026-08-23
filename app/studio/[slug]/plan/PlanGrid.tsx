@@ -312,13 +312,13 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
       <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
         <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%', tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: 180 }} />
+            <col style={{ width: 150 }} />
             {SLOTS.map(s => <col key={`c-${s}`} style={{ width: 96 }} />)}
             {SLOTS.map(s => <col key={`o-${s}`} style={{ width: 96 }} />)}
           </colgroup>
           <thead>
             <tr>
-              <th style={{ ...thBase, background: '#f8fafc', borderRight: '2px solid #cbd5e1' }} />
+              <th style={{ ...thBase, background: '#f8fafc', borderRight: '2px solid #cbd5e1', position: 'sticky', left: 0, zIndex: 2 }} />
               <th colSpan={6} style={{ ...thBase, background: '#eff6ff', color: '#3b82f6', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', borderRight: '2px solid #3b82f6' }}>
                 Closed
               </th>
@@ -327,7 +327,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
               </th>
             </tr>
             <tr>
-              <th style={{ ...thSlot, textAlign: 'left', paddingLeft: 12, background: '#f8fafc', borderRight: '2px solid #cbd5e1' }}>Dance</th>
+              <th style={{ ...thSlot, textAlign: 'left', paddingLeft: 12, background: '#f8fafc', borderRight: '2px solid #cbd5e1', position: 'sticky', left: 0, zIndex: 2 }}>Dance</th>
               {SLOTS.map(s => (
                 <th key={`ch-${s}`} style={{ ...thSlot, background: '#eff6ff', borderRight: s === 6 ? '2px solid #3b82f6' : '1px solid #dbeafe' }}>H{s}</th>
               ))}
@@ -343,6 +343,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
                   padding: '7px 12px', fontWeight: 600, fontSize: '0.82rem',
                   background: idx % 2 === 0 ? '#f8fafc' : '#fff',
                   borderRight: '2px solid #cbd5e1', whiteSpace: 'nowrap',
+                  position: 'sticky', left: 0, zIndex: 1,
                 }}>
                   {dance.name}
                 </td>
