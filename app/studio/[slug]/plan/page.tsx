@@ -54,11 +54,11 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
       events={events.map(e => ({ id: e.id, name: e.name, heatCount: e.heats.length, isAmateur: e.isAmateur }))}
       heatCounts={
         Object.entries(
-          heatCounts.reduce((acc, h) => {
+          heatCounts.reduce<Record<string, number>>((acc, h) => {
             const key = `${h.danceTypeId}:${h.category}`
             acc[key] = (acc[key] ?? 0) + 1
             return acc
-          }, {} as Record<string, number>)
+          }, {})
         ).map(([key, count]) => {
           const [danceTypeId, category] = key.split(':')
           return { danceTypeId: parseInt(danceTypeId), category: category as 'closed' | 'open', count }
