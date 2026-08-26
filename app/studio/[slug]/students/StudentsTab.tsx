@@ -111,6 +111,15 @@ export default function StudentsTab({
   const grandTotal = students.reduce((sum, s) => sum + computeTotals(s, config).total, 0)
   const grandRemaining = students.reduce((sum, s) => sum + computeTotals(s, config).remaining, 0)
 
+  // Sort: heat count desc; PIF students split to bottom section (alphabetical within each section)
+  const activeStudents = [...students]
+    .filter(s => !getBilling(s).pifPaid)
+    .sort((a, b) => b.heatCount - a.heatCount)
+  const pifStudents = [...students]
+    .filter(s => getBilling(s).pifPaid)
+    .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+  const sortedStudents = [...activeStudents, ...pifStudents]
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 860 }}>
 
@@ -170,34 +179,49 @@ export default function StudentsTab({
             </tr>
           </thead>
           <tbody>
-            {students.map((s, idx) => {
+            {sortedStudents.map((s, idx) => {
               const { remaining, total } = computeTotals(s, config)
               const b = getBilling(s)
               const isExpanded = expandedId === s.id
+              const isPif = b.pifPaid
+              const showPifDivider = isPif && (idx === 0 || !getBilling(sortedStudents[idx - 1]).pifPaid)
               return (
-                <tr
-                  key={s.id}
-                  onClick={() => setExpandedId(isExpanded ? null : s.id)}
-                  style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer', background: isExpanded ? '#f0f7ff' : idx % 2 === 0 ? '#fff' : '#fafafa' }}
-                >
-                  <td style={tdS}>{s.firstName} {s.lastName}</td>
-                  <td style={{ ...tdS, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{s.heatCount}</td>
-                  <td style={{ ...tdS, textAlign: 'center' }}>
-                    {b.depositPaid ? <span style={{ color: '#166534' }}>✓</span> : <span style={{ color: '#cbd5e1' }}>—</span>}
-                  </td>
-                  <td style={{ ...tdS, textAlign: 'center' }}>
-                    {b.pifPaid ? <span style={{ color: '#166534' }}>✓</span> : <span style={{ color: '#cbd5e1' }}>—</span>}
-                  </td>
-                  <td style={{ ...tdS, textAlign: 'right', paddingRight: 12, fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{
-                      background: remainingBg(remaining),
-                      color: remainingColor(remaining),
-                      borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem',
-                    }}>
-                      {total === 0 ? '—' : fmt(remaining)}
-                    </span>
-                  </td>
-                </tr>
+                <>
+                  {showPifDivider && (
+                    <tr key={`divider-${s.id}`}>
+                      <td colSpan={5} style={{ padding: '5px 10px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8', background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                        Paid in Full
+                      </td>
+                    </tr>
+                  )}
+                  <tr
+                    key={s.id}
+                    onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                    style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer', background: isExpanded ? '#f0f7ff' : idx % 2 === 0 ? '#fff' : '#fafafa' }}
+                  >
+                    <td style={tdS}>{s.firstName} {s.lastName}</td>
+                    <td style={{ ...tdS, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{s.heatCount}</td>
+                    <td style={{ ...tdS, textAlign: 'center' }}>
+                      {b.depositPaid
+                        ? <span style={chipDep}>{[b.depositDate, b.depositInitials].filter(Boolean).join(' · ') || 'paid'}</span>
+                        : <span style={{ color: '#cbd5e1' }}>—</span>}
+                    </td>
+                    <td style={{ ...tdS, textAlign: 'center' }}>
+                      {b.pifPaid
+                        ? <span style={chipPif}>{[b.pifDate, b.pifInitials].filter(Boolean).join(' · ') || 'paid'}</span>
+                        : <span style={{ color: '#cbd5e1' }}>—</span>}
+                    </td>
+                    <td style={{ ...tdS, textAlign: 'right', paddingRight: 12, fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{
+                        background: remainingBg(remaining),
+                        color: remainingColor(remaining),
+                        borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem',
+                      }}>
+                        {total === 0 ? '—' : fmt(remaining)}
+                      </span>
+                    </td>
+                  </tr>
+                </>
               )
             })}
             <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc', fontWeight: 700 }}>
@@ -215,12 +239,18 @@ export default function StudentsTab({
 
       {/* Student cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {students.map(s => {
+        {sortedStudents.map((s, idx) => {
           const b = getBilling(s)
           const t = computeTotals(s, config)
           const isExpanded = expandedId === s.id
+          const showPifDivider = b.pifPaid && (idx === 0 || !getBilling(sortedStudents[idx - 1]).pifPaid)
 
-          return (
+          return (<>
+            {showPifDivider && (
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', paddingTop: 6 }}>
+                Paid in Full
+              </div>
+            )}
             <div key={s.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
               {/* Card header */}
               <button
@@ -387,7 +417,7 @@ export default function StudentsTab({
                 </div>
               )}
             </div>
-          )
+          </>)
         })}
       </div>
     </div>
@@ -399,3 +429,5 @@ const tdS: React.CSSProperties = { padding: '8px 10px', fontSize: '0.82rem' }
 const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontVariantNumeric: 'tabular-nums' }
 const labelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 3, fontSize: '0.78rem', fontWeight: 500 }
 const inputStyle: React.CSSProperties = { padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: '0.82rem', width: 60 }
+const chipDep: React.CSSProperties = { display: 'inline-block', background: '#dcfce7', color: '#166534', borderRadius: 5, padding: '2px 7px', fontSize: '0.72rem', fontWeight: 500, fontFamily: 'ui-monospace, monospace', borderLeft: '3px solid #15803d', whiteSpace: 'nowrap' }
+const chipPif: React.CSSProperties = { display: 'inline-block', background: '#ccfbf1', color: '#0f766e', borderRadius: 5, padding: '2px 7px', fontSize: '0.72rem', fontWeight: 500, fontFamily: 'ui-monospace, monospace', borderLeft: '3px solid #0f766e', whiteSpace: 'nowrap' }
