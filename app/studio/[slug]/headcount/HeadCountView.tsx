@@ -1,7 +1,7 @@
 'use client'
 
-import { useTransition, useRef } from 'react'
-import { addSpectator, removeSpectator } from '@/app/actions/headcount'
+import { useTransition, useRef, useState } from 'react'
+import { addSpectator, removeSpectator, updateSpectator } from '@/app/actions/headcount'
 
 type Spectator = { id: number; name: string; guestOf: string | null }
 
@@ -20,6 +20,9 @@ export default function HeadCountView({
 }) {
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editGuestOf, setEditGuestOf] = useState('')
 
   function handleAdd(formData: FormData) {
     startTransition(async () => {
@@ -30,6 +33,20 @@ export default function HeadCountView({
 
   function handleRemove(id: number) {
     startTransition(async () => { await removeSpectator(slug, id) })
+  }
+
+  function startEdit(s: Spectator) {
+    setEditingId(s.id)
+    setEditName(s.name)
+    setEditGuestOf(s.guestOf ?? '')
+  }
+
+  function handleSave(id: number) {
+    if (!editName.trim()) return
+    startTransition(async () => {
+      await updateSpectator(slug, id, editName, editGuestOf || null)
+      setEditingId(null)
+    })
   }
 
   const totalParticipants = studentCount + instructorCount
@@ -119,23 +136,70 @@ export default function HeadCountView({
           {spectators.map((s, i) => (
             <div
               key={s.id}
-              className="flex items-center gap-3 px-4 py-2.5"
+              className="px-4 py-2.5"
               style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
             >
-              <div className="flex-1">
-                <div className="text-sm font-medium">{s.name}</div>
-                {s.guestOf && (
-                  <div className="text-xs" style={{ color: 'var(--muted)' }}>Guest of {s.guestOf}</div>
-                )}
-              </div>
-              <button
-                onClick={() => handleRemove(s.id)}
-                disabled={pending}
-                className="text-xs px-2 py-1"
-                style={{ color: '#dc2626', opacity: pending ? 0.4 : 1 }}
-              >
-                Remove
-              </button>
+              {editingId === s.id ? (
+                <div className="flex gap-2 items-center flex-wrap">
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSave(s.id); if (e.key === 'Escape') setEditingId(null) }}
+                    className="input"
+                    style={{ flex: '1 1 120px', minWidth: 100 }}
+                    placeholder="Name"
+                  />
+                  <input
+                    value={editGuestOf}
+                    onChange={e => setEditGuestOf(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSave(s.id); if (e.key === 'Escape') setEditingId(null) }}
+                    className="input"
+                    style={{ flex: '1 1 140px', minWidth: 120 }}
+                    placeholder="Guest of (optional)"
+                  />
+                  <button
+                    onClick={() => handleSave(s.id)}
+                    disabled={pending || !editName.trim()}
+                    className="text-xs px-3 py-1 font-medium"
+                    style={{ backgroundColor: 'var(--accent)', color: 'white', borderRadius: 4, opacity: pending ? 0.5 : 1 }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="text-xs px-2 py-1"
+                    style={{ color: 'var(--muted)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{s.name}</div>
+                    {s.guestOf && (
+                      <div className="text-xs" style={{ color: 'var(--muted)' }}>Guest of {s.guestOf}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => startEdit(s)}
+                    disabled={pending}
+                    className="text-xs px-2 py-1"
+                    style={{ color: 'var(--muted)', opacity: pending ? 0.4 : 1 }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleRemove(s.id)}
+                    disabled={pending}
+                    className="text-xs px-2 py-1"
+                    style={{ color: '#dc2626', opacity: pending ? 0.4 : 1 }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

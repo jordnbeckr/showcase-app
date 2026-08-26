@@ -28,3 +28,14 @@ export async function removeSpectator(slug: string, spectatorId: number) {
   revalidatePath('/admin/headcount')
   revalidatePath('/admin/budget')
 }
+
+export async function updateSpectator(slug: string, spectatorId: number, name: string, guestOf: string | null) {
+  const studio = await getStudio(slug)
+  if (!name.trim()) return
+  await db.spectator.updateMany({
+    where: { id: spectatorId, studioId: studio.id },
+    data: { name: name.trim(), guestOf: guestOf?.trim() || null },
+  })
+  revalidatePath(`/studio/${slug}/headcount`)
+  revalidatePath('/admin/headcount')
+}
