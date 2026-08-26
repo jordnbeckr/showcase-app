@@ -12,6 +12,12 @@ model Studio {
   slug            String                 @unique
   passwordHash    String
   order           Int                    @default(0)
+  // Showcase billing config
+  depositAmount      Float   @default(350)
+  requiresDeposit    Boolean @default(true)
+  heatPrice          Float   @default(75)
+  lunchTicketPrice   Float   @default(175)
+  maxFreeHeats       Int     @default(4)
   instructors     Instructor[]
   students        Student[]
   proShows        ProShow[]
@@ -21,6 +27,7 @@ model Studio {
   spectators      Spectator[]
   planEntries     PlanEntry[]
   planEventEntries PlanEventEntry[]
+  studentBillings StudentBilling[]
 }
 
 model Spectator {
@@ -115,6 +122,26 @@ model Heat {
   floorAssignments HeatFloorAssignment[]
 }
 
+model StudentBilling {
+  id               Int      @id @default(autoincrement())
+  studioId         Int
+  studio           Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studentId        Int
+  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  freeHeats        Int      @default(0)
+  lunchTickets     Int      @default(0)
+  isKeyClub        Boolean  @default(false)
+  depositPaid      Boolean  @default(false)
+  depositDate      String?
+  depositInitials  String?
+  pifPaid          Boolean  @default(false)
+  pifDate          String?
+  pifInitials      String?
+  notes            String?
+
+  @@unique([studioId, studentId])
+}
+
 model Student {
   id               Int                    @id @default(autoincrement())
   firstName        String
@@ -137,6 +164,7 @@ model Student {
   studioAccess     StudentStudioAccess[]
   planEntries      PlanEntry[]
   planEventEntries PlanEventEntry[]
+  studentBillings  StudentBilling[]
 }
 
 model PlanEntry {
