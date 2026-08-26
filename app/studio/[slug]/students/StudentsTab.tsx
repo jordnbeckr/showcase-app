@@ -117,11 +117,11 @@ export default function StudentsTab({
     .sort((a, b) => b.heatCount - a.heatCount)
   const pifStudents = [...students]
     .filter(s => getBilling(s).pifPaid)
-    .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+    .sort((a, b) => b.heatCount - a.heatCount)
   const sortedStudents = [...activeStudents, ...pifStudents]
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 860 }}>
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 860, margin: '0 auto' }}>
 
       {/* Config bar */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 16, overflow: 'hidden' }}>

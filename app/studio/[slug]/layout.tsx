@@ -38,7 +38,7 @@ export default async function StudioLayout({
             { href: `/studio/${slug}/heats`, label: 'Heat Sign-Up' },
             // { href: `/studio/${slug}/shows`, label: 'Shows' },
             ...(slug === 'sherman-oaks' ? [{ href: `/studio/${slug}/plan`, label: 'Plan' }] : []),
-            ...(slug === 'sherman-oaks' ? [{ href: `/studio/${slug}/students`, label: 'Students' }] : []),
+            ...(slug === 'sherman-oaks' ? [{ href: `/studio/${slug}/students`, label: 'Payments' }] : []),
             { href: `/studio/${slug}/breakdown`, label: 'Breakdown' },
             { href: `/studio/${slug}/heatsheet`, label: 'Heat Sheet' },
             { href: `/studio/${slug}/headcount`, label: 'Head Count' },
