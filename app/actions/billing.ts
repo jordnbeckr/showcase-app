@@ -43,12 +43,12 @@ export async function updateStudentBilling(
     lunchTickets: number
     isKeyClub: boolean
     depositPaid: boolean
-    depositDate: string
-    depositInitials: string
+    depositDate: string | null
+    depositInitials: string | null
     pifPaid: boolean
-    pifDate: string
-    pifInitials: string
-    notes: string
+    pifDate: string | null
+    pifInitials: string | null
+    notes: string | null
   }>
 ) {
   const studio = await requireStudio(slug)
