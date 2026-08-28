@@ -225,9 +225,12 @@ export default function StudentsTab({
           </thead>
           <tbody>
             {summaryRows.map((row, idx) => {
-              const isPifSection = row.remaining === 0
-              const prevRow = summaryRows[idx - 1]
-              const showDivider = isPifSection && (idx === 0 || summaryRows[idx - 1].remaining > 0)
+              const isPifSection = row.kind === 'guest'
+                ? (row.data as LunchGuestRow).paid
+                : (row.data as StudentRow).billing?.pifPaid ?? false
+              const showDivider = isPifSection && (idx === 0 || !(summaryRows[idx - 1].kind === 'guest'
+                ? (summaryRows[idx - 1].data as LunchGuestRow).paid
+                : (summaryRows[idx - 1].data as StudentRow).billing?.pifPaid ?? false))
               const key = row.kind === 'student' ? `s-${row.data.id}` : `g-${row.data.id}`
               const isExpanded = row.kind === 'student' && expandedId === row.data.id
 

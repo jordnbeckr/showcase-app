@@ -244,7 +244,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', background: '#f8fafc',
-        border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 14, flexWrap: 'wrap',
+        border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: activeStudentId ? 14 : 4, flexWrap: 'wrap',
       }}>
         <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748b', whiteSpace: 'nowrap' }}>
           Filling for
@@ -313,10 +313,18 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
           </span>
         )}
 
-        <span style={{ fontSize: '0.75rem', color: activeStudentId ? '#94a3b8' : '#f59e0b', marginLeft: 'auto', fontWeight: activeStudentId ? 400 : 500 }}>
-          {activeStudentId ? 'Click a cell to place · Click a filled cell to remove' : '↑ Select a student first'}
-        </span>
+        {activeStudentId && (
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: 'auto' }}>
+            Click a cell to place · Click a filled cell to remove
+          </span>
+        )}
       </div>
+
+      {!activeStudentId && (
+        <p style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 500, marginBottom: 14, paddingLeft: 2 }}>
+          Select a student above to begin placing heats.
+        </p>
+      )}
 
       {/* Grid */}
       <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
