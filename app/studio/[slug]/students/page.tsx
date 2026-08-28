@@ -15,6 +15,7 @@ export default async function StudentsPage({ params }: { params: Promise<{ slug:
     include: {
       students: { orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] },
       studentBillings: true,
+      lunchGuests: { orderBy: { id: 'asc' } },
     },
   })
   if (!studio) redirect('/login/studio')
@@ -51,6 +52,7 @@ export default async function StudentsPage({ params }: { params: Promise<{ slug:
         heatCount: heatCountByStudent[s.id] ?? 0,
         billing: studio.studentBillings.find(b => b.studentId === s.id) ?? null,
       }))}
+      lunchGuests={studio.lunchGuests}
     />
   )
 }

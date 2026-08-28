@@ -28,6 +28,7 @@ model Studio {
   planEntries     PlanEntry[]
   planEventEntries PlanEventEntry[]
   studentBillings StudentBilling[]
+  lunchGuests     LunchGuest[]
 }
 
 model Spectator {
@@ -407,4 +408,16 @@ model SemiMark {
   called    Boolean @default(false)
 
   @@unique([judgeId, eventId, studentId])
+}
+
+model LunchGuest {
+  id           Int     @id @default(autoincrement())
+  studioId     Int
+  studio       Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name         String
+  guestOf      String?
+  lunchTickets Int     @default(1)
+  paid         Boolean @default(false)
+  paidDate     String?
+  paidInitials String?
 }

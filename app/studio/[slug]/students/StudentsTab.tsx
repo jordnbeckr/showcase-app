@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { updateStudioBillingConfig, updateStudentBilling } from '@/app/actions/billing'
+import { updateStudioBillingConfig, updateStudentBilling, addLunchGuest, updateLunchGuest, removeLunchGuest } from '@/app/actions/billing'
 
 type Config = {
   depositAmount: number
@@ -23,6 +23,16 @@ type Billing = {
   pifInitials: string | null
   notes: string | null
 } | null
+
+type LunchGuestRow = {
+  id: number
+  name: string
+  guestOf: string | null
+  lunchTickets: number
+  paid: boolean
+  paidDate: string | null
+  paidInitials: string | null
+}
 
 type StudentRow = {
   id: number
@@ -73,16 +83,20 @@ export default function StudentsTab({
   slug,
   config: initialConfig,
   students: initialStudents,
+  lunchGuests: initialLunchGuests,
 }: {
   slug: string
   config: Config
   students: StudentRow[]
+  lunchGuests: LunchGuestRow[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [config, setConfig] = useState<Config>(initialConfig)
   const [configOpen, setConfigOpen] = useState(false)
   const [students, setStudents] = useState<StudentRow[]>(initialStudents)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [lunchGuests, setLunchGuests] = useState<LunchGuestRow[]>(initialLunchGuests)
+  const [newGuest, setNewGuest] = useState({ name: '', guestOf: '', lunchTickets: 1 })
 
   function getBilling(s: StudentRow): NonNullable<Billing> {
     return s.billing ?? {
@@ -420,6 +434,146 @@ export default function StudentsTab({
           </>)
         })}
       </div>
+
+      {/* Lunch guests section */}
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 24, overflow: 'hidden' }}>
+        <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.82rem' }}>Lunch-Only Guests</span>
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lunchGuests.length} guest{lunchGuests.length !== 1 ? 's' : ''} · {fmt(lunchGuests.reduce((s, g) => s + g.lunchTickets * config.lunchTicketPrice, 0))} total</span>
+        </div>
+
+        {/* Guest rows */}
+        {lunchGuests.length > 0 && (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th style={thS}>Name</th>
+                <th style={thS}>Guest of</th>
+                <th style={{ ...thS, textAlign: 'center' }}>Tickets</th>
+                <th style={{ ...thS, textAlign: 'center' }}>Paid</th>
+                <th style={{ ...thS, textAlign: 'right', paddingRight: 12 }}>Total</th>
+                <th style={thS} />
+              </tr>
+            </thead>
+            <tbody>
+              {lunchGuests.map(g => (
+                <tr key={g.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                  <td style={tdS}>{g.name}</td>
+                  <td style={{ ...tdS, color: '#64748b' }}>{g.guestOf ?? '—'}</td>
+                  <td style={{ ...tdS, textAlign: 'center' }}>
+                    <input
+                      type="number" min={1}
+                      value={g.lunchTickets}
+                      onChange={e => setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, lunchTickets: parseInt(e.target.value) || 1 } : x))}
+                      onBlur={e => startTransition(async () => { await updateLunchGuest(slug, g.id, { lunchTickets: parseInt(e.target.value) || 1 }) })}
+                      style={{ ...inputStyle, width: 48, textAlign: 'center' }}
+                    />
+                  </td>
+                  <td style={{ ...tdS, textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={g.paid}
+                        onChange={e => {
+                          const paid = e.target.checked
+                          setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, paid } : x))
+                          startTransition(async () => { await updateLunchGuest(slug, g.id, { paid }) })
+                        }}
+                      />
+                      {g.paid && (
+                        <span style={chipPif}>{[g.paidDate, g.paidInitials].filter(Boolean).join(' · ') || 'paid'}</span>
+                      )}
+                    </div>
+                    {g.paid && (
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 4 }}>
+                        <input
+                          type="text" placeholder="Date"
+                          value={g.paidDate ?? ''}
+                          onChange={e => setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, paidDate: e.target.value } : x))}
+                          onBlur={e => startTransition(async () => { await updateLunchGuest(slug, g.id, { paidDate: e.target.value || null }) })}
+                          style={{ ...inputStyle, width: 70 }}
+                        />
+                        <input
+                          type="text" placeholder="Init"
+                          value={g.paidInitials ?? ''}
+                          onChange={e => setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, paidInitials: e.target.value } : x))}
+                          onBlur={e => startTransition(async () => { await updateLunchGuest(slug, g.id, { paidInitials: e.target.value || null }) })}
+                          style={{ ...inputStyle, width: 48 }}
+                        />
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ ...tdS, textAlign: 'right', paddingRight: 12, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{
+                      background: g.paid ? '#dcfce7' : '#fee2e2',
+                      color: g.paid ? '#166534' : '#991b1b',
+                      borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem',
+                    }}>
+                      {fmt(g.lunchTickets * config.lunchTicketPrice)}
+                    </span>
+                  </td>
+                  <td style={{ ...tdS, textAlign: 'right' }}>
+                    <button
+                      onClick={() => {
+                        setLunchGuests(prev => prev.filter(x => x.id !== g.id))
+                        startTransition(async () => { await removeLunchGuest(slug, g.id) })
+                      }}
+                      style={{ fontSize: '0.75rem', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Add guest form */}
+        <div style={{ padding: '12px 14px', borderTop: lunchGuests.length > 0 ? '1px solid #e2e8f0' : undefined, display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label style={labelStyle}>
+            Name
+            <input
+              type="text" placeholder="Anna R."
+              value={newGuest.name}
+              onChange={e => setNewGuest(g => ({ ...g, name: e.target.value }))}
+              style={{ ...inputStyle, width: 130 }}
+            />
+          </label>
+          <label style={labelStyle}>
+            Guest of
+            <input
+              type="text" placeholder="David Romm"
+              value={newGuest.guestOf}
+              onChange={e => setNewGuest(g => ({ ...g, guestOf: e.target.value }))}
+              style={{ ...inputStyle, width: 140 }}
+            />
+          </label>
+          <label style={labelStyle}>
+            Tickets
+            <input
+              type="number" min={1}
+              value={newGuest.lunchTickets}
+              onChange={e => setNewGuest(g => ({ ...g, lunchTickets: parseInt(e.target.value) || 1 }))}
+              style={{ ...inputStyle, width: 56 }}
+            />
+          </label>
+          <button
+            disabled={!newGuest.name.trim() || isPending}
+            onClick={() => {
+              const g = { ...newGuest }
+              setNewGuest({ name: '', guestOf: '', lunchTickets: 1 })
+              startTransition(async () => {
+                await addLunchGuest(slug, { name: g.name, guestOf: g.guestOf || null, lunchTickets: g.lunchTickets })
+              })
+            }}
+            style={{ padding: '5px 14px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', opacity: !newGuest.name.trim() || isPending ? 0.5 : 1 }}
+          >
+            Add Guest
+          </button>
+        </div>
+      </div>
+
     </div>
   )
 }

@@ -27,6 +27,33 @@ export async function updateStudioBillingConfig(
   revalidatePath(`/studio/${slug}/students`)
 }
 
+export async function addLunchGuest(
+  slug: string,
+  data: { name: string; guestOf?: string | null; lunchTickets?: number }
+) {
+  const studio = await requireStudio(slug)
+  await db.lunchGuest.create({
+    data: { studioId: studio.id, name: data.name.trim(), guestOf: data.guestOf?.trim() || null, lunchTickets: data.lunchTickets ?? 1 },
+  })
+  revalidatePath(`/studio/${slug}/students`)
+}
+
+export async function updateLunchGuest(
+  slug: string,
+  id: number,
+  data: Partial<{ name: string; guestOf: string | null; lunchTickets: number; paid: boolean; paidDate: string | null; paidInitials: string | null }>
+) {
+  const studio = await requireStudio(slug)
+  await db.lunchGuest.updateMany({ where: { id, studioId: studio.id }, data })
+  revalidatePath(`/studio/${slug}/students`)
+}
+
+export async function removeLunchGuest(slug: string, id: number) {
+  const studio = await requireStudio(slug)
+  await db.lunchGuest.deleteMany({ where: { id, studioId: studio.id } })
+  revalidatePath(`/studio/${slug}/students`)
+}
+
 async function upsertBilling(studioId: number, studentId: number) {
   return db.studentBilling.upsert({
     where: { studioId_studentId: { studioId, studentId } },
