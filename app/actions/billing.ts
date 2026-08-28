@@ -32,10 +32,11 @@ export async function addLunchGuest(
   data: { name: string; guestOf?: string | null; lunchTickets?: number }
 ) {
   const studio = await requireStudio(slug)
-  await db.lunchGuest.create({
+  const guest = await db.lunchGuest.create({
     data: { studioId: studio.id, name: data.name.trim(), guestOf: data.guestOf?.trim() || null, lunchTickets: data.lunchTickets ?? 1 },
   })
   revalidatePath(`/studio/${slug}/students`)
+  return guest
 }
 
 export async function updateLunchGuest(

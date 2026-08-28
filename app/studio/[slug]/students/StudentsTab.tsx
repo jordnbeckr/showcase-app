@@ -122,10 +122,7 @@ export default function StudentsTab({
     startTransition(async () => { await updateStudioBillingConfig(slug, next) })
   }
 
-  const grandTotal = students.reduce((sum, s) => sum + computeTotals(s, config).total, 0)
-  const grandRemaining = students.reduce((sum, s) => sum + computeTotals(s, config).remaining, 0)
-
-  // Sort: heat count desc; PIF students split to bottom section (alphabetical within each section)
+  // Sort: heat count desc; PIF students split to bottom section
   const activeStudents = [...students]
     .filter(s => !getBilling(s).pifPaid)
     .sort((a, b) => b.heatCount - a.heatCount)
@@ -133,6 +130,40 @@ export default function StudentsTab({
     .filter(s => getBilling(s).pifPaid)
     .sort((a, b) => b.heatCount - a.heatCount)
   const sortedStudents = [...activeStudents, ...pifStudents]
+
+  const grandTotal = students.reduce((sum, s) => sum + computeTotals(s, config).total, 0)
+    + lunchGuests.reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
+  const grandRemaining = students.reduce((sum, s) => sum + computeTotals(s, config).remaining, 0)
+    + lunchGuests.filter(g => !g.paid).reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
+
+  // Merge active students + unpaid guests, sorted by remaining desc; PIF/paid at bottom
+  type SummaryRow =
+    | { kind: 'student'; data: StudentRow; remaining: number; total: number }
+    | { kind: 'guest'; data: LunchGuestRow; remaining: number; total: number }
+
+  const activeRows: SummaryRow[] = activeStudents.map(s => {
+    const { remaining, total } = computeTotals(s, config)
+    return { kind: 'student', data: s, remaining, total }
+  })
+  const unpaidGuestRows: SummaryRow[] = lunchGuests
+    .filter(g => !g.paid)
+    .map(g => {
+      const total = g.lunchTickets * config.lunchTicketPrice
+      return { kind: 'guest', data: g, remaining: total, total }
+    })
+  const owingRows: SummaryRow[] = [...activeRows, ...unpaidGuestRows]
+    .sort((a, b) => b.remaining - a.remaining)
+  const pifStudentRows: SummaryRow[] = pifStudents.map(s => {
+    const { remaining, total } = computeTotals(s, config)
+    return { kind: 'student', data: s, remaining, total }
+  })
+  const paidGuestRows: SummaryRow[] = lunchGuests
+    .filter(g => g.paid)
+    .map(g => {
+      const total = g.lunchTickets * config.lunchTicketPrice
+      return { kind: 'guest', data: g, remaining: 0, total }
+    })
+  const summaryRows: SummaryRow[] = [...owingRows, ...pifStudentRows, ...paidGuestRows]
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 860, margin: '0 auto' }}>
@@ -193,23 +224,60 @@ export default function StudentsTab({
             </tr>
           </thead>
           <tbody>
-            {sortedStudents.map((s, idx) => {
-              const { remaining, total } = computeTotals(s, config)
+            {summaryRows.map((row, idx) => {
+              const isPifSection = row.remaining === 0
+              const prevRow = summaryRows[idx - 1]
+              const showDivider = isPifSection && (idx === 0 || summaryRows[idx - 1].remaining > 0)
+              const key = row.kind === 'student' ? `s-${row.data.id}` : `g-${row.data.id}`
+              const isExpanded = row.kind === 'student' && expandedId === row.data.id
+
+              if (row.kind === 'guest') {
+                const g = row.data as LunchGuestRow
+                return (
+                  <>
+                    {showDivider && (
+                      <tr key={`divider-${key}`}>
+                        <td colSpan={5} style={{ padding: '5px 10px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8', background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                          Paid in Full
+                        </td>
+                      </tr>
+                    )}
+                    <tr key={key} style={{ borderTop: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                      <td style={tdS}>
+                        <span>{g.name}</span>
+                        {g.guestOf && <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 6 }}>guest of {g.guestOf}</span>}
+                        <span style={{ fontSize: '0.7rem', background: '#f0f9ff', color: '#0369a1', borderRadius: 4, padding: '1px 5px', fontWeight: 600, marginLeft: 6 }}>🥗 lunch</span>
+                      </td>
+                      <td style={{ ...tdS, textAlign: 'center', color: '#cbd5e1' }}>—</td>
+                      <td style={{ ...tdS, textAlign: 'center', color: '#cbd5e1' }}>—</td>
+                      <td style={{ ...tdS, textAlign: 'center' }}>
+                        {g.paid
+                          ? <span style={chipPif}>{[g.paidDate, g.paidInitials].filter(Boolean).join(' · ') || 'paid'}</span>
+                          : <span style={{ color: '#cbd5e1' }}>—</span>}
+                      </td>
+                      <td style={{ ...tdS, textAlign: 'right', paddingRight: 12, fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ background: remainingBg(row.remaining), color: remainingColor(row.remaining), borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem' }}>
+                          {fmt(row.remaining)}
+                        </span>
+                      </td>
+                    </tr>
+                  </>
+                )
+              }
+
+              const s = row.data as StudentRow
               const b = getBilling(s)
-              const isExpanded = expandedId === s.id
-              const isPif = b.pifPaid
-              const showPifDivider = isPif && (idx === 0 || !getBilling(sortedStudents[idx - 1]).pifPaid)
               return (
                 <>
-                  {showPifDivider && (
-                    <tr key={`divider-${s.id}`}>
+                  {showDivider && (
+                    <tr key={`divider-${key}`}>
                       <td colSpan={5} style={{ padding: '5px 10px', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8', background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
                         Paid in Full
                       </td>
                     </tr>
                   )}
                   <tr
-                    key={s.id}
+                    key={key}
                     onClick={() => setExpandedId(isExpanded ? null : s.id)}
                     style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer', background: isExpanded ? '#f0f7ff' : idx % 2 === 0 ? '#fff' : '#fafafa' }}
                   >
@@ -226,12 +294,8 @@ export default function StudentsTab({
                         : <span style={{ color: '#cbd5e1' }}>—</span>}
                     </td>
                     <td style={{ ...tdS, textAlign: 'right', paddingRight: 12, fontVariantNumeric: 'tabular-nums' }}>
-                      <span style={{
-                        background: remainingBg(remaining),
-                        color: remainingColor(remaining),
-                        borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem',
-                      }}>
-                        {total === 0 ? '—' : fmt(remaining)}
+                      <span style={{ background: remainingBg(row.remaining), color: remainingColor(row.remaining), borderRadius: 4, padding: '1px 7px', fontWeight: 600, fontSize: '0.78rem' }}>
+                        {row.total === 0 ? '—' : fmt(row.remaining)}
                       </span>
                     </td>
                   </tr>
@@ -564,7 +628,8 @@ export default function StudentsTab({
               const g = { ...newGuest }
               setNewGuest({ name: '', guestOf: '', lunchTickets: 1 })
               startTransition(async () => {
-                await addLunchGuest(slug, { name: g.name, guestOf: g.guestOf || null, lunchTickets: g.lunchTickets })
+                const created = await addLunchGuest(slug, { name: g.name, guestOf: g.guestOf || null, lunchTickets: g.lunchTickets })
+                if (created) setLunchGuests(prev => [...prev, { ...created, paidDate: created.paidDate ?? null, paidInitials: created.paidInitials ?? null, guestOf: created.guestOf ?? null }])
               })
             }}
             style={{ padding: '5px 14px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', opacity: !newGuest.name.trim() || isPending ? 0.5 : 1 }}
