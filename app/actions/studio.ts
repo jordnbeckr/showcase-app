@@ -48,6 +48,55 @@ export async function deleteStudent(studioSlug: string, studentId: number) {
   revalidatePath(`/studio/${studioSlug}/heats`)
 }
 
+// --- Plan sync helpers ---
+
+// Given a heat, return the 1-based slot index (its position among heats of the same danceType+category)
+async function heatSlotIndex(heatId: number) {
+  const heat = await db.heat.findUnique({ where: { id: heatId } })
+  if (!heat || heat.category === 'none') return null
+  const heats = await db.heat.findMany({
+    where: { danceTypeId: heat.danceTypeId, category: heat.category },
+    orderBy: { number: 'asc' },
+    select: { id: true },
+  })
+  const pos = heats.findIndex(h => h.id === heatId) + 1
+  return pos > 0 ? { danceTypeId: heat.danceTypeId, category: heat.category as 'closed' | 'open', slotIndex: pos } : null
+}
+
+async function syncPlanEntryFromHeatEntry(
+  studioId: number,
+  heatId: number,
+  studentId: number,
+  instructorId: number
+) {
+  const slot = await heatSlotIndex(heatId)
+  if (!slot) return
+  // Upsert: if a PlanEntry already exists at this slot for this instructor, leave it; otherwise create as published
+  const existing = await db.planEntry.findFirst({
+    where: { studioId, instructorId, danceTypeId: slot.danceTypeId, category: slot.category, slotIndex: slot.slotIndex },
+  })
+  if (!existing) {
+    try {
+      await db.planEntry.create({
+        data: { studioId, instructorId, studentId, danceTypeId: slot.danceTypeId, category: slot.category, slotIndex: slot.slotIndex, isPublished: true },
+      })
+    } catch { /* unique constraint hit — slot taken by another student, skip */ }
+  }
+}
+
+async function removePlanEntryForHeatEntry(
+  studioId: number,
+  heatId: number,
+  studentId: number,
+  instructorId: number
+) {
+  const slot = await heatSlotIndex(heatId)
+  if (!slot) return
+  await db.planEntry.deleteMany({
+    where: { studioId, instructorId, studentId, danceTypeId: slot.danceTypeId, category: slot.category, slotIndex: slot.slotIndex },
+  })
+}
+
 // --- Heat entries ---
 
 export async function addHeatEntry(
@@ -79,7 +128,10 @@ export async function addHeatEntry(
     return { error: 'Student already signed up for this heat' }
   }
 
+  await syncPlanEntryFromHeatEntry(studio.id, heatId, studentId, instructorId)
+
   revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath(`/studio/${studioSlug}/plan`)
   revalidatePath('/admin/master')
   revalidatePath('/view')
 }
@@ -239,8 +291,10 @@ export async function removeHeatEntry(studioSlug: string, entryId: number) {
     },
   })
   if (!entry) return { error: 'Entry not found' }
+  await removePlanEntryForHeatEntry(studio.id, entry.heatId, entry.studentId, entry.instructorId ?? 0)
   await db.heatEntry.delete({ where: { id: entryId } })
   revalidatePath(`/studio/${studioSlug}/heats`)
+  revalidatePath(`/studio/${studioSlug}/plan`)
   revalidatePath('/admin/master')
   revalidatePath('/view')
 }
