@@ -421,3 +421,13 @@ model LunchGuest {
   paidDate     String?
   paidInitials String?
 }
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  studioSlug String?
+  actor     String?  // instructor or student name, or "Admin"
+  action    String   // e.g. "add_heat_entry", "remove_heat_entry", "publish_plan"
+  subject   String   // human-readable summary, e.g. "Jordan Becker — Waltz Closed H2"
+  details   String?  // optional extra context
+}

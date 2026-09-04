@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { logActivity } from './activity'
 
 async function requireStudio(studioSlug: string) {
   const session = await getSession()
@@ -129,6 +130,14 @@ export async function addHeatEntry(
   }
 
   await syncPlanEntryFromHeatEntry(studio.id, heatId, studentId, instructorId)
+
+  const danceType = await db.danceType.findUnique({ where: { id: heat.danceTypeId } })
+  await logActivity({
+    studioSlug,
+    actor: instructor.name,
+    action: 'add_heat_entry',
+    subject: `${student.firstName} ${student.lastName} — ${danceType?.name ?? ''} ${heat.category !== 'none' ? heat.category : ''} #${heat.number}`.trim(),
+  })
 
   revalidatePath(`/studio/${studioSlug}/heats`)
   revalidatePath(`/studio/${studioSlug}/plan`)
@@ -291,8 +300,19 @@ export async function removeHeatEntry(studioSlug: string, entryId: number) {
     },
   })
   if (!entry) return { error: 'Entry not found' }
+  const removedHeat = await db.heat.findUnique({ where: { id: entry.heatId }, include: { danceType: true } })
+  const removedStudent = await db.student.findUnique({ where: { id: entry.studentId } })
+  const removedInstructor = entry.instructorId ? await db.instructor.findUnique({ where: { id: entry.instructorId } }) : null
   await removePlanEntryForHeatEntry(studio.id, entry.heatId, entry.studentId, entry.instructorId ?? 0)
   await db.heatEntry.delete({ where: { id: entryId } })
+  await logActivity({
+    studioSlug,
+    actor: removedInstructor?.name,
+    action: 'remove_heat_entry',
+    subject: removedStudent && removedHeat
+      ? `${removedStudent.firstName} ${removedStudent.lastName} — ${removedHeat.danceType.name} ${removedHeat.category !== 'none' ? removedHeat.category : ''} #${removedHeat.number}`.trim()
+      : `Entry #${entryId}`,
+  })
   revalidatePath(`/studio/${studioSlug}/heats`)
   revalidatePath(`/studio/${studioSlug}/plan`)
   revalidatePath('/admin/master')

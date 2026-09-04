@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { updateStudioBillingConfig, updateStudentBilling, addLunchGuest, updateLunchGuest, removeLunchGuest } from '@/app/actions/billing'
+import { updateStudioBillingConfig, updateStudentBilling, updateLunchGuest, removeLunchGuest } from '@/app/actions/billing'
 
 type Config = {
   depositAmount: number
@@ -96,7 +96,6 @@ export default function StudentsTab({
   const [students, setStudents] = useState<StudentRow[]>(initialStudents)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [lunchGuests, setLunchGuests] = useState<LunchGuestRow[]>(initialLunchGuests)
-  const [newGuest, setNewGuest] = useState({ name: '', guestOf: '', lunchTickets: 1 })
 
   function getBilling(s: StudentRow): NonNullable<Billing> {
     return s.billing ?? {
@@ -596,49 +595,8 @@ export default function StudentsTab({
           </table>
         )}
 
-        {/* Add guest form */}
-        <div style={{ padding: '12px 14px', borderTop: lunchGuests.length > 0 ? '1px solid #e2e8f0' : undefined, display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label style={labelStyle}>
-            Name
-            <input
-              type="text" placeholder="Anna R."
-              value={newGuest.name}
-              onChange={e => setNewGuest(g => ({ ...g, name: e.target.value }))}
-              style={{ ...inputStyle, width: 130 }}
-            />
-          </label>
-          <label style={labelStyle}>
-            Guest of
-            <input
-              type="text" placeholder="David Romm"
-              value={newGuest.guestOf}
-              onChange={e => setNewGuest(g => ({ ...g, guestOf: e.target.value }))}
-              style={{ ...inputStyle, width: 140 }}
-            />
-          </label>
-          <label style={labelStyle}>
-            Tickets
-            <input
-              type="number" min={1}
-              value={newGuest.lunchTickets}
-              onChange={e => setNewGuest(g => ({ ...g, lunchTickets: parseInt(e.target.value) || 1 }))}
-              style={{ ...inputStyle, width: 56 }}
-            />
-          </label>
-          <button
-            disabled={!newGuest.name.trim() || isPending}
-            onClick={() => {
-              const g = { ...newGuest }
-              setNewGuest({ name: '', guestOf: '', lunchTickets: 1 })
-              startTransition(async () => {
-                const created = await addLunchGuest(slug, { name: g.name, guestOf: g.guestOf || null, lunchTickets: g.lunchTickets })
-                if (created) setLunchGuests(prev => [...prev, { ...created, paidDate: created.paidDate ?? null, paidInitials: created.paidInitials ?? null, guestOf: created.guestOf ?? null }])
-              })
-            }}
-            style={{ padding: '5px 14px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 6, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', opacity: !newGuest.name.trim() || isPending ? 0.5 : 1 }}
-          >
-            Add Guest
-          </button>
+        <div style={{ padding: '10px 14px', borderTop: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Add lunch guests from the Head Count tab.</p>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { logActivity } from './activity'
 
 async function requireStudio(slug: string) {
   const session = await getSession()
@@ -35,6 +36,7 @@ export async function addLunchGuest(
   const guest = await db.lunchGuest.create({
     data: { studioId: studio.id, name: data.name.trim(), guestOf: data.guestOf?.trim() || null, lunchTickets: data.lunchTickets ?? 1 },
   })
+  await logActivity({ studioSlug: slug, action: 'add_lunch_guest', subject: data.name.trim() + (data.guestOf ? ` (guest of ${data.guestOf})` : '') + ` — ${data.lunchTickets ?? 1} lunch ticket(s)` })
   revalidatePath(`/studio/${slug}/students`)
   return guest
 }

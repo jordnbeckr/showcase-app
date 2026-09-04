@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { logActivity } from './activity'
 
 async function requireStudio(slug: string) {
   const session = await getSession()
@@ -177,6 +178,10 @@ export async function publishPlanEntries(slug: string) {
   const eventResult = await publishPlanEventEntries(slug)
   published += eventResult.published
   skipReasons.push(...eventResult.skipReasons)
+
+  if (published > 0) {
+    await logActivity({ studioSlug: slug, actor: 'Plan', action: 'publish_plan', subject: `${published} entr${published === 1 ? 'y' : 'ies'} published` })
+  }
 
   revalidatePath(`/studio/${slug}/plan`)
   revalidatePath(`/studio/${slug}/heats`)
