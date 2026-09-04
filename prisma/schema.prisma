@@ -167,6 +167,7 @@ model Student {
   planEntries      PlanEntry[]
   planEventEntries PlanEventEntry[]
   studentBillings  StudentBilling[]
+  lunchGuests      LunchGuest[]
 }
 
 model PlanEntry {
@@ -412,15 +413,17 @@ model SemiMark {
 }
 
 model LunchGuest {
-  id           Int     @id @default(autoincrement())
-  studioId     Int
-  studio       Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  name         String
-  guestOf      String?
-  lunchTickets Int     @default(1)
-  paid         Boolean @default(false)
-  paidDate     String?
-  paidInitials String?
+  id                Int      @id @default(autoincrement())
+  studioId          Int
+  studio            Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name              String
+  guestOf           String?
+  guestOfStudentId  Int?
+  guestOfStudent    Student? @relation(fields: [guestOfStudentId], references: [id], onDelete: SetNull)
+  lunchTickets      Int      @default(1)
+  paid              Boolean  @default(false)
+  paidDate          String?
+  paidInitials      String?
 }
 
 model AttendanceNote {
