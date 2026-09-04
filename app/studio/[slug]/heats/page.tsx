@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import HeatSignUp from './HeatSignUp'
 import { studentDisplayName } from '@/lib/studentDisplay'
+import DeadlineBanner from '@/components/DeadlineBanner'
 
 export default async function HeatsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -144,6 +145,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="mx-auto space-y-3">
+      <DeadlineBanner />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-center">Heat Sign-Up — {studio.name}</h1>
         <span className="text-sm" style={{ color: 'var(--muted)' }}>{totalEntries} entries from this studio</span>
