@@ -20,7 +20,7 @@ export default async function StudioDashboard({ params }: { params: Promise<{ sl
   const actions = [
     { label: 'Manage Roster', sub: 'Add & edit students', href: 'roster' },
     { label: 'Heat Sign-Up', sub: 'Assign students to heats', href: 'heats' },
-    { label: 'Show Entries', sub: 'Pro & Student Show', href: 'shows' },
+    // { label: 'Show Entries', sub: 'Pro & Student Show', href: 'shows' },  // uncomment to restore
     { label: 'Entry Breakdown', sub: 'Counts by student & teacher', href: 'breakdown' },
     { label: 'View Full Sheet', sub: 'All studios — read only', href: '/view' },
   ]

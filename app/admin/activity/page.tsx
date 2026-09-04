@@ -16,31 +16,54 @@ function fmt(d: Date) {
   return d.toLocaleString('en-US', {
     month: 'short', day: 'numeric',
     hour: 'numeric', minute: '2-digit', hour12: true,
+    timeZone: 'America/Los_Angeles',
   })
 }
 
-export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ studio?: string; action?: string }> }) {
+const PAGE_SIZE = 50
+
+export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ studio?: string; action?: string; page?: string }> }) {
   const session = await getSession()
   if (session?.role !== 'admin') redirect('/login/admin')
 
-  const { studio, action } = await searchParams
+  const { studio, action, page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1') || 1)
 
-  const logs = await db.activityLog.findMany({
-    where: {
-      ...(studio ? { studioSlug: studio } : {}),
-      ...(action ? { action } : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  })
+  const where = {
+    ...(studio ? { studioSlug: studio } : {}),
+    ...(action ? { action } : {}),
+  }
+
+  const [logs, total] = await Promise.all([
+    db.activityLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
+    db.activityLog.count({ where }),
+  ])
 
   const studios = await db.studio.findMany({ select: { slug: true, name: true }, orderBy: { order: 'asc' } })
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  function pageUrl(p: number) {
+    const params = new URLSearchParams()
+    if (studio) params.set('studio', studio)
+    if (action) params.set('action', action)
+    if (p > 1) params.set('page', String(p))
+    return `/admin/activity${params.size ? '?' + params.toString() : ''}`
+  }
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>Activity Log</h1>
-        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 2 }}>Last 200 events, newest first</p>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>Activity Log</h1>
+          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 2 }}>
+            {total} event{total !== 1 ? 's' : ''} total · page {page} of {totalPages}
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
@@ -108,6 +131,28 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 16, justifyContent: 'center' }}>
+          <a href={pageUrl(page - 1)}
+            aria-disabled={page <= 1}
+            style={{ padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', color: page <= 1 ? 'var(--muted)' : 'var(--text)', pointerEvents: page <= 1 ? 'none' : 'auto', background: 'var(--surface)', textDecoration: 'none' }}>
+            ← Prev
+          </a>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <a key={p} href={pageUrl(p)}
+              style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: p === page ? 'var(--accent)' : 'var(--surface)', color: p === page ? 'white' : 'var(--text)', textDecoration: 'none', fontWeight: p === page ? 700 : 400 }}>
+              {p}
+            </a>
+          ))}
+          <a href={pageUrl(page + 1)}
+            aria-disabled={page >= totalPages}
+            style={{ padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', color: page >= totalPages ? 'var(--muted)' : 'var(--text)', pointerEvents: page >= totalPages ? 'none' : 'auto', background: 'var(--surface)', textDecoration: 'none' }}>
+            Next →
+          </a>
         </div>
       )}
     </div>
