@@ -28,6 +28,7 @@ type LunchGuestRow = {
   id: number
   name: string
   guestOf: string | null
+  guestOfStudentId: number | null
   lunchTickets: number
   paid: boolean
   paidDate: string | null
@@ -46,14 +47,15 @@ function fmt(n: number) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function computeTotals(s: StudentRow, cfg: Config) {
+function computeTotals(s: StudentRow, cfg: Config, guestLunchTickets = 0) {
   const b = s.billing
   const freeHeats = Math.min(b?.freeHeats ?? 0, cfg.maxFreeHeats)
   const billableHeats = Math.max(0, s.heatCount - freeHeats)
   const base = s.heatCount > 0 ? cfg.depositAmount : 0
   const heatCost = billableHeats * cfg.heatPrice
-  const lunchCost = (b?.lunchTickets ?? 0) * cfg.lunchTicketPrice
-  const subtotalHeats = heatCost
+  const ownLunchTickets = b?.lunchTickets ?? 0
+  const totalLunchTickets = ownLunchTickets + guestLunchTickets
+  const lunchCost = totalLunchTickets * cfg.lunchTicketPrice
   const subtotalWithBase = base + heatCost
   const subtotalFinal = subtotalWithBase + lunchCost
   const kcDiscount = (b?.isKeyClub ?? false) ? subtotalFinal * 0.05 : 0
@@ -64,7 +66,7 @@ function computeTotals(s: StudentRow, cfg: Config) {
       ? Math.min(cfg.depositAmount, total)
       : 0
   const remaining = Math.max(0, total - paid)
-  return { base, freeHeats, billableHeats, heatCost, subtotalHeats, subtotalWithBase, lunchCost, subtotalFinal, kcDiscount, total, paid, remaining }
+  return { base, freeHeats, billableHeats, heatCost, ownLunchTickets, guestLunchTickets, totalLunchTickets, lunchCost, subtotalWithBase, subtotalFinal, kcDiscount, total, paid, remaining }
 }
 
 function remainingColor(remaining: number) {
@@ -121,6 +123,16 @@ export default function StudentsTab({
     startTransition(async () => { await updateStudioBillingConfig(slug, next) })
   }
 
+  // Guests linked to a student roll up into that student's total
+  function guestTicketsFor(studentId: number) {
+    return lunchGuests.filter(g => g.guestOfStudentId === studentId).reduce((s, g) => s + g.lunchTickets, 0)
+  }
+  function linkedGuestsFor(studentId: number) {
+    return lunchGuests.filter(g => g.guestOfStudentId === studentId)
+  }
+  // Standalone guests have no linked student
+  const standaloneGuests = lunchGuests.filter(g => g.guestOfStudentId === null)
+
   // Sort: heat count desc; PIF students split to bottom section
   const activeStudents = [...students]
     .filter(s => !getBilling(s).pifPaid)
@@ -130,21 +142,21 @@ export default function StudentsTab({
     .sort((a, b) => b.heatCount - a.heatCount)
   const sortedStudents = [...activeStudents, ...pifStudents]
 
-  const grandTotal = students.reduce((sum, s) => sum + computeTotals(s, config).total, 0)
-    + lunchGuests.reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
-  const grandRemaining = students.reduce((sum, s) => sum + computeTotals(s, config).remaining, 0)
-    + lunchGuests.filter(g => !g.paid).reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
+  const grandTotal = students.reduce((sum, s) => sum + computeTotals(s, config, guestTicketsFor(s.id)).total, 0)
+    + standaloneGuests.reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
+  const grandRemaining = students.reduce((sum, s) => sum + computeTotals(s, config, guestTicketsFor(s.id)).remaining, 0)
+    + standaloneGuests.filter(g => !g.paid).reduce((sum, g) => sum + g.lunchTickets * config.lunchTicketPrice, 0)
 
-  // Merge active students + unpaid guests, sorted by remaining desc; PIF/paid at bottom
+  // Summary rows: active students + unpaid standalone guests sorted by remaining; PIF/paid at bottom
   type SummaryRow =
     | { kind: 'student'; data: StudentRow; remaining: number; total: number }
     | { kind: 'guest'; data: LunchGuestRow; remaining: number; total: number }
 
   const activeRows: SummaryRow[] = activeStudents.map(s => {
-    const { remaining, total } = computeTotals(s, config)
+    const { remaining, total } = computeTotals(s, config, guestTicketsFor(s.id))
     return { kind: 'student', data: s, remaining, total }
   })
-  const unpaidGuestRows: SummaryRow[] = lunchGuests
+  const unpaidGuestRows: SummaryRow[] = standaloneGuests
     .filter(g => !g.paid)
     .map(g => {
       const total = g.lunchTickets * config.lunchTicketPrice
@@ -153,10 +165,10 @@ export default function StudentsTab({
   const owingRows: SummaryRow[] = [...activeRows, ...unpaidGuestRows]
     .sort((a, b) => b.remaining - a.remaining)
   const pifStudentRows: SummaryRow[] = pifStudents.map(s => {
-    const { remaining, total } = computeTotals(s, config)
+    const { remaining, total } = computeTotals(s, config, guestTicketsFor(s.id))
     return { kind: 'student', data: s, remaining, total }
   })
-  const paidGuestRows: SummaryRow[] = lunchGuests
+  const paidGuestRows: SummaryRow[] = standaloneGuests
     .filter(g => g.paid)
     .map(g => {
       const total = g.lunchTickets * config.lunchTicketPrice
@@ -321,7 +333,8 @@ export default function StudentsTab({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {sortedStudents.map((s, idx) => {
           const b = getBilling(s)
-          const t = computeTotals(s, config)
+          const gGuests = linkedGuestsFor(s.id)
+          const t = computeTotals(s, config, guestTicketsFor(s.id))
           const isExpanded = expandedId === s.id
           const showPifDivider = b.pifPaid && (idx === 0 || !getBilling(sortedStudents[idx - 1]).pifPaid)
 
@@ -400,9 +413,17 @@ export default function StudentsTab({
                       <span>Heats ({s.heatCount}{t.freeHeats > 0 ? ` − ${t.freeHeats} free` : ''} = {t.billableHeats} × {fmt(config.heatPrice)})</span>
                       <span>{fmt(t.heatCost)}</span>
                     </div>
-                    {b.lunchTickets > 0 && (
+                    {t.totalLunchTickets > 0 && (
                       <div style={rowStyle}>
-                        <span>Lunch ({b.lunchTickets} × {fmt(config.lunchTicketPrice)})</span>
+                        <span>
+                          Lunch ({t.totalLunchTickets} × {fmt(config.lunchTicketPrice)}
+                          {gGuests.length > 0 && (
+                            <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                              {' '}— {t.ownLunchTickets} own{gGuests.length > 0 ? ` + ${t.guestLunchTickets} guest${t.guestLunchTickets !== 1 ? 's' : ''}: ${gGuests.map(g => g.name).join(', ')}` : ''}
+                            </span>
+                          )}
+                          )
+                        </span>
                         <span>{fmt(t.lunchCost)}</span>
                       </div>
                     )}
@@ -501,15 +522,15 @@ export default function StudentsTab({
         })}
       </div>
 
-      {/* Lunch guests section */}
+      {/* Lunch guests section — standalone guests only (linked guests roll into student billing) */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 24, overflow: 'hidden' }}>
         <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontWeight: 600, fontSize: '0.82rem' }}>Lunch-Only Guests</span>
-          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lunchGuests.length} guest{lunchGuests.length !== 1 ? 's' : ''} · {fmt(lunchGuests.reduce((s, g) => s + g.lunchTickets * config.lunchTicketPrice, 0))} total</span>
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{standaloneGuests.length} guest{standaloneGuests.length !== 1 ? 's' : ''} · {fmt(standaloneGuests.reduce((s, g) => s + g.lunchTickets * config.lunchTicketPrice, 0))} total</span>
         </div>
 
         {/* Guest rows */}
-        {lunchGuests.length > 0 && (
+        {standaloneGuests.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
@@ -522,7 +543,7 @@ export default function StudentsTab({
               </tr>
             </thead>
             <tbody>
-              {lunchGuests.map(g => (
+              {standaloneGuests.map(g => (
                 <tr key={g.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                   <td style={tdS}>{g.name}</td>
                   <td style={{ ...tdS, color: '#64748b' }}>{g.guestOf ?? '—'}</td>
