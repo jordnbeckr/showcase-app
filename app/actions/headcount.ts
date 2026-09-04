@@ -16,11 +16,12 @@ export async function addSpectator(slug: string, formData: FormData) {
   const name = (formData.get('name') as string)?.trim()
   const guestOf = (formData.get('guestOf') as string)?.trim() || null
   if (!name) return { error: 'Name is required' }
-  await db.spectator.create({ data: { studioId: studio.id, name, guestOf } })
+  const spectator = await db.spectator.create({ data: { studioId: studio.id, name, guestOf } })
   await logActivity({ studioSlug: slug, action: 'add_spectator', subject: name + (guestOf ? ` (guest of ${guestOf})` : '') })
   revalidatePath(`/studio/${slug}/headcount`)
   revalidatePath('/admin/headcount')
   revalidatePath('/admin/budget')
+  return { id: spectator.id }
 }
 
 export async function removeSpectator(slug: string, spectatorId: number) {
