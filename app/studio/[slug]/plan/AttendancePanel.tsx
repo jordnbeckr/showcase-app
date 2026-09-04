@@ -30,7 +30,7 @@ export default function AttendancePanel({ slug, initial }: { slug: string; initi
     startTransition(async () => { await removeAttendanceNote(slug, id) })
   }
 
-  const rowS: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderTop: '1px solid var(--border)', fontSize: '0.82rem' }
+  const rowS: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 2fr auto', alignItems: 'center', gap: 8, padding: '6px 12px', borderTop: '1px solid var(--border)', fontSize: '0.82rem' }
 
   return (
     <div style={{ marginTop: 32 }}>
@@ -59,9 +59,9 @@ export default function AttendancePanel({ slug, initial }: { slug: string; initi
             </div>
             {out.map(n => (
               <div key={n.id} style={rowS}>
-                <span style={{ fontWeight: 500, color: 'var(--text)', minWidth: 0, flex: '0 0 auto', maxWidth: '40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>
-                {n.note && <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.note}</span>}
-                <button onClick={() => remove(n.id)} disabled={pending} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.75rem', padding: '2px 4px', marginLeft: 'auto', flexShrink: 0, opacity: pending ? 0.4 : 1 }}>✕</button>
+                <span style={{ fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.note ?? ''}</span>
+                <button onClick={() => remove(n.id)} disabled={pending} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.75rem', padding: '2px 4px', justifySelf: 'end', opacity: pending ? 0.4 : 1 }}>✕</button>
               </div>
             ))}
             {out.length === 0 && <div style={{ padding: '9px 12px', fontSize: '0.78rem', color: 'var(--muted)', fontStyle: 'italic' }}>None yet</div>}
