@@ -30,11 +30,11 @@ export async function updateStudioBillingConfig(
 
 export async function addLunchGuest(
   slug: string,
-  data: { name: string; guestOf?: string | null; lunchTickets?: number }
+  data: { name: string; guestOf?: string | null; guestOfStudentId?: number | null; lunchTickets?: number }
 ) {
   const studio = await requireStudio(slug)
   const guest = await db.lunchGuest.create({
-    data: { studioId: studio.id, name: data.name.trim(), guestOf: data.guestOf?.trim() || null, lunchTickets: data.lunchTickets ?? 1 },
+    data: { studioId: studio.id, name: data.name.trim(), guestOf: data.guestOf?.trim() || null, guestOfStudentId: data.guestOfStudentId ?? null, lunchTickets: data.lunchTickets ?? 1 },
   })
   await logActivity({ studioSlug: slug, action: 'add_lunch_guest', subject: data.name.trim() + (data.guestOf ? ` (guest of ${data.guestOf})` : '') + ` — ${data.lunchTickets ?? 1} lunch ticket(s)` })
   revalidatePath(`/studio/${slug}/students`)

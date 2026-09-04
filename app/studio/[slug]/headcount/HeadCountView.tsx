@@ -5,7 +5,8 @@ import { addSpectator, removeSpectator, updateSpectator } from '@/app/actions/he
 import { addLunchGuest, updateLunchGuest, removeLunchGuest } from '@/app/actions/billing'
 
 type Spectator = { id: number; name: string; guestOf: string | null }
-type LunchGuest = { id: number; name: string; guestOf: string | null; lunchTickets: number; paid: boolean; paidDate: string | null; paidInitials: string | null }
+type LunchGuest = { id: number; name: string; guestOf: string | null; guestOfStudentId: number | null; lunchTickets: number; paid: boolean; paidDate: string | null; paidInitials: string | null }
+type StudentOption = { id: number; firstName: string; lastName: string }
 
 export default function HeadCountView({
   slug,
@@ -14,6 +15,7 @@ export default function HeadCountView({
   heatEntryCount,
   spectators,
   lunchGuests: initialLunchGuests,
+  studentsWithHeats,
 }: {
   slug: string
   studentCount: number
@@ -21,6 +23,7 @@ export default function HeadCountView({
   heatEntryCount: number
   spectators: Spectator[]
   lunchGuests: LunchGuest[]
+  studentsWithHeats: StudentOption[]
 }) {
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -29,7 +32,7 @@ export default function HeadCountView({
   const [editGuestOf, setEditGuestOf] = useState('')
 
   const [lunchGuests, setLunchGuests] = useState<LunchGuest[]>(initialLunchGuests)
-  const [newGuest, setNewGuest] = useState({ name: '', guestOf: '', lunchTickets: 1 })
+  const [newGuest, setNewGuest] = useState({ name: '', guestOfStudentId: '' as string, lunchTickets: 1 })
 
   function handleAdd(formData: FormData) {
     startTransition(async () => {
@@ -172,7 +175,7 @@ export default function HeadCountView({
             </div>
             <input type="number" min={1} value={g.lunchTickets}
               onChange={e => setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, lunchTickets: parseInt(e.target.value) || 1 } : x))}
-              onBlur={e => startTransition(async () => { await updateLunchGuest(slug, g.id, { lunchTickets: parseInt(e.target.value) || 1 }) })}
+              onBlur={e => { const v = parseInt(e.target.value) || 1; startTransition(async () => { await updateLunchGuest(slug, g.id, { lunchTickets: v }) }) }}
               className="input" style={{ width: 52, textAlign: 'center', fontSize: '0.82rem' }} />
             <button onClick={() => {
               setLunchGuests(prev => prev.filter(x => x.id !== g.id))
@@ -193,9 +196,14 @@ export default function HeadCountView({
           </div>
           <div>
             <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Guest of</label>
-            <input type="text" placeholder="David Romm" value={newGuest.guestOf}
-              onChange={e => setNewGuest(g => ({ ...g, guestOf: e.target.value }))}
-              className="input" style={{ width: 150 }} />
+            <select value={newGuest.guestOfStudentId}
+              onChange={e => setNewGuest(g => ({ ...g, guestOfStudentId: e.target.value }))}
+              className="input" style={{ width: 170 }}>
+              <option value="">— standalone —</option>
+              {studentsWithHeats.map(s => (
+                <option key={s.id} value={String(s.id)}>{s.firstName} {s.lastName}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Tickets</label>
@@ -207,10 +215,13 @@ export default function HeadCountView({
             disabled={!newGuest.name.trim() || pending}
             onClick={() => {
               const g = { ...newGuest }
-              setNewGuest({ name: '', guestOf: '', lunchTickets: 1 })
+              const studentId = g.guestOfStudentId ? parseInt(g.guestOfStudentId) : null
+              const student = studentId ? studentsWithHeats.find(s => s.id === studentId) : null
+              const guestOfName = student ? `${student.firstName} ${student.lastName}` : null
+              setNewGuest({ name: '', guestOfStudentId: '', lunchTickets: 1 })
               startTransition(async () => {
-                const created = await addLunchGuest(slug, { name: g.name, guestOf: g.guestOf || null, lunchTickets: g.lunchTickets })
-                if (created) setLunchGuests(prev => [...prev, { ...created, paidDate: created.paidDate ?? null, paidInitials: created.paidInitials ?? null, guestOf: created.guestOf ?? null }])
+                const created = await addLunchGuest(slug, { name: g.name, guestOf: guestOfName, guestOfStudentId: studentId, lunchTickets: g.lunchTickets })
+                if (created) setLunchGuests(prev => [...prev, { ...created, paidDate: created.paidDate ?? null, paidInitials: created.paidInitials ?? null, guestOf: created.guestOf ?? null, guestOfStudentId: created.guestOfStudentId ?? null }])
               })
             }}
             className="text-sm font-medium px-4 py-2"

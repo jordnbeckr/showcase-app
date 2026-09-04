@@ -20,9 +20,14 @@ export default async function HeadCountPage({ params }: { params: Promise<{ slug
   })
   if (!studio) return <p>Studio not found</p>
 
-  const heatEntryCount = await db.heatEntry.count({
-    where: { student: { studioId: studio.id } },
-  })
+  const [heatEntryCount, studentsWithHeats] = await Promise.all([
+    db.heatEntry.count({ where: { student: { studioId: studio.id } } }),
+    db.student.findMany({
+      where: { studioId: studio.id, heatEntries: { some: {} } },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    }),
+  ])
 
   return (
     <>
@@ -39,6 +44,7 @@ export default async function HeadCountPage({ params }: { params: Promise<{ slug
         heatEntryCount={heatEntryCount}
         spectators={studio.spectators.map(s => ({ id: s.id, name: s.name, guestOf: s.guestOf }))}
         lunchGuests={studio.lunchGuests}
+        studentsWithHeats={studentsWithHeats}
       />
     </>
   )
