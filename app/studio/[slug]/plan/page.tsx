@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import PlanGrid from './PlanGrid'
+import AttendancePanel from './AttendancePanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
   })
   if (!studio) redirect('/login/studio')
 
-  const [danceTypes, events, heatCounts, planEntries, planEventEntries] = await Promise.all([
+  const [danceTypes, events, heatCounts, planEntries, planEventEntries, attendanceNotes] = await Promise.all([
     db.danceType.findMany({ orderBy: { order: 'asc' } }),
     db.event.findMany({
       where: { isCompetitive: true },
@@ -38,6 +39,10 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
       where: { studioId: studio.id },
       orderBy: { createdAt: 'asc' },
     }),
+    db.attendanceNote.findMany({
+      where: { studioId: studio.id },
+      orderBy: { createdAt: 'asc' },
+    }),
   ])
 
   const heatCountMap: Record<string, number> = {}
@@ -51,6 +56,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
   })
 
   return (
+    <>
     <PlanGrid
       slug={slug}
       instructors={[...studio.instructors]
@@ -80,5 +86,10 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
         isPublished: e.isPublished,
       }))}
     />
+    <AttendancePanel
+      slug={slug}
+      initial={attendanceNotes.map(n => ({ id: n.id, name: n.name, status: n.status, note: n.note }))}
+    />
+    </>
   )
 }

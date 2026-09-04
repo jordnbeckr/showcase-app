@@ -28,7 +28,8 @@ model Studio {
   planEntries     PlanEntry[]
   planEventEntries PlanEventEntry[]
   studentBillings StudentBilling[]
-  lunchGuests     LunchGuest[]
+  lunchGuests      LunchGuest[]
+  attendanceNotes  AttendanceNote[]
 }
 
 model Spectator {
@@ -420,6 +421,16 @@ model LunchGuest {
   paid         Boolean @default(false)
   paidDate     String?
   paidInitials String?
+}
+
+model AttendanceNote {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  studioId  Int
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  name      String
+  status    String   // "out" | "maybe"
+  note      String?
 }
 
 model ActivityLog {
