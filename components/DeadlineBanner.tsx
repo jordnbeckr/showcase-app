@@ -1,7 +1,7 @@
 export default function DeadlineBanner() {
   const now = new Date()
-  const entryDeadline = new Date('2025-09-14T00:00:00')
-  const headcountDeadline = new Date('2025-09-15T00:00:00')
+  const entryDeadline = new Date('2026-09-14T00:00:00')
+  const headcountDeadline = new Date('2026-09-15T00:00:00')
   const msPerDay = 1000 * 60 * 60 * 24
 
   const daysToEntry = Math.ceil((entryDeadline.getTime() - now.getTime()) / msPerDay)
