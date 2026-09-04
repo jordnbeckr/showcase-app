@@ -13,7 +13,7 @@ export default async function AdminHeadCountPage() {
       include: {
         students: { select: { id: true } },
         instructors: { select: { id: true } },
-        spectators: { orderBy: { createdAt: 'asc' } },
+        lunchGuests: { orderBy: { id: 'asc' } },
       },
     }),
     db.heatEntry.findMany({
@@ -32,14 +32,14 @@ export default async function AdminHeadCountPage() {
       instructorCount: studio.instructors.length,
       participantCount: participantStudentIds.size + participantInstructorIds.size,
       heatEntryCount: entries.length,
-      spectators: studio.spectators,
+      lunchGuests: studio.lunchGuests,
     }
   })
 
   const totalStudents = studioRows.reduce((s, r) => s + r.studentCount, 0)
   const totalInstructors = studioRows.reduce((s, r) => s + r.instructorCount, 0)
   const totalParticipants = studioRows.reduce((s, r) => s + r.participantCount, 0)
-  const totalSpectators = studioRows.reduce((s, r) => s + r.spectators.length, 0)
+  const totalSpectators = studioRows.reduce((s, r) => s + r.lunchGuests.length, 0)
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -94,32 +94,34 @@ export default async function AdminHeadCountPage() {
               <span className="font-semibold">{studio.name}</span>
               <div className="flex items-center gap-4 text-sm">
                 <span style={{ opacity: 0.75 }}>
-                  {studio.studentCount} students · {studio.instructorCount} instructors · {studio.spectators.length} spectators
+                  {studio.studentCount} students · {studio.instructorCount} instructors · {studio.lunchGuests.length} spectators
                 </span>
                 <span
                   className="text-lg font-bold"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
-                  {studio.studentCount + studio.instructorCount + studio.spectators.length}
+                  {studio.studentCount + studio.instructorCount + studio.lunchGuests.length}
                 </span>
               </div>
             </div>
 
-            {studio.spectators.length > 0 ? (
+            {studio.lunchGuests.length > 0 ? (
               <table className="data-table" style={{ fontSize: '0.85rem' }}>
                 <thead>
                   <tr>
                     <th>Spectator Name</th>
                     <th>Guest Of</th>
+                    <th>Lunch Tickets</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {studio.spectators.map(s => (
-                    <tr key={s.id}>
-                      <td>{s.name}</td>
-                      <td style={{ color: s.guestOf ? 'var(--text)' : 'var(--muted)' }}>
-                        {s.guestOf ?? '—'}
+                  {studio.lunchGuests.map(g => (
+                    <tr key={g.id}>
+                      <td>{g.name}</td>
+                      <td style={{ color: g.guestOf ? 'var(--text)' : 'var(--muted)' }}>
+                        {g.guestOf ?? '—'}
                       </td>
+                      <td>{g.lunchTickets}</td>
                     </tr>
                   ))}
                 </tbody>

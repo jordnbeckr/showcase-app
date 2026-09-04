@@ -9,7 +9,7 @@ export default async function BudgetPage() {
     db.showcaseSettings.findFirst(),
     db.studio.findMany({
       orderBy: { name: 'asc' },
-      include: { studioBudget: true, spectators: { select: { id: true } } },
+      include: { studioBudget: true, lunchGuests: { select: { id: true } } },
     }),
     db.heatEntry.findMany({
       select: { studentId: true, instructorId: true, student: { select: { studioId: true } }, instructor: { select: { studioId: true } } },
@@ -25,7 +25,7 @@ export default async function BudgetPage() {
       name: studio.name,
       participantCount: studentIds.size + instructorIds.size,
       entryCount: entries.length,
-      attendees: studio.spectators.length,
+      attendees: studio.lunchGuests.length,
       paid: studio.studioBudget?.paid ?? false,
     }
   })

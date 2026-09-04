@@ -14,7 +14,6 @@ export default async function HeadCountPage({ params }: { params: Promise<{ slug
     include: {
       students: true,
       instructors: true,
-      spectators: { orderBy: { createdAt: 'asc' } },
       lunchGuests: { orderBy: { id: 'asc' } },
     },
   })
@@ -42,7 +41,6 @@ export default async function HeadCountPage({ params }: { params: Promise<{ slug
         studentCount={studio.students.length}
         instructorCount={studio.instructors.length}
         heatEntryCount={heatEntryCount}
-        spectators={studio.spectators.map(s => ({ id: s.id, name: s.name, guestOf: s.guestOf }))}
         lunchGuests={studio.lunchGuests}
         studentsWithHeats={studentsWithHeats}
       />
