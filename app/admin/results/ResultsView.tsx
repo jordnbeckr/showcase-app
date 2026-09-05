@@ -389,16 +389,23 @@ export default function ResultsView({
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa' }}>Final Standings</span>
                       <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 4 }}>announced last → first</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {[...ranked].reverse().map(c => {
+                    {(() => {
+                      const items = [...ranked].reverse()
+                      const rem = items.length % 4
+                      return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {items.map((c, i) => {
                         const ms = medalStyle[c.rank]
                         const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
+                        const isLastRow = rem > 0 && i >= items.length - rem
+                        const colSpan = isLastRow ? (rem === 1 ? 4 : rem === 2 ? 2 : 1) : 1
                         return (
                           <div key={c.studentId} style={{
                             display: 'flex', alignItems: 'center', gap: 8,
                             padding: '8px 12px', borderRadius: 8,
                             backgroundColor: ms ? ms.bg : '#2d2d4e',
                             border: `2px solid ${ms ? ms.border : '#4c1d95'}`,
+                            gridColumn: colSpan > 1 ? `span ${colSpan}` : undefined,
                           }}>
                             <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>
                               {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>{rankLabel}</span>}
@@ -412,6 +419,8 @@ export default function ResultsView({
                         )
                       })}
                     </div>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
@@ -505,7 +514,35 @@ export default function ResultsView({
           </div>
           {eligibleStudios.length === 0
             ? <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible studios yet.</p>
-            : <div className="card overflow-hidden"><table className="data-table">
+            : <>
+              {eligibleStudios.length >= 1 && (() => {
+                const studioMedalStyle: Record<number, { bg: string; color: string; border: string }> = {
+                  0: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
+                  1: { bg: '#cbd5e1', color: '#1e293b', border: '#94a3b8' },
+                  2: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
+                }
+                const top = eligibleStudios.slice(0, 3)
+                return (
+                  <div style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: '14px 16px', marginBottom: 8 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 10 }}>Top Studio Standings</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {top.map((s, i) => {
+                        const ms = studioMedalStyle[i]
+                        return (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, backgroundColor: ms.bg, border: `2px solid ${ms.border}` }}>
+                            <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms.color, lineHeight: 1.3 }}>{s.name}</div>
+                              <div style={{ fontSize: '0.72rem', color: ms.color, opacity: 0.75, lineHeight: 1.2 }}>{Math.round(s.goldPct * 100)}% gold</div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+              <div className="card overflow-hidden"><table className="data-table">
                 <thead>
                   <tr>
                     <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
@@ -537,6 +574,7 @@ export default function ResultsView({
                   ))}
                 </tbody>
               </table></div>
+            </>
           }
         </div>
       </section>
