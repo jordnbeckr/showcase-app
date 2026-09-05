@@ -119,24 +119,19 @@ export default async function AdminResultsPage() {
     const rec = studioAwardMap.get(entry.student.studio.id)
     if (rec) rec.totalEntries++
   }
-  const studioClosedStudents = new Map<number, Set<number>>()
-  const studioGoldStudents = new Map<number, Set<number>>()
+  // Count closed entries and gold entries per studio (entries, not unique students)
   for (const entry of allEntries) {
     if ((heatCategory.get(entry.heatId) ?? 'none') !== 'closed') continue
-    const sid = entry.student.studio.id
-    if (!studioClosedStudents.has(sid)) studioClosedStudents.set(sid, new Set())
-    studioClosedStudents.get(sid)!.add(entry.studentId)
+    const rec = studioAwardMap.get(entry.student.studio.id)
+    if (rec) rec.studentsInClosed++
   }
   for (const score of closedScoresAll) {
     if (score.placement !== 'Gold') continue
     if ((heatCategory.get(score.heatId) ?? 'none') !== 'closed') continue
-    const sid = score.student.studio.id
-    if (!studioGoldStudents.has(sid)) studioGoldStudents.set(sid, new Set())
-    studioGoldStudents.get(sid)!.add(score.studentId)
+    const rec = studioAwardMap.get(score.student.studio.id)
+    if (rec) rec.goldStudents++
   }
-  for (const [studioId, rec] of studioAwardMap) {
-    rec.studentsInClosed = studioClosedStudents.get(studioId)?.size ?? 0
-    rec.goldStudents = studioGoldStudents.get(studioId)?.size ?? 0
+  for (const rec of studioAwardMap.values()) {
     rec.goldPct = rec.studentsInClosed > 0 ? rec.goldStudents / rec.studentsInClosed : 0
   }
   const eligibleStudios = [...studioAwardMap.values()]

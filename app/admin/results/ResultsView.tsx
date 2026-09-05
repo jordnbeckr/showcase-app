@@ -501,7 +501,7 @@ export default function ResultsView({
         <div className="space-y-2">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Studio</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Eligible: ≥200 total entries. Ranked by % of students in closed heats who earned at least one Gold.</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Eligible: ≥200 total entries. Ranked by % of closed-heat entries that earned Gold (multiple Golds per student count separately).</p>
           </div>
           {eligibleStudios.length === 0
             ? <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible studios yet.</p>
@@ -511,8 +511,8 @@ export default function ResultsView({
                     <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
                     <th>Studio</th>
                     <th style={{ textAlign: 'center', width: 100 }}>Total entries</th>
-                    <th style={{ textAlign: 'center', width: 120 }}>Students in closed</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Gold students</th>
+                    <th style={{ textAlign: 'center', width: 120 }}>Closed entries</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Gold entries</th>
                     <th style={{ textAlign: 'center', width: 100 }}>Gold %</th>
                   </tr>
                 </thead>
