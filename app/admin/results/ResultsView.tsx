@@ -314,10 +314,10 @@ export default function ResultsView({
                               </td>
                               <td style={{ textAlign: 'center' }}>
                                 {isIn
-                                  ? <span style={{ display: 'inline-block', padding: '2px 6px', borderRadius: 4, backgroundColor: '#dcfce7', color: '#14532d', fontWeight: 700, fontSize: '0.72rem' }}>In final</span>
+                                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, backgroundColor: '#16a34a', color: '#fff', fontWeight: 800, fontSize: '0.75rem', border: '2px solid #14532d', letterSpacing: '0.01em' }}>✓ In final</span>
                                   : isTiedOut
-                                    ? <span style={{ display: 'inline-block', padding: '2px 6px', borderRadius: 4, backgroundColor: '#fef9c3', color: '#713f12', fontWeight: 700, fontSize: '0.72rem' }}>⚠ Tie</span>
-                                    : <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>Out</span>}
+                                    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, backgroundColor: '#f59e0b', color: '#1c1917', fontWeight: 800, fontSize: '0.75rem', border: '2px solid #b45309' }}>⚠ Tie</span>
+                                    : <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 9px', borderRadius: 6, backgroundColor: 'var(--surface)', color: 'var(--muted)', fontWeight: 600, fontSize: '0.75rem', border: '1px solid var(--border)' }}>Out</span>}
                               </td>
                             </tr>
                           )
@@ -351,7 +351,8 @@ export default function ResultsView({
                         const total = couple._total
                         const rankEntry = ranked.find(r => r.studentId === couple.studentId)
                         const rankNum = rankEntry?.rank
-                        const totalColor = rankNum === 1 ? '#92400e' : rankNum === 2 ? '#1e293b' : rankNum === 3 ? '#431407' : '#6b21a8'
+                        const totalBg = rankNum === 1 ? '#fde68a' : rankNum === 2 ? '#cbd5e1' : rankNum === 3 ? '#fed7aa' : 'transparent'
+                        const totalColor = rankNum === 1 ? '#78350f' : rankNum === 2 ? '#1e293b' : rankNum === 3 ? '#7c2d12' : '#6b21a8'
                         return (
                           <tr key={couple.studentId}>
                             <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
@@ -367,9 +368,9 @@ export default function ResultsView({
                                   : <span style={{ color: 'var(--muted)' }}>—</span>}
                               </td>
                             })}
-                            <td style={{ textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center', padding: '4px 6px' }}>
                               {couple._scored > 0
-                                ? <span style={{ fontWeight: 900, fontSize: '1rem', color: totalColor }}>{total}</span>
+                                ? <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 6, backgroundColor: totalBg, fontWeight: 900, fontSize: '0.95rem', color: totalColor }}>{total}</span>
                                 : <span style={{ color: 'var(--muted)' }}>—</span>}
                             </td>
                           </tr>
@@ -406,7 +407,7 @@ export default function ResultsView({
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: ms ? ms.color : '#a78bfa', opacity: 0.7, lineHeight: 1 }}>{c.leaderNumber ?? '—'}</div>
                               <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.3 }}>{c.personA}</div>
-                              {c.personB && <div style={{ fontSize: '0.72rem', color: ms ? ms.color : '#9ca3af', lineHeight: 1.2 }}>&amp; {c.personB}</div>}
+                              {c.personB && <div style={{ fontWeight: 700, fontSize: '0.78rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.2 }}>&amp; {c.personB}</div>}
                             </div>
                           </div>
                         )
