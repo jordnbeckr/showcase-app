@@ -1,57 +1,51 @@
 import { db } from '@/lib/db'
+import ResultsView from './ResultsView'
+import type { ClosedHeatData, OpenHeatData, CompEventData } from './ResultsView'
 
 export const dynamic = 'force-dynamic'
 
+function getEntryDisplay(entry: {
+  student: { firstName: string; lastName: string; role: string; leaderNumber: number | null }
+  instructor: { name: string; role: string; leaderNumber: number | null } | null
+  partnerStudent: { firstName: string; lastName: string } | null
+}) {
+  const { student, instructor, partnerStudent } = entry
+  if (instructor) {
+    if (instructor.role === 'Leader' && student.role !== 'Leader') {
+      return { num: instructor.leaderNumber, personA: instructor.name, personB: `${student.firstName} ${student.lastName}` }
+    }
+    return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: instructor.name }
+  }
+  if (partnerStudent) {
+    return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: `${partnerStudent.firstName} ${partnerStudent.lastName}` }
+  }
+  return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: '' }
+}
+
+function lastNameSort(name: string) {
+  const parts = name.trim().split(/\s+/)
+  return parts.length > 1 ? parts[parts.length - 1] : name
+}
+
 export default async function AdminResultsPage() {
-  const [judges, heats, allEntries, closedScoresAll, studios, events] = await Promise.all([
+  const [judgesRaw, heats, allEntries, closedScoresAll, studios, events] = await Promise.all([
     db.judge.findMany({ orderBy: { name: 'asc' } }),
     db.heat.findMany({
       where: { category: { not: 'none' } },
       orderBy: { number: 'asc' },
       include: {
         danceType: true,
-        closedScores: {
-          include: {
-            judge: true,
-            student: { include: { studio: true } },
-          },
-        },
-        openThumbs: {
-          include: {
-            judge: true,
-            student: { include: { studio: true } },
-            category: true,
-          },
-        },
-        openNotes: {
-          include: {
-            judge: true,
-            student: { include: { studio: true } },
-          },
-        },
-        entries: {
-          include: {
-            student: { include: { studio: true } },
-            instructor: true,
-            partnerStudent: true,
-          },
-        },
+        closedScores: { include: { judge: true, student: { include: { studio: true } } } },
+        openThumbs: { include: { judge: true, student: { include: { studio: true } }, category: true } },
+        openNotes: { include: { judge: true, student: { include: { studio: true } } } },
+        entries: { include: { student: { include: { studio: true } }, instructor: true, partnerStudent: true } },
       },
     }),
-    // For awards: ALL heat entries (all categories) with instructor and heat category
     db.heatEntry.findMany({
-      include: {
-        heat: true,
-        student: { include: { studio: true } },
-        instructor: { include: { studio: true } },
-      },
+      include: { heat: true, student: { include: { studio: true } }, instructor: { include: { studio: true } } },
     }),
-    // All closed scores (for awards computation)
     db.closedScore.findMany({
-      include: {
-        student: { include: { studio: true } },
-        heat: true,
-      },
+      include: { student: { include: { studio: true } }, heat: true },
     }),
     db.studio.findMany({ orderBy: { order: 'asc' } }),
     db.event.findMany({
@@ -61,170 +55,13 @@ export default async function AdminResultsPage() {
         compRound: true,
         compScores: { include: { judge: true, student: { include: { studio: true } } } },
         semiMarks: { include: { judge: true, student: { include: { studio: true } } } },
-        studentEvents: {
-          include: {
-            student: { include: { studio: true } },
-            instructor: true,
-          },
-        },
+        studentEvents: { include: { student: { include: { studio: true } }, instructor: true } },
       },
     }),
   ])
 
-  // ── Awards computation ──────────────────────────────────────────────────────
-
-  // Index: heatId → category
-  const heatCategory = new Map<number, string>()
-  for (const h of heats) heatCategory.set(h.id, h.category)
-  // Also need ALL heats (not just scored ones) for entry counts
-  const allHeatIds = new Set(allEntries.map(e => e.heatId))
-
-  // TOP TEACHER
-  // Group entries by instructor
-  type InstructorAwardData = {
-    id: number
-    name: string
-    studioName: string
-    totalEntries: number
-    closedEntries: number
-    totalPlacements: number  // all G+S+B across all their students' closed heat entries
-    goldCount: number
-    silverCount: number
-    bronzeCount: number
-  }
-
-  const instructorMap = new Map<number, InstructorAwardData>()
-  for (const entry of allEntries) {
-    if (!entry.instructorId || !entry.instructor) continue
-    const iid = entry.instructorId
-    if (!instructorMap.has(iid)) {
-      instructorMap.set(iid, {
-        id: iid,
-        name: entry.instructor.name,
-        studioName: entry.instructor.studio.name,
-        totalEntries: 0,
-        closedEntries: 0,
-        totalPlacements: 0,
-        goldCount: 0,
-        silverCount: 0,
-        bronzeCount: 0,
-      })
-    }
-    const rec = instructorMap.get(iid)!
-    rec.totalEntries++
-    const cat = heatCategory.get(entry.heatId) ?? 'none'
-    if (cat === 'closed') rec.closedEntries++
-  }
-
-  // Count placements per instructor (via closed scores on entries they taught)
-  for (const score of closedScoresAll) {
-    const cat = heatCategory.get(score.heatId) ?? 'none'
-    if (cat !== 'closed') continue
-    // Find the entry for this student in this heat to get the instructor
-    const entry = allEntries.find(e => e.studentId === score.studentId && e.heatId === score.heatId)
-    if (!entry?.instructorId) continue
-    const rec = instructorMap.get(entry.instructorId)
-    if (!rec) continue
-    rec.totalPlacements++
-    if (score.placement === 'Gold') rec.goldCount++
-    else if (score.placement === 'Silver') rec.silverCount++
-    else if (score.placement === 'Bronze') rec.bronzeCount++
-  }
-
-  const eligibleTeachers = [...instructorMap.values()]
-    .filter(t => t.totalEntries >= 30 && t.closedEntries / t.totalEntries >= 0.4)
-    .sort((a, b) => {
-      const goldPctA = a.closedEntries > 0 ? a.goldCount / a.closedEntries : 0
-      const goldPctB = b.closedEntries > 0 ? b.goldCount / b.closedEntries : 0
-      if (goldPctB !== goldPctA) return goldPctB - goldPctA
-      const silverPctA = a.closedEntries > 0 ? a.silverCount / a.closedEntries : 0
-      const silverPctB = b.closedEntries > 0 ? b.silverCount / b.closedEntries : 0
-      if (silverPctB !== silverPctA) return silverPctB - silverPctA
-      const bronzePctA = a.closedEntries > 0 ? a.bronzeCount / a.closedEntries : 0
-      const bronzePctB = b.closedEntries > 0 ? b.bronzeCount / b.closedEntries : 0
-      return bronzePctB - bronzePctA
-    })
-
-  // TOP STUDIO
-  type StudioAwardData = {
-    id: number
-    name: string
-    totalEntries: number
-    studentsInClosed: number       // unique students who appeared in ≥1 closed heat
-    goldStudents: number           // unique students who earned ≥1 Gold in a closed heat
-    goldPct: number
-  }
-
-  const studioAwardMap = new Map<number, StudioAwardData>()
-  for (const s of studios) {
-    studioAwardMap.set(s.id, { id: s.id, name: s.name, totalEntries: 0, studentsInClosed: 0, goldStudents: 0, goldPct: 0 })
-  }
-
-  // Count total entries per studio
-  for (const entry of allEntries) {
-    const sid = entry.student.studio.id
-    const rec = studioAwardMap.get(sid)
-    if (rec) rec.totalEntries++
-  }
-
-  // Find unique students per studio in closed heats
-  const studioClosedStudents = new Map<number, Set<number>>() // studioId → Set<studentId>
-  const studioGoldStudents = new Map<number, Set<number>>()   // studioId → Set<studentId>
-
-  for (const entry of allEntries) {
-    const cat = heatCategory.get(entry.heatId) ?? 'none'
-    if (cat !== 'closed') continue
-    const studioId = entry.student.studio.id
-    if (!studioClosedStudents.has(studioId)) studioClosedStudents.set(studioId, new Set())
-    studioClosedStudents.get(studioId)!.add(entry.studentId)
-  }
-
-  for (const score of closedScoresAll) {
-    if (score.placement !== 'Gold') continue
-    const cat = heatCategory.get(score.heatId) ?? 'none'
-    if (cat !== 'closed') continue
-    const studioId = score.student.studio.id
-    if (!studioGoldStudents.has(studioId)) studioGoldStudents.set(studioId, new Set())
-    studioGoldStudents.get(studioId)!.add(score.studentId)
-  }
-
-  for (const [studioId, rec] of studioAwardMap) {
-    rec.studentsInClosed = studioClosedStudents.get(studioId)?.size ?? 0
-    rec.goldStudents = studioGoldStudents.get(studioId)?.size ?? 0
-    rec.goldPct = rec.studentsInClosed > 0 ? rec.goldStudents / rec.studentsInClosed : 0
-  }
-
-  const eligibleStudios = [...studioAwardMap.values()]
-    .filter(s => s.totalEntries >= 200)
-    .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
-
-  // BEST OF THE BEST — Gold recipients only, grouped by dance
-  type BoBStudent = { studentId: number; name: string; studioName: string }
-  const bobByDance = new Map<string, { dance: string; students: Map<number, BoBStudent> }>()
-
-  for (const score of closedScoresAll) {
-    if (score.placement !== 'Gold') continue
-    const cat = heatCategory.get(score.heatId) ?? 'none'
-    if (cat !== 'closed') continue
-    const heat = heats.find(h => h.id === score.heatId)
-    if (!heat) continue
-    const dance = heat.danceType.name
-    if (!bobByDance.has(dance)) bobByDance.set(dance, { dance, students: new Map() })
-    const group = bobByDance.get(dance)!
-    if (!group.students.has(score.studentId)) {
-      group.students.set(score.studentId, {
-        studentId: score.studentId,
-        name: `${score.student.firstName} ${score.student.lastName}`,
-        studioName: score.student.studio.name,
-      })
-    }
-  }
-
-  const bobDances = [...bobByDance.values()]
-    .map(g => ({ dance: g.dance, students: [...g.students.values()].sort((a, b) => a.name.localeCompare(b.name)) }))
-    .sort((a, b) => a.dance.localeCompare(b.dance))
-
-  // ────────────────────────────────────────────────────────────────────────────
+  // Sort judges by last name
+  const judges = [...judgesRaw].sort((a, b) => lastNameSort(a.name).localeCompare(lastNameSort(b.name)))
 
   if (judges.length === 0) {
     return (
@@ -235,483 +72,182 @@ export default async function AdminResultsPage() {
     )
   }
 
-  function getEntryDisplay(entry: { student: { firstName: string; lastName: string; role: string; leaderNumber: number | null }; instructor: { name: string; role: string; leaderNumber: number | null } | null; partnerStudent: { firstName: string; lastName: string } | null }) {
-    const { student, instructor, partnerStudent } = entry
-    if (instructor) {
-      const instRole = instructor.role
-      const stuRole = student.role
-      if (instRole === 'Leader' && stuRole !== 'Leader') {
-        return { num: instructor.leaderNumber, personA: instructor.name, personB: `${student.firstName} ${student.lastName}` }
-      } else {
-        return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: instructor.name }
-      }
-    } else if (partnerStudent) {
-      return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: `${partnerStudent.firstName} ${partnerStudent.lastName}` }
-    }
-    return { num: student.leaderNumber, personA: `${student.firstName} ${student.lastName}`, personB: '' }
-  }
+  // ── Awards computation ──────────────────────────────────────────────────────
 
-  const closedHeats = heats.filter(h => h.category === 'closed')
-  const openHeats = heats.filter(h => h.category === 'open')
+  const heatCategory = new Map<number, string>()
+  for (const h of heats) heatCategory.set(h.id, h.category)
+
+  type InstructorAwardData = { id: number; name: string; studioName: string; totalEntries: number; closedEntries: number; totalPlacements: number; goldCount: number; silverCount: number; bronzeCount: number }
+  const instructorMap = new Map<number, InstructorAwardData>()
+  for (const entry of allEntries) {
+    if (!entry.instructorId || !entry.instructor) continue
+    const iid = entry.instructorId
+    if (!instructorMap.has(iid)) instructorMap.set(iid, { id: iid, name: entry.instructor.name, studioName: entry.instructor.studio.name, totalEntries: 0, closedEntries: 0, totalPlacements: 0, goldCount: 0, silverCount: 0, bronzeCount: 0 })
+    const rec = instructorMap.get(iid)!
+    rec.totalEntries++
+    if ((heatCategory.get(entry.heatId) ?? 'none') === 'closed') rec.closedEntries++
+  }
+  for (const score of closedScoresAll) {
+    if ((heatCategory.get(score.heatId) ?? 'none') !== 'closed') continue
+    const entry = allEntries.find(e => e.studentId === score.studentId && e.heatId === score.heatId)
+    if (!entry?.instructorId) continue
+    const rec = instructorMap.get(entry.instructorId)
+    if (!rec) continue
+    rec.totalPlacements++
+    if (score.placement === 'Gold') rec.goldCount++
+    else if (score.placement === 'Silver') rec.silverCount++
+    else if (score.placement === 'Bronze') rec.bronzeCount++
+  }
+  const eligibleTeachers = [...instructorMap.values()]
+    .filter(t => t.totalEntries >= 30 && t.closedEntries / t.totalEntries >= 0.4)
+    .sort((a, b) => {
+      const gA = a.closedEntries > 0 ? a.goldCount / a.closedEntries : 0
+      const gB = b.closedEntries > 0 ? b.goldCount / b.closedEntries : 0
+      if (gB !== gA) return gB - gA
+      const sA = a.closedEntries > 0 ? a.silverCount / a.closedEntries : 0
+      const sB = b.closedEntries > 0 ? b.silverCount / b.closedEntries : 0
+      if (sB !== sA) return sB - sA
+      const bA = a.closedEntries > 0 ? a.bronzeCount / a.closedEntries : 0
+      const bB = b.closedEntries > 0 ? b.bronzeCount / b.closedEntries : 0
+      return bB - bA
+    })
+
+  type StudioAwardData = { id: number; name: string; totalEntries: number; studentsInClosed: number; goldStudents: number; goldPct: number }
+  const studioAwardMap = new Map<number, StudioAwardData>()
+  for (const s of studios) studioAwardMap.set(s.id, { id: s.id, name: s.name, totalEntries: 0, studentsInClosed: 0, goldStudents: 0, goldPct: 0 })
+  for (const entry of allEntries) {
+    const rec = studioAwardMap.get(entry.student.studio.id)
+    if (rec) rec.totalEntries++
+  }
+  const studioClosedStudents = new Map<number, Set<number>>()
+  const studioGoldStudents = new Map<number, Set<number>>()
+  for (const entry of allEntries) {
+    if ((heatCategory.get(entry.heatId) ?? 'none') !== 'closed') continue
+    const sid = entry.student.studio.id
+    if (!studioClosedStudents.has(sid)) studioClosedStudents.set(sid, new Set())
+    studioClosedStudents.get(sid)!.add(entry.studentId)
+  }
+  for (const score of closedScoresAll) {
+    if (score.placement !== 'Gold') continue
+    if ((heatCategory.get(score.heatId) ?? 'none') !== 'closed') continue
+    const sid = score.student.studio.id
+    if (!studioGoldStudents.has(sid)) studioGoldStudents.set(sid, new Set())
+    studioGoldStudents.get(sid)!.add(score.studentId)
+  }
+  for (const [studioId, rec] of studioAwardMap) {
+    rec.studentsInClosed = studioClosedStudents.get(studioId)?.size ?? 0
+    rec.goldStudents = studioGoldStudents.get(studioId)?.size ?? 0
+    rec.goldPct = rec.studentsInClosed > 0 ? rec.goldStudents / rec.studentsInClosed : 0
+  }
+  const eligibleStudios = [...studioAwardMap.values()]
+    .filter(s => s.totalEntries >= 200)
+    .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
+
+  type BoBStudent = { studentId: number; name: string; studioName: string }
+  const bobByDance = new Map<string, { dance: string; students: Map<number, BoBStudent> }>()
+  for (const score of closedScoresAll) {
+    if (score.placement !== 'Gold') continue
+    if ((heatCategory.get(score.heatId) ?? 'none') !== 'closed') continue
+    const heat = heats.find(h => h.id === score.heatId)
+    if (!heat) continue
+    const dance = heat.danceType.name
+    if (!bobByDance.has(dance)) bobByDance.set(dance, { dance, students: new Map() })
+    const group = bobByDance.get(dance)!
+    if (!group.students.has(score.studentId)) {
+      group.students.set(score.studentId, { studentId: score.studentId, name: `${score.student.firstName} ${score.student.lastName}`, studioName: score.student.studio.name })
+    }
+  }
+  const bobDances = [...bobByDance.values()]
+    .map(g => ({ dance: g.dance, students: [...g.students.values()].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.dance.localeCompare(b.dance))
+
+  // ── Transform heats into serializable data for ResultsView ──────────────────
+
+  const closedHeatData: ClosedHeatData[] = heats
+    .filter(h => h.category === 'closed')
+    .map(heat => ({
+      id: heat.id,
+      number: heat.number,
+      dance: heat.danceType.name,
+      entries: heat.entries.map(entry => {
+        const display = getEntryDisplay(entry)
+        const byJudge = judges.map(j => ({
+          judgeId: j.id,
+          placement: heat.closedScores.find(s => s.studentId === entry.studentId && s.judgeId === j.id)?.placement ?? null,
+        }))
+        return { studentId: entry.studentId, num: display.num, personA: display.personA, personB: display.personB, byJudge }
+      }),
+    }))
+
+  const openHeatData: OpenHeatData[] = heats
+    .filter(h => h.category === 'open')
+    .map(heat => ({
+      id: heat.id,
+      number: heat.number,
+      dance: heat.danceType.name,
+      entries: heat.entries.map(entry => {
+        const display = getEntryDisplay(entry)
+        const thumbs = heat.openThumbs.filter(t => t.studentId === entry.studentId)
+        const notes = heat.openNotes.filter(n => n.studentId === entry.studentId)
+        const feedbackLines: { judgeId: number; judgeName: string; text: string }[] = []
+        for (const j of judges) {
+          const jThumbs = thumbs.filter(t => t.judgeId === j.id)
+          const jNote = notes.find(n => n.judgeId === j.id)
+          const parts = [
+            ...jThumbs.filter(t => t.sentiment === 'up').map(t => t.category.name),
+            ...jThumbs.filter(t => t.sentiment === 'down').map(t => `↓${t.category.name}`),
+          ]
+          if (jNote) parts.push(jNote.note)
+          if (parts.length > 0) feedbackLines.push({ judgeId: j.id, judgeName: j.name, text: parts.join(' · ') })
+        }
+        return { studentId: entry.studentId, num: display.num, personA: display.personA, personB: display.personB, feedbackLines }
+      }),
+    }))
+
+  const eventData: CompEventData[] = events.map(evt => {
+    const isSemi = evt.compRound?.round === 'semifinal'
+    const finalSize = evt.compRound?.finalSize ?? 6
+    const couples = evt.studentEvents
+      .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
+      .map(se => {
+        const student = se.student
+        const instructor = se.instructor
+        let leaderNumber: number | null = null
+        let personA = ''
+        let personB = ''
+        if (instructor) {
+          if (instructor.role === 'Leader' && student.role !== 'Leader') {
+            leaderNumber = instructor.leaderNumber; personA = instructor.name; personB = `${student.firstName} ${student.lastName}`
+          } else {
+            leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`; personB = instructor.name
+          }
+        } else {
+          leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`
+          const partner = evt.studentEvents.find(x => x.studentId === se.partnerStudentId)
+          if (partner) personB = `${partner.student.firstName} ${partner.student.lastName}`
+        }
+        const scores = judges.map(j => {
+          const s = evt.compScores.find(cs => cs.judgeId === j.id && cs.studentId === student.id)
+          return s ? { judgeId: j.id, place: s.place } : null
+        }).filter(Boolean) as { judgeId: number; place: number }[]
+        const semiCalled = judges.map(j => {
+          const m = evt.semiMarks.find(sm => sm.judgeId === j.id && sm.studentId === student.id)
+          return { judgeId: j.id, called: m?.called ?? false }
+        })
+        return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled }
+      })
+    return { id: evt.id, name: evt.name, isSemi, finalSize, couples }
+  })
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
-      <h1 className="text-xl font-bold text-center">Judge Results</h1>
-
-      {/* CLOSED HEATS */}
-      {closedHeats.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Closed Heats — Placements</h2>
-          <div className="card overflow-hidden">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 44 }}>#</th>
-                  <th style={{ width: 130 }}>Dance</th>
-                  <th>Couple</th>
-                  {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {closedHeats.map(heat => {
-                  const rows = heat.entries.map(entry => {
-                    const display = getEntryDisplay(entry)
-                    const scores = heat.closedScores.filter(s => s.studentId === entry.studentId)
-                    const byJudge = judges.map(j => ({
-                      judge: j.name,
-                      placement: scores.find(s => s.judgeId === j.id)?.placement ?? null,
-                    }))
-                    return { ...display, studentId: entry.studentId, byJudge }
-                  })
-                  if (rows.length === 0) return (
-                    <tr key={heat.id}>
-                      <td style={{ background: '#fde68a', fontFamily: 'monospace', fontWeight: 700, color: '#92400e' }}>{heat.number}</td>
-                      <td style={{ background: '#fef3c7', color: '#78350f', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
-                      <td colSpan={1 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
-                    </tr>
-                  )
-                  return rows.map((row, ri) => (
-                    <tr key={`${heat.id}-${row.studentId}`} style={{ borderTop: ri === 0 && heat.id !== closedHeats[0].id ? '2px solid var(--border)' : undefined }}>
-                      {ri === 0 && <td rowSpan={rows.length} style={{ background: '#fde68a', fontFamily: 'monospace', fontWeight: 700, color: '#92400e', verticalAlign: 'top', paddingTop: 8 }}>{heat.number}</td>}
-                      {ri === 0 && <td rowSpan={rows.length} style={{ background: '#fef3c7', color: '#78350f', fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
-                      <td>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{row.num ?? '—'}</span>
-                        {row.personA}{row.personB ? ` & ${row.personB}` : ''}
-                      </td>
-                      {row.byJudge.map(({ judge, placement }) => (
-                        <td key={judge} style={{ textAlign: 'center' }}>
-                          {placement
-                            ? <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 4, fontSize: '0.8rem', backgroundColor: placement === 'Gold' ? '#fde047' : placement === 'Silver' ? '#cbd5e1' : '#fdba74', color: '#1e1e1e' }}>{placement[0]}</span>
-                            : <span style={{ color: 'var(--muted)' }}>—</span>}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* OPEN HEATS */}
-      {openHeats.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>Open Heats — Feedback</h2>
-          <div className="card overflow-hidden">
-            <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
-              <colgroup>
-                <col style={{ width: 44 }} />
-                <col style={{ width: 130 }} />
-                <col style={{ width: 180 }} />
-                <col />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Dance</th>
-                  <th>Couple</th>
-                  <th>Feedback</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openHeats.map(heat =>
-                  heat.entries.length === 0 ? (
-                    <tr key={heat.id}>
-                      <td style={{ background: '#93c5fd', fontFamily: 'monospace', fontWeight: 700, color: '#1e40af' }}>{heat.number}</td>
-                      <td style={{ background: '#dbeafe', color: '#1e3a8a', fontSize: '0.82rem' }}>{heat.danceType.name}</td>
-                      <td colSpan={2} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No entries</td>
-                    </tr>
-                  ) : heat.entries.map((entry, ri) => {
-                    const display = getEntryDisplay(entry)
-                    const thumbs = heat.openThumbs.filter(t => t.studentId === entry.studentId)
-                    const notes = heat.openNotes.filter(n => n.studentId === entry.studentId)
-                    const feedbackLines: { name: string; text: string }[] = []
-                    for (const judge of judges) {
-                      const jThumbs = thumbs.filter(t => t.judgeId === judge.id)
-                      const jNote = notes.find(n => n.judgeId === judge.id)
-                      const parts = [
-                        ...jThumbs.filter(t => t.sentiment === 'up').map(t => t.category.name),
-                        ...jThumbs.filter(t => t.sentiment === 'down').map(t => `↓${t.category.name}`),
-                      ]
-                      if (jNote) parts.push(jNote.note)
-                      if (parts.length > 0) feedbackLines.push({ name: judge.name, text: parts.join(' · ') })
-                    }
-                    return (
-                      <tr key={`${heat.id}-${entry.studentId}`} style={{ borderTop: ri === 0 && heat.id !== openHeats[0].id ? '2px solid var(--border)' : undefined }}>
-                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ background: '#93c5fd', fontFamily: 'monospace', fontWeight: 700, color: '#1e40af', verticalAlign: 'top', paddingTop: 8 }}>{heat.number}</td>}
-                        {ri === 0 && <td rowSpan={heat.entries.length} style={{ background: '#dbeafe', color: '#1e3a8a', fontSize: '0.82rem', verticalAlign: 'top', paddingTop: 8 }}>{heat.danceType.name}</td>}
-                        <td style={{ fontSize: '0.82rem', verticalAlign: 'top' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 6, color: '#555' }}>{display.num ?? '—'}</span>
-                          {display.personA}{display.personB ? ` & ${display.personB}` : ''}
-                        </td>
-                        <td style={{ fontSize: '0.78rem', verticalAlign: 'top' }}>
-                          {feedbackLines.length === 0
-                            ? <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No feedback yet</span>
-                            : feedbackLines.map((line, i) => (
-                                <div key={i} style={{ color: '#444', lineHeight: 1.6 }}>
-                                  <span style={{ fontWeight: 700, color: '#1a2744', marginRight: 4 }}>{line.name}:</span>{line.text}
-                                </div>
-                              ))
-                          }
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* COMPETITIVE EVENTS */}
-      {events.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Competitive Events — Placements</h2>
-          {events.map(evt => {
-            const isSemi = evt.compRound?.round === 'semifinal'
-            const couples = evt.studentEvents
-              .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
-              .map(se => {
-                const student = se.student
-                const instructor = se.instructor
-                let leaderNumber: number | null = null
-                let personA = ''
-                let personB = ''
-                if (instructor) {
-                  if (instructor.role === 'Leader' && student.role !== 'Leader') {
-                    leaderNumber = instructor.leaderNumber; personA = instructor.name; personB = `${student.firstName} ${student.lastName}`
-                  } else {
-                    leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`; personB = instructor.name
-                  }
-                } else {
-                  leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`
-                  const partner = evt.studentEvents.find(x => x.studentId === se.partnerStudentId)
-                  if (partner) personB = `${partner.student.firstName} ${partner.student.lastName}`
-                }
-                return { studentId: student.id, leaderNumber, personA, personB }
-              })
-
-            // Sort by total score ascending (best first); fall back to leader number if no scores yet
-            const couplesSorted = couples.map(c => ({
-              ...c,
-              _total: evt.compScores.filter(s => s.studentId === c.studentId).reduce((sum, s) => sum + s.place, 0),
-              _scored: evt.compScores.filter(s => s.studentId === c.studentId).length,
-            })).sort((a, b) => {
-              if (!isSemi && a._scored > 0 && b._scored > 0) return a._total !== b._total ? a._total - b._total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
-              return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
-            })
-
-            return (
-              <div key={evt.id} className="card overflow-hidden">
-                <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
-                  <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
-                  <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>
-                    {isSemi ? 'Semifinal callbacks' : `Final — 1–${evt.compRound?.finalSize ?? 6}`}
-                  </span>
-                </div>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Couple</th>
-                      {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
-                      {!isSemi && <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8' }}>Total</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {couplesSorted.map(couple => {
-                      const coupleScores = evt.compScores.filter(s => s.studentId === couple.studentId)
-                      const total = coupleScores.reduce((sum, s) => sum + s.place, 0)
-                      return (
-                      <tr key={couple.studentId}>
-                        <td>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, marginRight: 8, color: '#555' }}>{couple.leaderNumber ?? '—'}</span>
-                          {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
-                        </td>
-                        {judges.map(judge => {
-                          if (isSemi) {
-                            const mark = evt.semiMarks.find(m => m.judgeId === judge.id && m.studentId === couple.studentId)
-                            return (
-                              <td key={judge.id} style={{ textAlign: 'center' }}>
-                                {mark?.called
-                                  ? <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
-                                  : <span style={{ color: 'var(--muted)' }}>—</span>
-                                }
-                              </td>
-                            )
-                          } else {
-                            const score = evt.compScores.find(s => s.judgeId === judge.id && s.studentId === couple.studentId)
-                            return (
-                              <td key={judge.id} style={{ textAlign: 'center', fontWeight: score ? 700 : 400 }}>
-                                {score
-                                  ? <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 4, backgroundColor: '#f3e8ff', color: '#6b21a8', fontSize: '0.85rem' }}>{score.place}</span>
-                                  : <span style={{ color: 'var(--muted)' }}>—</span>
-                                }
-                              </td>
-                            )
-                          }
-                        })}
-                        {!isSemi && (
-                          <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem', color: coupleScores.length > 0 ? '#6b21a8' : 'var(--muted)' }}>
-                            {coupleScores.length > 0 ? total : '—'}
-                          </td>
-                        )}
-                      </tr>
-                      )
-                    })}
-                    {couplesSorted.length === 0 && (
-                      <tr><td colSpan={1 + judges.length + (isSemi ? 0 : 1)} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Final tabulation: sum scores, rank lowest-total first */}
-                {!isSemi && couplesSorted.length > 0 && (() => {
-                  const scoredCouples = couplesSorted.map(couple => {
-                    const scores = evt.compScores.filter(s => s.studentId === couple.studentId)
-                    const total = scores.reduce((sum, s) => sum + s.place, 0)
-                    const judgeCount = scores.length
-                    return { ...couple, total, judgeCount }
-                  }).filter(c => c.judgeCount > 0)
-                    .sort((a, b) => a.total !== b.total ? a.total - b.total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-
-                  if (scoredCouples.length === 0) return null
-
-                  // Assign ranks, handling ties
-                  type Ranked = typeof scoredCouples[number] & { rank: number }
-                  const ranked: Ranked[] = []
-                  for (let i = 0; i < scoredCouples.length; i++) {
-                    const rank = i === 0 ? 1 : scoredCouples[i].total === scoredCouples[i - 1].total ? ranked[i - 1].rank : i + 1
-                    ranked.push({ ...scoredCouples[i], rank })
-                  }
-
-                  const medalStyle: Record<number, { bg: string; color: string; border: string }> = {
-                    1: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
-                    2: { bg: '#cbd5e1', color: '#1e293b', border: '#94a3b8' },
-                    3: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
-                  }
-
-                  return (
-                    <div style={{ borderTop: '4px solid #7c3aed', background: 'linear-gradient(180deg,#ede9fe 0%,#faf5ff 100%)' }}>
-                      <div className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '2px solid #c4b5fd' }}>
-                        <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>🏆</span>
-                        <div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#4c1d95', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Final Standings</div>
-                          <div style={{ fontSize: '0.7rem', color: '#7c3aed', fontWeight: 600, letterSpacing: '0.06em' }}>Read from bottom ↑ — 1st place announced last</div>
-                        </div>
-                      </div>
-                      <div className="divide-y" style={{ borderColor: '#ddd6fe' }}>
-                        {[...ranked].reverse().map(c => {
-                          const ms = medalStyle[c.rank]
-                          const isTop3 = c.rank <= 3
-                          return (
-                            <div key={c.studentId} className="flex items-center gap-4 px-4"
-                              style={{
-                                padding: isTop3 ? '14px 20px' : '10px 20px',
-                                backgroundColor: ms ? ms.bg : '#f5f3ff',
-                                borderLeft: isTop3 ? `6px solid ${ms.border}` : '6px solid #c4b5fd',
-                              }}>
-                              <div style={{ fontSize: isTop3 ? '2.2rem' : '1.1rem', fontWeight: 900, fontFamily: 'monospace', color: ms ? ms.color : '#6b21a8', minWidth: 48, textAlign: 'center', lineHeight: 1 }}>
-                                {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: isTop3 ? '1.05rem' : '0.9rem', fontWeight: isTop3 ? 800 : 600, color: ms ? ms.color : '#1e1e1e', lineHeight: 1.2 }}>
-                                  <span style={{ fontFamily: 'monospace', marginRight: 8, opacity: 0.7 }}>{c.leaderNumber ?? '—'}</span>
-                                  {c.personA}{c.personB ? ` & ${c.personB}` : ''}
-                                </div>
-                              </div>
-                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: isTop3 ? '1.1rem' : '0.95rem', fontWeight: 900, color: ms ? ms.color : '#6b21a8' }}>{c.total} pts</div>
-                                <div style={{ fontSize: '0.68rem', color: ms ? ms.color : '#7c3aed', opacity: 0.75 }}>{c.judgeCount} judge{c.judgeCount !== 1 ? 's' : ''}</div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })()}
-              </div>
-            )
-          })}
-        </section>
-      )}
-
-      {closedHeats.length === 0 && openHeats.length === 0 && events.length === 0 && (
-        <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No heats or events have been assigned categories yet. Set heat categories in Config → Heat Order & Categories.</p>
-      )}
-
-      {/* BEST OF THE BEST */}
-      {bobDances.length > 0 && (
-        <section className="space-y-4 pt-4" style={{ borderTop: '2px solid var(--border)' }}>
-          <div>
-            <h2 className="text-lg font-bold">Best of the Best</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Students who earned Gold in any closed heat, grouped by dance.</p>
-          </div>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
-            {bobDances.map(({ dance, students }) => (
-              <div key={dance} className="card overflow-hidden">
-                <div className="px-4 py-2 font-semibold text-sm" style={{ backgroundColor: '#fef9c3', borderBottom: '1px solid #fde68a' }}>{dance}</div>
-                <table className="data-table">
-                  <tbody>
-                    {students.map(s => (
-                      <tr key={s.studentId}>
-                        <td>
-                          <span className="font-medium">{s.name}</span>
-                          <span className="text-xs ml-1.5" style={{ color: 'var(--muted)' }}>{s.studioName}</span>
-                        </td>
-                        <td style={{ textAlign: 'right', width: 40 }}>
-                          <span style={{ fontSize: '0.9rem' }}>🥇</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* AWARDS */}
-      <section className="space-y-6 pt-4" style={{ borderTop: '2px solid var(--border)' }}>
-        <h2 className="text-lg font-bold">Awards</h2>
-
-        {/* TOP TEACHER */}
-        <div className="space-y-2">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Teacher</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-              Eligible: ≥30 total entries AND ≥40% of entries in closed heats.
-              Ranked by Gold % of closed entries, then Silver %, then Bronze %.
-            </p>
-          </div>
-
-          {eligibleTeachers.length === 0 ? (
-            <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible teachers yet.</p>
-          ) : (
-            <div className="card overflow-hidden">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
-                    <th>Teacher</th>
-                    <th>Studio</th>
-                    <th style={{ textAlign: 'center', width: 80 }}>Total entries</th>
-                    <th style={{ textAlign: 'center', width: 80 }}>Closed entries</th>
-                    <th style={{ textAlign: 'center', width: 60 }}>Closed %</th>
-                    <th style={{ textAlign: 'center', width: 52 }}>
-                      <span style={{ color: '#713f12' }}>G</span>
-                    </th>
-                    <th style={{ textAlign: 'center', width: 52 }}>
-                      <span style={{ color: '#475569' }}>S</span>
-                    </th>
-                    <th style={{ textAlign: 'center', width: 52 }}>
-                      <span style={{ color: '#7c2d12' }}>B</span>
-                    </th>
-                    <th style={{ textAlign: 'center', width: 80 }}>Gold %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eligibleTeachers.map((t, i) => (
-                    <tr key={t.id} style={{ backgroundColor: i === 0 ? '#fffbeb' : i === 1 ? '#f8fafc' : i === 2 ? '#fff7ed' : undefined }}>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                      </td>
-                      <td className="font-semibold">{t.name}</td>
-                      <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{t.studioName}</td>
-                      <td style={{ textAlign: 'center' }}>{t.totalEntries}</td>
-                      <td style={{ textAlign: 'center' }}>{t.closedEntries}</td>
-                      <td style={{ textAlign: 'center', fontSize: '0.8rem' }}>
-                        {Math.round(t.closedEntries / t.totalEntries * 100)}%
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        <span style={{ color: '#713f12' }}>{t.goldCount || '—'}</span>
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        <span style={{ color: '#475569' }}>{t.silverCount || '—'}</span>
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        <span style={{ color: '#7c2d12' }}>{t.bronzeCount || '—'}</span>
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
-                        {t.closedEntries > 0 ? `${Math.round(t.goldCount / t.closedEntries * 100)}%` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* TOP STUDIO */}
-        <div className="space-y-2">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Studio</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-              Eligible: ≥200 total entries.
-              Ranked by % of students in closed heats who earned at least one Gold (highest first).
-            </p>
-          </div>
-
-          {eligibleStudios.length === 0 ? (
-            <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible studios yet.</p>
-          ) : (
-            <div className="card overflow-hidden">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
-                    <th>Studio</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Total entries</th>
-                    <th style={{ textAlign: 'center', width: 120 }}>Students in closed</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Gold students</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Gold %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eligibleStudios.map((s, i) => (
-                    <tr key={s.id} style={{ backgroundColor: i === 0 ? '#fffbeb' : i === 1 ? '#f8fafc' : i === 2 ? '#fff7ed' : undefined }}>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                      </td>
-                      <td className="font-semibold">{s.name}</td>
-                      <td style={{ textAlign: 'center' }}>{s.totalEntries}</td>
-                      <td style={{ textAlign: 'center' }}>{s.studentsInClosed}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#713f12' }}>{s.goldStudents}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>
-                        {s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+    <ResultsView
+      judges={judges.map(j => ({ id: j.id, name: j.name }))}
+      closedHeats={closedHeatData}
+      openHeats={openHeatData}
+      events={eventData}
+      bobDances={bobDances}
+      eligibleTeachers={eligibleTeachers}
+      eligibleStudios={eligibleStudios}
+    />
   )
 }
