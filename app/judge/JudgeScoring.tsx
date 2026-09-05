@@ -565,7 +565,7 @@ function CompBlock({
           const callbackBlocked = isSemiPhase && !myMark && atLimit
 
           return (
-            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
+            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: isSemiPhase && myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
               <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
                 {couple.leaderNumber ?? '—'}
               </span>
