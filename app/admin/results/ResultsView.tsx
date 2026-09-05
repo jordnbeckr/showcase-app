@@ -128,22 +128,22 @@ export default function ResultsView({
                         <thead>
                           <tr>
                             <th style={{ width: 36 }}>#</th>
-                            <th style={{ minWidth: 180 }}>Couple</th>
-                            {judges.map(j => <th key={j.id} style={{ textAlign: 'center', minWidth: 60 }}>{j.name}</th>)}
+                            <th>Couple</th>
+                            {judges.map(j => <th key={j.id} style={{ textAlign: 'center', width: 52 }}>{j.name}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {heat.entries.map(row => (
                             <tr key={row.studentId}>
                               <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{row.num ?? '—'}</td>
-                              <td style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>
+                              <td style={{ whiteSpace: 'nowrap' }}>
                                 <span style={{ fontWeight: 600 }}>{row.personA}</span>
-                                {row.personB && <><br /><span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>&amp; {row.personB}</span></>}
+                                {row.personB && <span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}> &amp; {row.personB}</span>}
                               </td>
                               {row.byJudge.map(({ judgeId, placement }) => (
                                 <td key={judgeId} style={{ textAlign: 'center' }}>
                                   {placement
-                                    ? <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: '0.8rem', backgroundColor: placementColor[placement] ?? '#e2e8f0', color: '#1e1e1e', fontWeight: 700 }}>{placement[0]}</span>
+                                    ? <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 4, fontSize: '0.8rem', backgroundColor: placementColor[placement] ?? '#e2e8f0', color: '#1e1e1e', fontWeight: 700 }}>{placement[0]}</span>
                                     : <span style={{ color: 'var(--muted)' }}>—</span>}
                                 </td>
                               ))}
@@ -176,11 +176,16 @@ export default function ResultsView({
                 {isOpen && (
                   heat.entries.length === 0
                     ? <p className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No entries</p>
-                    : <table className="data-table">
+                    : <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                        <colgroup>
+                          <col style={{ width: 36 }} />
+                          <col style={{ width: 160 }} />
+                          <col />
+                        </colgroup>
                         <thead>
                           <tr>
-                            <th style={{ width: 36 }}>#</th>
-                            <th style={{ minWidth: 160 }}>Couple</th>
+                            <th>#</th>
+                            <th>Couple</th>
                             <th>Feedback</th>
                           </tr>
                         </thead>
@@ -188,9 +193,9 @@ export default function ResultsView({
                           {heat.entries.map(row => (
                             <tr key={row.studentId}>
                               <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem', verticalAlign: 'top', paddingTop: 10 }}>{row.num ?? '—'}</td>
-                              <td style={{ verticalAlign: 'top', whiteSpace: 'normal', lineHeight: 1.4 }}>
-                                <span style={{ fontWeight: 600 }}>{row.personA}</span>
-                                {row.personB && <><br /><span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>&amp; {row.personB}</span></>}
+                              <td style={{ verticalAlign: 'top', lineHeight: 1.4 }}>
+                                <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.personA}</div>
+                                {row.personB && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>&amp; {row.personB}</div>}
                               </td>
                               <td style={{ fontSize: '0.8rem', verticalAlign: 'top' }}>
                                 {row.feedbackLines.length === 0
@@ -365,33 +370,33 @@ export default function ResultsView({
                 )}
 
                 {showFinal && ranked.length > 0 && (
-                  <div style={{ borderTop: '4px solid #7c3aed', background: 'linear-gradient(180deg,#ede9fe 0%,#faf5ff 100%)' }}>
-                    <div className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '2px solid #c4b5fd' }}>
-                      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>🏆</span>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#4c1d95', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Final Standings</div>
-                        <div style={{ fontSize: '0.7rem', color: '#7c3aed', fontWeight: 600, letterSpacing: '0.06em' }}>Read from bottom ↑ — 1st place announced last</div>
-                      </div>
+                  <div style={{ borderTop: '4px solid #1a1a2e', backgroundColor: '#1a1a2e', padding: '14px 16px' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa' }}>Final Standings</span>
+                      <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 4 }}>announced last → first</span>
                     </div>
-                    <div className="divide-y" style={{ borderColor: '#ddd6fe' }}>
-                      {[...ranked].reverse().map(c => {
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {ranked.map(c => {
                         const ms = medalStyle[c.rank]
-                        const isTop3 = c.rank <= 3
+                        const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
                         return (
-                          <div key={c.studentId} className="flex items-center gap-4"
-                            style={{ padding: isTop3 ? '14px 20px' : '10px 20px', backgroundColor: ms ? ms.bg : '#f5f3ff', borderLeft: `6px solid ${ms ? ms.border : '#c4b5fd'}` }}>
-                            <div style={{ fontSize: isTop3 ? '2.2rem' : '1.1rem', fontWeight: 900, fontFamily: 'monospace', color: ms ? ms.color : '#6b21a8', minWidth: 48, textAlign: 'center', lineHeight: 1 }}>
-                              {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}
+                          <div key={c.studentId} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 12px', borderRadius: 8,
+                            backgroundColor: ms ? ms.bg : '#2d2d4e',
+                            border: `2px solid ${ms ? ms.border : '#4c1d95'}`,
+                            minWidth: 160, flex: '1 1 160px',
+                          }}>
+                            <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>
+                              {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>{rankLabel}</span>}
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: isTop3 ? '1.05rem' : '0.9rem', fontWeight: isTop3 ? 800 : 600, color: ms ? ms.color : '#1e1e1e', lineHeight: 1.3 }}>
-                                <span style={{ fontFamily: 'monospace', marginRight: 8, opacity: 0.7 }}>{c.leaderNumber ?? '—'}</span>
-                                {c.personA}{c.personB ? ` & ${c.personB}` : ''}
-                              </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: ms ? ms.color : '#a78bfa', opacity: 0.7, lineHeight: 1 }}>{c.leaderNumber ?? '—'}</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.personA}</div>
+                              {c.personB && <div style={{ fontSize: '0.72rem', color: ms ? ms.color : '#9ca3af', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>&amp; {c.personB}</div>}
                             </div>
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontSize: isTop3 ? '1.1rem' : '0.95rem', fontWeight: 900, color: ms ? ms.color : '#6b21a8' }}>{c.total} pts</div>
-                              <div style={{ fontSize: '0.68rem', color: ms ? ms.color : '#7c3aed', opacity: 0.75 }}>{c.judgeCount} judge{c.judgeCount !== 1 ? 's' : ''}</div>
+                            <div style={{ marginLeft: 'auto', flexShrink: 0, textAlign: 'right' }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 900, color: ms ? ms.color : '#a78bfa' }}>{c.total}pts</div>
                             </div>
                           </div>
                         )

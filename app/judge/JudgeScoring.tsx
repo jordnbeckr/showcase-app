@@ -448,9 +448,10 @@ function EntryRow({
         <span style={{ fontSize: '0.9rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 28, flexShrink: 0 }}>
           {display.leaderNumber ?? '—'}
         </span>
-        <span className="text-sm font-medium" style={{ minWidth: 0, lineHeight: 1.3 }}>
-          {display.personA}{display.personB ? ` & ${display.personB}` : ''}
-        </span>
+        <div style={{ minWidth: 0, lineHeight: 1.3 }}>
+          <div className="text-sm font-semibold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{display.personA}</div>
+          {display.personB && <div style={{ fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>&amp; {display.personB}</div>}
+        </div>
       </div>
 
       {/* Categories + note, flush left of identity column */}
