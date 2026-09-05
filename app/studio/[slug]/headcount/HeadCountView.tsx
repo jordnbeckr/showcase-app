@@ -88,7 +88,7 @@ export default function HeadCountView({
             <input type="number" min={1} value={g.lunchTickets}
               onChange={e => setLunchGuests(prev => prev.map(x => x.id === g.id ? { ...x, lunchTickets: parseInt(e.target.value) || 1 } : x))}
               onBlur={e => { const v = parseInt(e.target.value) || 1; startTransition(async () => { await updateLunchGuest(slug, g.id, { lunchTickets: v }) }) }}
-              className="input" style={{ width: 52, textAlign: 'center', fontSize: '0.82rem', border: '1px solid var(--border)', borderRadius: 4 }} />
+              className="input" style={{ width: 52, textAlign: 'center', fontSize: '0.82rem', border: '1px solid #94a3b8', borderRadius: 4 }} />
             <button onClick={() => {
               setLunchGuests(prev => prev.filter(x => x.id !== g.id))
               startTransition(async () => { await removeLunchGuest(slug, g.id) })
@@ -122,7 +122,7 @@ export default function HeadCountView({
             <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Tickets</label>
             <input type="number" min={1} value={newGuest.lunchTickets}
               onChange={e => setNewGuest(g => ({ ...g, lunchTickets: parseInt(e.target.value) || 1 }))}
-              className="input" style={{ width: 56, border: '1px solid var(--border)', borderRadius: 4 }} />
+              className="input" style={{ width: 56, border: '1px solid #94a3b8', borderRadius: 4 }} />
           </div>
           <button disabled={!newGuest.name.trim() || pending} onClick={() => {
             const g = { ...newGuest }
