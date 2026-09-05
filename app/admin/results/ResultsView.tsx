@@ -392,20 +392,17 @@ export default function ResultsView({
                     {(() => {
                       const items = [...ranked].reverse()
                       const rem = items.length % 4
-                      return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {items.map((c, i) => {
+                      const mainItems = rem > 0 ? items.slice(0, items.length - rem) : items
+                      const lastItems = rem > 0 ? items.slice(items.length - rem) : []
+                      const pill = (c: typeof items[number]) => {
                         const ms = medalStyle[c.rank]
                         const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
-                        const isLastRow = rem > 0 && i >= items.length - rem
-                        const colSpan = isLastRow ? (rem === 1 ? 4 : rem === 2 ? 2 : 1) : 1
                         return (
                           <div key={c.studentId} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
+                            display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 0',
                             padding: '8px 12px', borderRadius: 8,
                             backgroundColor: ms ? ms.bg : '#2d2d4e',
                             border: `2px solid ${ms ? ms.border : '#4c1d95'}`,
-                            gridColumn: colSpan > 1 ? `span ${colSpan}` : undefined,
                           }}>
                             <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>
                               {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>{rankLabel}</span>}
@@ -417,8 +414,20 @@ export default function ResultsView({
                             </div>
                           </div>
                         )
-                      })}
-                    </div>
+                      }
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {mainItems.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                              {mainItems.map(pill)}
+                            </div>
+                          )}
+                          {lastItems.length > 0 && (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              {lastItems.map(pill)}
+                            </div>
+                          )}
+                        </div>
                       )
                     })()}
                   </div>
