@@ -474,7 +474,35 @@ export default function ResultsView({
           </div>
           {eligibleTeachers.length === 0
             ? <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible teachers yet.</p>
-            : <div className="card overflow-hidden"><table className="data-table">
+            : <>
+              {eligibleTeachers.length >= 1 && (() => {
+                const podiumStyle: Record<number, { bg: string; color: string; border: string }> = {
+                  0: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
+                  1: { bg: '#cbd5e1', color: '#1e293b', border: '#94a3b8' },
+                  2: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
+                }
+                const top = eligibleTeachers.slice(0, 3)
+                return (
+                  <div style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: '14px 16px', marginBottom: 8 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 10 }}>Top Teacher Standings</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {top.map((t, i) => {
+                        const ms = podiumStyle[i]
+                        return (
+                          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, backgroundColor: ms.bg, border: `2px solid ${ms.border}` }}>
+                            <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms.color, lineHeight: 1.3 }}>{t.name}</div>
+                              <div style={{ fontSize: '0.72rem', color: ms.color, opacity: 0.75, lineHeight: 1.2 }}>{t.studioName} · {t.closedEntries > 0 ? `${Math.round(t.goldCount / t.closedEntries * 100)}%` : '—'} gold</div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+              <div className="card overflow-hidden"><table className="data-table">
                 <thead>
                   <tr>
                     <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
@@ -504,6 +532,7 @@ export default function ResultsView({
                   ))}
                 </tbody>
               </table></div>
+            </>
           }
         </div>
 
@@ -549,11 +578,11 @@ export default function ResultsView({
                     <th>Studio</th>
                     <th style={{ textAlign: 'center', width: 100 }}>Total entries</th>
                     <th style={{ textAlign: 'center', width: 100 }}>Closed entries</th>
-                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#713f12' }}>Gold</span></th>
-                    <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#713f12' }}>Gold %</span></th>
-                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#475569' }}>Silver</span></th>
+                    <th style={{ textAlign: 'center', width: 64, backgroundColor: '#fef9c3' }}><span style={{ color: '#713f12', fontWeight: 900 }}>Gold</span></th>
+                    <th style={{ textAlign: 'center', width: 64, backgroundColor: '#fef9c3' }}><span style={{ color: '#713f12', fontWeight: 900 }}>Gold %</span></th>
+                    <th style={{ textAlign: 'center', width: 64 }}><span style={{ color: '#475569' }}>Silver</span></th>
                     <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#475569' }}>Silver %</span></th>
-                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#7c2d12' }}>Bronze</span></th>
+                    <th style={{ textAlign: 'center', width: 64 }}><span style={{ color: '#7c2d12' }}>Bronze</span></th>
                     <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#7c2d12' }}>Bronze %</span></th>
                   </tr>
                 </thead>
@@ -564,8 +593,8 @@ export default function ResultsView({
                       <td className="font-semibold">{s.name}</td>
                       <td style={{ textAlign: 'center' }}>{s.totalEntries}</td>
                       <td style={{ textAlign: 'center' }}>{s.studentsInClosed}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#713f12' }}>{s.goldStudents || '—'}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#713f12' }}>{s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#713f12', backgroundColor: '#fef9c3' }}>{s.goldStudents || '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#713f12', backgroundColor: '#fef9c3', fontSize: '1rem' }}>{s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}</td>
                       <td style={{ textAlign: 'center', fontWeight: 700, color: '#475569' }}>{s.silverStudents || '—'}</td>
                       <td style={{ textAlign: 'center', fontWeight: 900, color: '#475569' }}>{s.studentsInClosed > 0 ? `${Math.round(s.silverPct * 100)}%` : '—'}</td>
                       <td style={{ textAlign: 'center', fontWeight: 700, color: '#7c2d12' }}>{s.bronzeStudents || '—'}</td>
