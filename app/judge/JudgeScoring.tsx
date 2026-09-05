@@ -39,6 +39,7 @@ type CompetitiveEvent = {
   id: number
   name: string
   round: string
+  phase: string
   finalSize: number
   semiSize: number
   firstHeatNumber: number
@@ -521,16 +522,19 @@ function CompBlock({
   onCompScore: (eventId: number, studentId: number, place: number) => void
   onSemiMark: (eventId: number, studentId: number) => void
 }) {
-  const isSemi = event.round === 'semifinal'
-  const maxPlace = isSemi ? event.semiSize : event.finalSize
+  // A "semifinal event" in semi phase → show callback UI
+  // A "semifinal event" in final phase → show placement UI for called-back couples only
+  // A plain "final" event → show placement UI
+  const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
+  const isFinalPhase = !isSemiPhase
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
       {/* Header */}
       <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
         <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
-        <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: isSemi ? '#fde68a' : '#d8b4fe', borderRadius: 3, color: isSemi ? '#92400e' : '#6b21a8' }}>
-          {isSemi ? `Semifinal — mark ${event.semiSize} callbacks` : `Final — place 1–${event.finalSize}`}
+        <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: isSemiPhase ? '#fde68a' : '#d8b4fe', borderRadius: 3, color: isSemiPhase ? '#92400e' : '#6b21a8' }}>
+          {isSemiPhase ? `Semifinal — mark ${event.semiSize} callbacks` : `Final — place 1–${event.finalSize}`}
         </span>
       </div>
 
@@ -550,7 +554,7 @@ function CompBlock({
                 {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
               </span>
               <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
-                  {isSemi ? (
+                  {isSemiPhase ? (
                     <button
                       onClick={() => onSemiMark(event.id, couple.studentId)}
                       className="px-4 py-1.5 text-sm font-semibold"

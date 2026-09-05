@@ -10,7 +10,7 @@ import CollapsibleSection from './CollapsibleSection'
 export const dynamic = 'force-dynamic'
 
 export default async function ConfigPage() {
-  const [danceTypes, studios, events, allHeats, judges, feedbackCategories, allStudents] = await Promise.all([
+  const [danceTypes, studios, events, allHeats, judges, feedbackCategories, allStudents, semiMarksAll] = await Promise.all([
     db.danceType.findMany({
       include: { heats: { include: { entries: true } } },
       orderBy: { order: 'asc' },
@@ -26,6 +26,12 @@ export default async function ConfigPage() {
       include: {
         heats: { include: { heat: true }, orderBy: { heat: { number: 'asc' } } },
         compRound: true,
+        studentEvents: {
+          include: {
+            student: true,
+            instructor: true,
+          },
+        },
       },
       orderBy: { order: 'asc' },
     }),
@@ -36,6 +42,7 @@ export default async function ConfigPage() {
     db.judge.findMany({ orderBy: { name: 'asc' }, include: { floorRanges: { include: { floor: true }, orderBy: { heatFrom: 'asc' } } } }),
     db.feedbackCategory.findMany({ orderBy: { order: 'asc' } }),
     db.student.findMany({ include: { studio: true }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] }),
+    db.semiMark.findMany({ select: { eventId: true, studentId: true, judgeId: true, called: true } }),
   ])
 
   return (
@@ -44,14 +51,44 @@ export default async function ConfigPage() {
 
       <CollapsibleSection title="Multi-Dance Events">
         <EventsConfig
-          events={events.map(e => ({
-            id: e.id,
-            name: e.name,
-            isAmateur: e.isAmateur,
-            isCompetitive: e.isCompetitive,
-            compRound: e.compRound ? { round: e.compRound.round, finalSize: e.compRound.finalSize, semiSize: e.compRound.semiSize } : null,
-            heats: e.heats.filter(eh => eh.heat != null).map(eh => ({ id: eh.heat.id, number: eh.heat.number })),
-          }))}
+          events={events.map(e => {
+            // Build couples list for semifinal tabulation
+            const couples = e.studentEvents
+              .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
+              .map(se => {
+                const student = se.student
+                const instructor = se.instructor
+                let leaderNumber: number | null = null
+                let personA = ''
+                let personB = ''
+                if (instructor) {
+                  if (instructor.role === 'Leader' && student.role !== 'Leader') {
+                    leaderNumber = instructor.leaderNumber; personA = instructor.name; personB = `${student.firstName} ${student.lastName}`
+                  } else {
+                    leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`; personB = instructor.name
+                  }
+                } else {
+                  leaderNumber = student.leaderNumber; personA = `${student.firstName} ${student.lastName}`
+                  const partner = e.studentEvents.find(x => x.studentId === se.partnerStudentId)
+                  if (partner) personB = `${partner.student.firstName} ${partner.student.lastName}`
+                }
+                return { studentId: student.id, leaderNumber, personA, personB }
+              })
+            const eventSemiMarks = semiMarksAll.filter(m => m.eventId === e.id)
+            return {
+              id: e.id,
+              name: e.name,
+              isAmateur: e.isAmateur,
+              isCompetitive: e.isCompetitive,
+              compRound: e.compRound
+                ? { round: e.compRound.round, phase: e.compRound.phase, finalSize: e.compRound.finalSize, semiSize: e.compRound.semiSize }
+                : null,
+              heats: e.heats.filter(eh => eh.heat != null).map(eh => ({ id: eh.heat.id, number: eh.heat.number })),
+              couples,
+              semiMarks: eventSemiMarks,
+              judgeCount: judges.length,
+            }
+          })}
           allHeats={allHeats.map(h => ({
             id: h.id,
             number: h.number,

@@ -362,6 +362,14 @@ export async function setCompRoundSizes(eventId: number, finalSize: number, semi
   revalidatePath('/admin/config')
 }
 
+export async function setCompPhase(eventId: number, phase: 'semi' | 'final') {
+  await requireAdmin()
+  await db.compRound.update({ where: { eventId }, data: { phase } })
+  revalidatePath('/admin/config')
+  revalidatePath('/judge')
+  revalidatePath('/admin/results')
+}
+
 // --- Heat category ---
 
 export async function setHeatCategory(heatId: number, category: 'none' | 'closed' | 'open') {

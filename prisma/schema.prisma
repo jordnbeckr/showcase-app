@@ -380,6 +380,7 @@ model CompRound {
   eventId   Int   @unique
   event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   round     String  @default("final") // "final" | "semifinal"
+  phase     String  @default("semi")  // "semi" | "final" (only relevant when round=semifinal)
   finalSize Int   @default(6)
   semiSize  Int   @default(7)
 }

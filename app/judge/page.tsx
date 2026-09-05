@@ -31,7 +31,7 @@ export default async function JudgePage() {
     return ids
   }
 
-  const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks] = await Promise.all([
+  const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks, allSemiMarks] = await Promise.all([
     db.heat.findMany({
       orderBy: { number: 'asc' },
       include: {
@@ -65,6 +65,7 @@ export default async function JudgePage() {
     db.openNote.findMany({ where: { judgeId } }),
     db.compScore.findMany({ where: { judgeId } }),
     db.semiMark.findMany({ where: { judgeId } }),
+    db.semiMark.findMany({ select: { eventId: true, studentId: true, judgeId: true, called: true } }),
   ])
 
   // Map events by first heat number so they appear at the right position in the scroll
@@ -171,17 +172,35 @@ export default async function JudgePage() {
           return c
         })
 
+        const round = evt.compRound?.round ?? 'final'
+        const phase = evt.compRound?.phase ?? 'semi'
+        const finalSize = evt.compRound?.finalSize ?? 6
+
+        // When phase=final on a semifinal event, filter to top finalSize couples by callback count
+        let filteredCouples = couplesWithPartners.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+        if (round === 'semifinal' && phase === 'final') {
+          const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
+          const withCounts = filteredCouples.map(c => ({
+            ...c,
+            callbacks: eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).length,
+          }))
+          withCounts.sort((a, b) => b.callbacks - a.callbacks || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+          filteredCouples = withCounts.slice(0, finalSize)
+          filteredCouples.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+        }
+
         return {
           id: evt.id,
           name: evt.name,
-          round: evt.compRound?.round ?? 'final',
-          finalSize: evt.compRound?.finalSize ?? 6,
+          round,
+          phase,
+          finalSize,
           semiSize: evt.compRound?.semiSize ?? 7,
           firstHeatNumber: (() => {
             const nums = heats.filter(h => h.events.some(eh => eh.eventId === evt.id)).map(h => h.number)
             return nums.length > 0 ? Math.min(...nums) : 99999
           })(),
-          couples: couplesWithPartners.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)),
+          couples: filteredCouples,
         }
       }).sort((a, b) => a.firstHeatNumber - b.firstHeatNumber)}
       categories={categories.map(c => ({ id: c.id, name: c.name }))}

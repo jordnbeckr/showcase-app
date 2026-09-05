@@ -204,9 +204,14 @@ export default async function AdminResultsPage() {
       }),
     }))
 
+  // Fetch all semiMarks for results (need all judges' marks)
+  const allSemiMarks = await db.semiMark.findMany({ select: { eventId: true, studentId: true, judgeId: true, called: true } })
+
   const eventData: CompEventData[] = events.map(evt => {
     const isSemi = evt.compRound?.round === 'semifinal'
+    const phase = evt.compRound?.phase ?? 'semi'
     const finalSize = evt.compRound?.finalSize ?? 6
+    const eventSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
     const couples = evt.studentEvents
       .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
       .map(se => {
@@ -231,12 +236,13 @@ export default async function AdminResultsPage() {
           return s ? { judgeId: j.id, place: s.place } : null
         }).filter(Boolean) as { judgeId: number; place: number }[]
         const semiCalled = judges.map(j => {
-          const m = evt.semiMarks.find(sm => sm.judgeId === j.id && sm.studentId === student.id)
+          const m = eventSemiMarks.find(sm => sm.judgeId === j.id && sm.studentId === student.id)
           return { judgeId: j.id, called: m?.called ?? false }
         })
-        return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled }
+        const callbackCount = eventSemiMarks.filter(m => m.studentId === student.id && m.called).length
+        return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled, callbackCount }
       })
-    return { id: evt.id, name: evt.name, isSemi, finalSize, couples }
+    return { id: evt.id, name: evt.name, isSemi, phase, finalSize, judgeCount: judges.length, couples }
   })
 
   return (
