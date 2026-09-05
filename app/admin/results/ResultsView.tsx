@@ -261,7 +261,7 @@ export default function ResultsView({
                 <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
                   <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
                   <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>
-                    {showSemi ? 'Semifinal callbacks' : `Final — 1–${evt.finalSize}`}
+                    {showSemi ? 'Semifinal callbacks' : `Final — 1–${evt.couples.length}`}
                   </span>
                 </div>
 

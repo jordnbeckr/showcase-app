@@ -570,7 +570,7 @@ function CompBlock({
                       {myMark ? '✓ Called' : 'Call back'}
                     </button>
                   ) : (
-                    Array.from({ length: event.finalSize }, (_, i) => i + 1).map(place => {
+                    Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
                       const active = myPlace === place
                       return (
                         <button
