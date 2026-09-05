@@ -103,15 +103,15 @@ export default function HeadCountView({
           style={{ borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
           <div>
             <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Name</label>
-            <input type="text" placeholder="Anna R." value={newGuest.name}
+            <input type="text" placeholder="Full name" value={newGuest.name}
               onChange={e => setNewGuest(g => ({ ...g, name: e.target.value }))}
-              className="input" style={{ width: 130, border: '1px solid #94a3b8', borderRadius: 4, padding: '4px 8px', fontSize: '0.875rem' }} />
+              className="input" style={{ width: 130, border: '1px solid #94a3b8', borderRadius: 4, padding: '5px 8px', fontSize: '0.875rem', height: 34 }} />
           </div>
           <div>
             <label className="block text-xs mb-1" style={{ color: 'var(--muted)' }}>Guest of</label>
             <select value={newGuest.guestOfStudentId}
               onChange={e => setNewGuest(g => ({ ...g, guestOfStudentId: e.target.value }))}
-              className="input" style={{ width: 170, border: '1px solid #94a3b8', borderRadius: 4, padding: '4px 8px', fontSize: '0.875rem' }}>
+              className="input" style={{ width: 170, border: '1px solid #94a3b8', borderRadius: 4, padding: '5px 8px', fontSize: '0.875rem', height: 34 }}>
               <option value="">N/A</option>
               {studentsWithHeats.map(s => (
                 <option key={s.id} value={String(s.id)}>{s.firstName} {s.lastName}</option>
