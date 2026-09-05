@@ -534,20 +534,38 @@ function CompBlock({
       {/* Header */}
       <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
         <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
-        <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: isSemiPhase ? '#fde68a' : '#d8b4fe', borderRadius: 3, color: isSemiPhase ? '#92400e' : '#6b21a8' }}>
-          {isSemiPhase ? `Semifinal — mark ${event.semiSize} callbacks` : `Final — place 1–${event.finalSize}`}
-        </span>
+        {isSemiPhase ? (() => {
+          const marked = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+          const full = marked >= event.semiSize
+          return (
+            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: full ? '#dcfce7' : '#fde68a', borderRadius: 3, color: full ? '#14532d' : '#92400e' }}>
+              Semifinal — {marked}/{event.semiSize} called
+            </span>
+          )
+        })() : (
+          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+            Final — place 1–{event.finalSize}
+          </span>
+        )}
       </div>
 
       {/* Couples */}
       <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
+        {isSemiPhase && (() => {
+          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+          const atLimit = markedCount >= event.semiSize
+          return null // used below via closure
+        })()}
         {event.couples.map(couple => {
           const scoreKey = `${event.id}-${couple.studentId}`
           const myPlace = compScores[scoreKey]
           const myMark = semiMarks[scoreKey] ?? false
+          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+          const atLimit = markedCount >= event.semiSize
+          const callbackBlocked = isSemiPhase && !myMark && atLimit
 
           return (
-            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
               <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
                 {couple.leaderNumber ?? '—'}
               </span>
@@ -557,15 +575,18 @@ function CompBlock({
               <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
                   {isSemiPhase ? (
                     <button
-                      onClick={() => onSemiMark(event.id, couple.studentId)}
+                      onClick={() => !callbackBlocked && onSemiMark(event.id, couple.studentId)}
+                      disabled={callbackBlocked}
                       className="px-4 py-1.5 text-sm font-semibold"
                       style={{
                         borderRadius: 6,
                         border: '2px solid',
-                        borderColor: myMark ? '#16a34a' : 'var(--border)',
+                        borderColor: myMark ? '#16a34a' : callbackBlocked ? 'var(--border)' : '#6b21a8',
                         backgroundColor: myMark ? '#dcfce7' : 'transparent',
-                        color: myMark ? '#14532d' : 'var(--muted)',
+                        color: myMark ? '#14532d' : callbackBlocked ? '#ccc' : '#6b21a8',
                         minWidth: 80,
+                        cursor: callbackBlocked ? 'not-allowed' : 'pointer',
+                        opacity: callbackBlocked ? 0.45 : 1,
                       }}
                     >
                       {myMark ? '✓ Called' : 'Call back'}

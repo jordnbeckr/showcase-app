@@ -58,20 +58,25 @@ const placementColor: Record<string, string> = {
   Bronze: '#fdba74',
 }
 
-function HeatHeader({ number, dance, entryCount, open, onToggle }: { number: number; dance: string; entryCount: number; open: boolean; onToggle: () => void }) {
+function HeatHeader({ number, dance, entryCount, open, onToggle, variant }: { number: number; dance: string; entryCount: number; open: boolean; onToggle: () => void; variant: 'closed' | 'open' }) {
+  const themes = {
+    closed: { bg: '#fef9c3', numBg: '#fde047', numColor: '#713f12', border: '#fde68a', text: '#78350f' },
+    open:   { bg: '#eff6ff', numBg: '#93c5fd', numColor: '#1e3a8a', border: '#bfdbfe', text: '#1e40af' },
+  }
+  const t = themes[variant]
   return (
     <button
       onClick={onToggle}
       style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-        padding: '8px 12px', border: 'none', cursor: 'pointer', textAlign: 'left',
-        background: 'var(--surface)', borderBottom: open ? '1px solid var(--border)' : 'none',
+        width: '100%', display: 'flex', alignItems: 'center', gap: 0,
+        border: 'none', cursor: 'pointer', textAlign: 'left',
+        backgroundColor: t.bg, borderBottom: open ? `1px solid ${t.border}` : 'none',
       }}
     >
-      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', minWidth: 36 }}>#{number}</span>
-      <span style={{ fontWeight: 600, fontSize: '0.85rem', flex: 1 }}>{dance}</span>
-      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{entryCount} {entryCount === 1 ? 'couple' : 'couples'}</span>
-      <span style={{ color: 'var(--muted)', fontSize: '0.75rem', marginLeft: 4 }}>{open ? '▲' : '▼'}</span>
+      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.85rem', minWidth: 48, padding: '8px 10px', backgroundColor: t.numBg, color: t.numColor, textAlign: 'center', flexShrink: 0 }}>#{number}</span>
+      <span style={{ fontWeight: 600, fontSize: '0.85rem', flex: 1, padding: '8px 12px', color: t.text }}>{dance}</span>
+      <span style={{ fontSize: '0.75rem', color: t.text, opacity: 0.7, paddingRight: 6 }}>{entryCount} {entryCount === 1 ? 'couple' : 'couples'}</span>
+      <span style={{ color: t.text, fontSize: '0.75rem', paddingRight: 12, opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
     </button>
   )
 }
@@ -120,7 +125,7 @@ export default function ResultsView({
             const isOpen = openClosed.has(heat.id)
             return (
               <div key={heat.id} className="card overflow-hidden">
-                <HeatHeader number={heat.number} dance={heat.dance} entryCount={heat.entries.length} open={isOpen} onToggle={() => toggle(openClosed, heat.id, setOpenClosed)} />
+                <HeatHeader number={heat.number} dance={heat.dance} entryCount={heat.entries.length} open={isOpen} onToggle={() => toggle(openClosed, heat.id, setOpenClosed)} variant="closed" />
                 {isOpen && (
                   heat.entries.length === 0
                     ? <p className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No entries</p>
@@ -172,7 +177,7 @@ export default function ResultsView({
             const isOpen = openOpen.has(heat.id)
             return (
               <div key={heat.id} className="card overflow-hidden">
-                <HeatHeader number={heat.number} dance={heat.dance} entryCount={heat.entries.length} open={isOpen} onToggle={() => toggle(openOpen, heat.id, setOpenOpen)} />
+                <HeatHeader number={heat.number} dance={heat.dance} entryCount={heat.entries.length} open={isOpen} onToggle={() => toggle(openOpen, heat.id, setOpenOpen)} variant="open" />
                 {isOpen && (
                   heat.entries.length === 0
                     ? <p className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No entries</p>
@@ -297,7 +302,10 @@ export default function ResultsView({
                               {judges.map(judge => {
                                 const mark = couple.semiCalled.find(m => m.judgeId === judge.id)
                                 return <td key={judge.id} style={{ textAlign: 'center' }}>
-                                  {mark?.called ? <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span> : <span style={{ color: 'var(--muted)' }}>—</span>}
+                                  {mark?.called
+                                    ? <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 900, fontSize: '0.95rem', border: '2px solid #16a34a' }}>✓</span>
+                                    : <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface)', color: 'var(--muted)', fontWeight: 400, fontSize: '1rem', border: '1px solid var(--border)' }}>–</span>
+                                  }
                                 </td>
                               })}
                               <td style={{ textAlign: 'center' }}>
@@ -332,32 +340,37 @@ export default function ResultsView({
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>#</th>
-                        <th style={{ minWidth: 160 }}>Couple</th>
-                        {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
-                        <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8' }}>Total</th>
+                        <th style={{ width: 36 }}>#</th>
+                        <th>Couple</th>
+                        {judges.map(j => <th key={j.id} style={{ textAlign: 'center', width: 52 }}>{j.name}</th>)}
+                        <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8', width: 60 }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {couplesSorted.map(couple => {
                         const total = couple._total
+                        const rankEntry = ranked.find(r => r.studentId === couple.studentId)
+                        const rankNum = rankEntry?.rank
+                        const totalColor = rankNum === 1 ? '#92400e' : rankNum === 2 ? '#1e293b' : rankNum === 3 ? '#431407' : '#6b21a8'
                         return (
                           <tr key={couple.studentId}>
                             <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
-                            <td style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>
+                            <td style={{ whiteSpace: 'nowrap' }}>
                               <span style={{ fontWeight: 600 }}>{couple.personA}</span>
-                              {couple.personB && <><br /><span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>&amp; {couple.personB}</span></>}
+                              {couple.personB && <span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}> &amp; {couple.personB}</span>}
                             </td>
                             {judges.map(judge => {
                               const score = couple.scores.find(s => s.judgeId === judge.id)
                               return <td key={judge.id} style={{ textAlign: 'center' }}>
                                 {score
-                                  ? <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 4, backgroundColor: '#f3e8ff', color: '#6b21a8', fontSize: '0.85rem', fontWeight: 700 }}>{score.place}</span>
+                                  ? <span style={{ display: 'inline-block', padding: '1px 5px', borderRadius: 4, backgroundColor: '#f3e8ff', color: '#6b21a8', fontSize: '0.85rem', fontWeight: 700 }}>{score.place}</span>
                                   : <span style={{ color: 'var(--muted)' }}>—</span>}
                               </td>
                             })}
-                            <td style={{ textAlign: 'center', fontWeight: 900, color: couple._scored > 0 ? '#6b21a8' : 'var(--muted)' }}>
-                              {couple._scored > 0 ? total : '—'}
+                            <td style={{ textAlign: 'center' }}>
+                              {couple._scored > 0
+                                ? <span style={{ fontWeight: 900, fontSize: '1rem', color: totalColor }}>{total}</span>
+                                : <span style={{ color: 'var(--muted)' }}>—</span>}
                             </td>
                           </tr>
                         )
@@ -376,7 +389,7 @@ export default function ResultsView({
                       <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 4 }}>announced last → first</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {ranked.map(c => {
+                      {[...ranked].reverse().map(c => {
                         const ms = medalStyle[c.rank]
                         const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
                         return (
@@ -392,11 +405,8 @@ export default function ResultsView({
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: ms ? ms.color : '#a78bfa', opacity: 0.7, lineHeight: 1 }}>{c.leaderNumber ?? '—'}</div>
-                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.personA}</div>
-                              {c.personB && <div style={{ fontSize: '0.72rem', color: ms ? ms.color : '#9ca3af', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>&amp; {c.personB}</div>}
-                            </div>
-                            <div style={{ marginLeft: 'auto', flexShrink: 0, textAlign: 'right' }}>
-                              <div style={{ fontSize: '0.8rem', fontWeight: 900, color: ms ? ms.color : '#a78bfa' }}>{c.total}pts</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.3 }}>{c.personA}</div>
+                              {c.personB && <div style={{ fontSize: '0.72rem', color: ms ? ms.color : '#9ca3af', lineHeight: 1.2 }}>&amp; {c.personB}</div>}
                             </div>
                           </div>
                         )
