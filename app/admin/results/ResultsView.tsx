@@ -486,7 +486,7 @@ export default function ResultsView({
                   <div style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: '14px 16px', marginBottom: 8 }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 10 }}>Top Teacher Standings</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      {top.map((t, i) => {
+                      {top.map((t, i) => ({ t, i })).reverse().map(({ t, i }) => {
                         const ms = podiumStyle[i]
                         return (
                           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, backgroundColor: ms.bg, border: `2px solid ${ms.border}` }}>
@@ -555,7 +555,7 @@ export default function ResultsView({
                   <div style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: '14px 16px', marginBottom: 8 }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 10 }}>Top Studio Standings</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      {top.map((s, i) => {
+                      {top.map((s, i) => ({ s, i })).reverse().map(({ s, i }) => {
                         const ms = studioMedalStyle[i]
                         return (
                           <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, backgroundColor: ms.bg, border: `2px solid ${ms.border}` }}>
