@@ -112,31 +112,41 @@ export default async function AdminResultsPage() {
       return bB - bA
     })
 
-  type StudioAwardData = { id: number; name: string; totalEntries: number; studentsInClosed: number; goldStudents: number; goldPct: number }
+  type StudioAwardData = { id: number; name: string; totalEntries: number; studentsInClosed: number; goldStudents: number; silverStudents: number; bronzeStudents: number; goldPct: number; silverPct: number; bronzePct: number }
   const studioAwardMap = new Map<number, StudioAwardData>()
-  for (const s of studios) studioAwardMap.set(s.id, { id: s.id, name: s.name, totalEntries: 0, studentsInClosed: 0, goldStudents: 0, goldPct: 0 })
+  for (const s of studios) studioAwardMap.set(s.id, { id: s.id, name: s.name, totalEntries: 0, studentsInClosed: 0, goldStudents: 0, silverStudents: 0, bronzeStudents: 0, goldPct: 0, silverPct: 0, bronzePct: 0 })
   for (const entry of allEntries) {
     const rec = studioAwardMap.get(entry.student.studio.id)
     if (rec) rec.totalEntries++
   }
-  // Count closed entries and gold entries per studio (entries, not unique students)
+  // Count closed entries and placement entries per studio (entries, not unique students)
   for (const entry of allEntries) {
     if ((heatCategory.get(entry.heatId) ?? 'none') !== 'closed') continue
     const rec = studioAwardMap.get(entry.student.studio.id)
     if (rec) rec.studentsInClosed++
   }
   for (const score of closedScoresAll) {
-    if (score.placement !== 'Gold') continue
     if ((heatCategory.get(score.heatId) ?? 'none') !== 'closed') continue
     const rec = studioAwardMap.get(score.student.studio.id)
-    if (rec) rec.goldStudents++
+    if (!rec) continue
+    if (score.placement === 'Gold') rec.goldStudents++
+    else if (score.placement === 'Silver') rec.silverStudents++
+    else if (score.placement === 'Bronze') rec.bronzeStudents++
   }
   for (const rec of studioAwardMap.values()) {
-    rec.goldPct = rec.studentsInClosed > 0 ? rec.goldStudents / rec.studentsInClosed : 0
+    const d = rec.studentsInClosed
+    rec.goldPct = d > 0 ? rec.goldStudents / d : 0
+    rec.silverPct = d > 0 ? rec.silverStudents / d : 0
+    rec.bronzePct = d > 0 ? rec.bronzeStudents / d : 0
   }
+  // Tie-break: gold% → silver% → bronze%
   const eligibleStudios = [...studioAwardMap.values()]
     .filter(s => s.totalEntries >= 200)
-    .sort((a, b) => b.goldPct !== a.goldPct ? b.goldPct - a.goldPct : b.goldStudents - a.goldStudents)
+    .sort((a, b) =>
+      b.goldPct !== a.goldPct ? b.goldPct - a.goldPct :
+      b.silverPct !== a.silverPct ? b.silverPct - a.silverPct :
+      b.bronzePct - a.bronzePct
+    )
 
   type BoBStudent = { studentId: number; name: string; studioName: string }
   const bobByDance = new Map<string, { dance: string; students: Map<number, BoBStudent> }>()

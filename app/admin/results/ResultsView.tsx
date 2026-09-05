@@ -50,7 +50,7 @@ export type CompEventData = {
 
 export type BoBDance = { dance: string; students: { studentId: number; name: string; studioName: string }[] }
 export type TeacherAward = { id: number; name: string; studioName: string; totalEntries: number; closedEntries: number; goldCount: number; silverCount: number; bronzeCount: number }
-export type StudioAward = { id: number; name: string; totalEntries: number; studentsInClosed: number; goldStudents: number; goldPct: number }
+export type StudioAward = { id: number; name: string; totalEntries: number; studentsInClosed: number; goldStudents: number; silverStudents: number; bronzeStudents: number; goldPct: number; silverPct: number; bronzePct: number }
 
 const placementColor: Record<string, string> = {
   Gold: '#fde047',
@@ -389,7 +389,7 @@ export default function ResultsView({
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa' }}>Final Standings</span>
                       <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 4 }}>announced last → first</span>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                       {[...ranked].reverse().map(c => {
                         const ms = medalStyle[c.rank]
                         const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
@@ -399,7 +399,6 @@ export default function ResultsView({
                             padding: '8px 12px', borderRadius: 8,
                             backgroundColor: ms ? ms.bg : '#2d2d4e',
                             border: `2px solid ${ms ? ms.border : '#4c1d95'}`,
-                            minWidth: 160, flex: '1 1 160px',
                           }}>
                             <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>
                               {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>{rankLabel}</span>}
@@ -407,7 +406,7 @@ export default function ResultsView({
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: ms ? ms.color : '#a78bfa', opacity: 0.7, lineHeight: 1 }}>{c.leaderNumber ?? '—'}</div>
                               <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.3 }}>{c.personA}</div>
-                              {c.personB && <div style={{ fontWeight: 700, fontSize: '0.78rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.2 }}>&amp; {c.personB}</div>}
+                              {c.personB && <div style={{ fontWeight: 700, fontSize: '0.82rem', color: ms ? ms.color : '#e2e8f0', lineHeight: 1.2 }}>&amp; {c.personB}</div>}
                             </div>
                           </div>
                         )
@@ -502,7 +501,7 @@ export default function ResultsView({
         <div className="space-y-2">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Top Studio</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Eligible: ≥200 total entries. Ranked by % of closed-heat entries that earned Gold (multiple Golds per student count separately).</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Eligible: ≥200 total entries. Ranked by Gold % → Silver % → Bronze % of closed-heat entries (multiple awards per student each count).</p>
           </div>
           {eligibleStudios.length === 0
             ? <p className="text-sm italic" style={{ color: 'var(--muted)' }}>No eligible studios yet.</p>
@@ -512,9 +511,13 @@ export default function ResultsView({
                     <th style={{ width: 40, textAlign: 'center' }}>Rank</th>
                     <th>Studio</th>
                     <th style={{ textAlign: 'center', width: 100 }}>Total entries</th>
-                    <th style={{ textAlign: 'center', width: 120 }}>Closed entries</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Gold entries</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Gold %</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Closed entries</th>
+                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#713f12' }}>Gold</span></th>
+                    <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#713f12' }}>Gold %</span></th>
+                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#475569' }}>Silver</span></th>
+                    <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#475569' }}>Silver %</span></th>
+                    <th style={{ textAlign: 'center', width: 80 }}><span style={{ color: '#7c2d12' }}>Bronze</span></th>
+                    <th style={{ textAlign: 'center', width: 60 }}><span style={{ color: '#7c2d12' }}>Bronze %</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -524,8 +527,12 @@ export default function ResultsView({
                       <td className="font-semibold">{s.name}</td>
                       <td style={{ textAlign: 'center' }}>{s.totalEntries}</td>
                       <td style={{ textAlign: 'center' }}>{s.studentsInClosed}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#713f12' }}>{s.goldStudents}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 900 }}>{s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#713f12' }}>{s.goldStudents || '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#713f12' }}>{s.studentsInClosed > 0 ? `${Math.round(s.goldPct * 100)}%` : '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#475569' }}>{s.silverStudents || '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#475569' }}>{s.studentsInClosed > 0 ? `${Math.round(s.silverPct * 100)}%` : '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#7c2d12' }}>{s.bronzeStudents || '—'}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 900, color: '#7c2d12' }}>{s.studentsInClosed > 0 ? `${Math.round(s.bronzePct * 100)}%` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
