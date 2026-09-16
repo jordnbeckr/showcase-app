@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition, useState, useCallback, useRef } from 'react'
+import { useTransition, useState, useRef } from 'react'
 import { moveHeatEntry } from '@/app/actions/admin'
 
 type Instructor = { id: number; name: string }
@@ -37,34 +37,15 @@ function getAllInstructors(studios: Studio[]): Instructor[] {
   return list
 }
 
-// A stable palette for BTB color threading — one color per unique (name+instrId) pair
-const THREAD_COLORS = [
-  '#c47a20', '#2a7a50', '#7060c0', '#b83030',
-  '#1a7890', '#8a5020', '#306030', '#904070',
-  '#2060a0', '#805018',
-]
-function makeColorMap(heats: Heat[]): Map<string, string> {
-  const map = new Map<string, string>()
-  let idx = 0
-  // Find all BTB pairs first so colors are stable
+const BTB_COLOR = '#c47a20'
+
+function isBTBEntry(entry: Entry, heat: Heat, heats: Heat[]): boolean {
+  if (entry.instructorId == null) return false
   const heatByNum = new Map(heats.map(h => [h.number, h]))
-  for (const heat of heats) {
-    for (const e of heat.entries) {
-      if (e.instructorId == null) continue
-      const key = `${e.studentId}:${e.instructorId}`
-      if (map.has(key)) continue
-      // Check if this student+instructor appears in an adjacent heat
-      const prevHeat = heatByNum.get(heat.number - 1)
-      const nextHeat = heatByNum.get(heat.number + 1)
-      const isBTB =
-        prevHeat?.entries.some(x => x.studentId === e.studentId && x.instructorId === e.instructorId) ||
-        nextHeat?.entries.some(x => x.studentId === e.studentId && x.instructorId === e.instructorId)
-      if (isBTB) {
-        map.set(key, THREAD_COLORS[idx++ % THREAD_COLORS.length])
-      }
-    }
-  }
-  return map
+  return !!(
+    heatByNum.get(heat.number - 1)?.entries.some(e => e.studentId === entry.studentId && e.instructorId === entry.instructorId) ||
+    heatByNum.get(heat.number + 1)?.entries.some(e => e.studentId === entry.studentId && e.instructorId === entry.instructorId)
+  )
 }
 
 function getBTBDir(
@@ -98,10 +79,9 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
   const [dragOver, setDragOver] = useState<{ heatId: number; instrId: number | null } | null>(null)
 
   const instructors = getAllInstructors(studios)
-  const colorMap = makeColorMap(heats)
 
   // Move entry optimistically then persist
-  const handleDrop = useCallback((toHeatId: number, toInstrId: number | null) => {
+  const handleDrop = (toHeatId: number, toInstrId: number | null) => {
     const drag = dragRef.current
     if (!drag || drag.fromHeatId === toHeatId) return
     dragRef.current = null
@@ -123,7 +103,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
     startTransition(async () => {
       await moveHeatEntry(drag.entryId, toHeatId)
     })
-  }, [])
+  }
 
   const UNCATEGORIZED_ID = -1 // sentinel for "no instructor" column
 
@@ -178,39 +158,40 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                       }}
                       onDrop={() => handleDrop(heat.id, instrId === UNCATEGORIZED_ID ? null : instrId)}
                     >
-                      {cellEntries.map(entry => {
-                        const btbDir = getBTBDir(entry, heat, heats)
-                        const colorKey = `${entry.studentId}:${entry.instructorId}`
-                        const threadColor = colorMap.get(colorKey)
-                        return (
-                          <div
-                            key={entry.id}
-                            draggable
-                            onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
-                            onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
-                            style={{
-                              ...CHIP,
-                              ...(threadColor ? {
-                                borderLeft: `3px solid ${threadColor}`,
-                                background: threadColor + '18',
-                                paddingLeft: 5,
-                              } : {}),
-                            }}
-                            title={btbDir ? `Back-to-back: also in H${
-                              btbDir === 'prev' ? heat.number - 1 :
-                              btbDir === 'next' ? heat.number + 1 :
-                              `${heat.number - 1} + ${heat.number + 1}`
-                            }` : undefined}
-                          >
-                            {entry.studentName}
-                            {btbDir && (
-                              <span style={{ marginLeft: 3, fontWeight: 700, color: threadColor, fontSize: '0.65rem' }}>
-                                {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
-                              </span>
-                            )}
-                          </div>
-                        )
-                      })}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                        {cellEntries.map(entry => {
+                          const btb = isBTBEntry(entry, heat, heats)
+                          const btbDir = btb ? getBTBDir(entry, heat, heats) : null
+                          return (
+                            <div
+                              key={entry.id}
+                              draggable
+                              onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
+                              onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
+                              style={{
+                                ...CHIP,
+                                ...(btb ? {
+                                  borderLeft: `3px solid ${BTB_COLOR}`,
+                                  background: BTB_COLOR + '18',
+                                  paddingLeft: 5,
+                                } : {}),
+                              }}
+                              title={btbDir ? `Back-to-back: also in H${
+                                btbDir === 'prev' ? heat.number - 1 :
+                                btbDir === 'next' ? heat.number + 1 :
+                                `${heat.number - 1} + ${heat.number + 1}`
+                              }` : undefined}
+                            >
+                              {entry.studentName}
+                              {btbDir && (
+                                <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>
+                                  {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </td>
                   )
                 })}
