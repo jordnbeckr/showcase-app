@@ -172,23 +172,15 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
       <div style={{ overflowX: 'auto' }}>
         <table style={{
           borderCollapse: 'collapse',
-          width: '100%',
           fontSize: '0.78rem',
           opacity: pending ? 0.75 : 1,
           transition: 'opacity .15s',
-          tableLayout: 'fixed',
         }}>
-          <colgroup>
-            <col style={{ width: 130 }} />
-            {instructors.map(i => <col key={i.id} style={{ width: 140 }} />)}
-            {/* Last column gets all remaining space */}
-            <col style={{ width: 'auto' }} />
-          </colgroup>
           <thead>
             <tr>
               <th style={TH_HEAT}>Heat</th>
               {instructors.map(i => <th key={i.id} style={TH_INSTR}>{i.name}</th>)}
-              <th style={TH_INSTR}>—</th>
+              <th style={{ ...TH_INSTR, minWidth: 600 }}>—</th>
             </tr>
           </thead>
           <tbody>
@@ -242,8 +234,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
                           background: isOver ? 'var(--drag-bg, #e8f0fe)' : undefined,
                           outline: isOver ? '2px solid var(--accent)' : undefined,
                           outlineOffset: -2,
-                          // Last column: no width constraint, wraps freely
-                          ...(instrId === null ? { minWidth: 200 } : { minWidth: 110 }),
+                          ...(instrId === null ? { minWidth: 600 } : { minWidth: 110 }),
                         }}
                         onDragOver={e => { e.preventDefault(); setDragOver({ heatId: heat.id, instrId }) }}
                         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
