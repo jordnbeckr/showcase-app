@@ -160,40 +160,38 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                       }}
                       onDrop={() => handleDrop(heat.id, instrId === UNCATEGORIZED_ID ? null : instrId)}
                     >
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'flex-start' }}>
-                        {cellEntries.map(entry => {
-                          const btb = isBTBEntry(entry, heat, heats)
-                          const btbDir = btb ? getBTBDir(entry, heat, heats) : null
-                          return (
-                            <span
-                              key={entry.id}
-                              draggable
-                              onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
-                              onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
-                              style={{
-                                ...CHIP,
-                                ...(btb ? {
-                                  borderLeft: `3px solid ${BTB_COLOR}`,
-                                  background: BTB_COLOR + '18',
-                                  paddingLeft: 5,
-                                } : {}),
-                              }}
-                              title={btbDir ? `Back-to-back: also in H${
-                                btbDir === 'prev' ? heat.number - 1 :
-                                btbDir === 'next' ? heat.number + 1 :
-                                `${heat.number - 1} + ${heat.number + 1}`
-                              }` : undefined}
-                            >
-                              {entry.studentName}
-                              {btbDir && (
-                                <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>
-                                  {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
-                                </span>
-                              )}
-                            </span>
-                          )
-                        })}
-                      </div>
+                      {cellEntries.map(entry => {
+                        const btb = isBTBEntry(entry, heat, heats)
+                        const btbDir = btb ? getBTBDir(entry, heat, heats) : null
+                        return (
+                          <span
+                            key={entry.id}
+                            draggable
+                            onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
+                            onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
+                            style={{
+                              ...CHIP,
+                              ...(btb ? {
+                                borderLeft: `3px solid ${BTB_COLOR}`,
+                                background: BTB_COLOR + '18',
+                                paddingLeft: 5,
+                              } : {}),
+                            }}
+                            title={btbDir ? `Back-to-back: also in H${
+                              btbDir === 'prev' ? heat.number - 1 :
+                              btbDir === 'next' ? heat.number + 1 :
+                              `${heat.number - 1} + ${heat.number + 1}`
+                            }` : undefined}
+                          >
+                            {entry.studentName}
+                            {btbDir && (
+                              <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>
+                                {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
+                              </span>
+                            )}
+                          </span>
+                        )
+                      })}
                     </td>
                   )
                 })}
@@ -258,6 +256,7 @@ const CHIP: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   padding: '2px 7px',
+  margin: '1px 2px 1px 0',
   borderRadius: 10,
   background: 'var(--card-alt, #f5f3ef)',
   border: '1px solid var(--border)',
