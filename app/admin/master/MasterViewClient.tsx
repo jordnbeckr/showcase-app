@@ -12,7 +12,7 @@ type Props = {
 }
 
 export default function MasterViewClient({ children, rebalancerHeats, rebalancerStudios, heatCount, entryCount }: Props) {
-  const [mode, setMode] = useState<'sheet' | 'rebalance'>('sheet')
+  const [mode, setMode] = useState<'sheet' | 'rebalance'>('rebalance')
 
   return (
     <div className="space-y-4">

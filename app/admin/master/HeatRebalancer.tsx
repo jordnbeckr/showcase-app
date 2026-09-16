@@ -77,8 +77,11 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
   const [pending, startTransition] = useTransition()
   const dragRef = useRef<{ entryId: number; fromHeatId: number } | null>(null)
   const [dragOver, setDragOver] = useState<{ heatId: number; instrId: number | null } | null>(null)
+  const [danceFilter, setDanceFilter] = useState<string>('All')
 
   const instructors = getAllInstructors(studios)
+  const dances = ['All', ...Array.from(new Set(initialHeats.map(h => h.dance))).sort()]
+  const visibleHeats = danceFilter === 'All' ? heats : heats.filter(h => h.dance === danceFilter)
 
   // Move entry optimistically then persist
   const handleDrop = (toHeatId: number, toInstrId: number | null) => {
@@ -106,7 +109,22 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {dances.map(d => (
+          <button
+            key={d}
+            onClick={() => setDanceFilter(d)}
+            style={{
+              fontSize: '0.78rem', fontWeight: 500, padding: '3px 10px', borderRadius: 6,
+              border: '1px solid var(--border)', cursor: 'pointer',
+              background: danceFilter === d ? 'var(--ink)' : 'var(--card)',
+              color: danceFilter === d ? 'var(--page)' : 'var(--muted)',
+            }}
+          >{d}</button>
+        ))}
+      </div>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{
         borderCollapse: 'collapse',
         minWidth: `${120 + instructors.length * 130}px`,
@@ -123,7 +141,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
           </tr>
         </thead>
         <tbody>
-          {heats.map(heat => {
+          {visibleHeats.map(heat => {
             const count = heat.entries.length
             const status = heatStatus(count, heat.max)
             return (
@@ -198,6 +216,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
