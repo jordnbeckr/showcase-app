@@ -32,6 +32,15 @@ type Props = {
   events?: EventInfo[]
 }
 
+// A single displayable row — may be a whole heat or one event's slice of a heat
+type Row = {
+  heat: Heat
+  rowKey: string
+  label: string           // e.g. "H5 · Waltz" or the event name
+  eventColor: typeof EVENT_COLORS[0] | null
+  studentFilter: Set<number> | null   // null = show all students
+}
+
 function getAllInstructors(studios: Studio[]): Instructor[] {
   const seen = new Set<number>()
   const list: Instructor[] = []
@@ -45,7 +54,6 @@ function getAllInstructors(studios: Studio[]): Instructor[] {
 
 const BTB_COLOR = '#c47a20'
 
-// Stable palette for event labels
 const EVENT_COLORS = [
   { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
   { bg: '#f0fdf4', border: '#22c55e', text: '#15803d' },
@@ -82,52 +90,6 @@ function heatStatus(count: number, max: number) {
   return                                      { color: '#16a34a', bg: '#f0fdf4' }
 }
 
-function renderChips(
-  entries: Entry[],
-  heat: Heat,
-  heats: Heat[],
-  dragRef: React.MutableRefObject<{ entryId: number; fromHeatId: number } | null>,
-  setDragOver: (v: { heatId: number; instrId: number | null } | null) => void,
-) {
-  return entries.map(entry => {
-    const btb = isBTBEntry(entry, heat, heats)
-    const btbDir = btb ? getBTBDir(entry, heat, heats) : null
-    return (
-      <span
-        key={entry.id}
-        draggable
-        onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
-        onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
-        style={{
-          display: 'inline-block',
-          verticalAlign: 'middle',
-          padding: '1px 7px',
-          margin: '1px 2px 1px 0',
-          borderRadius: 10,
-          background: btb ? BTB_COLOR + '18' : 'var(--card, #fff)',
-          border: `1px solid ${btb ? BTB_COLOR : 'var(--border, #d4d9e0)'}`,
-          borderLeft: btb ? `3px solid ${BTB_COLOR}` : undefined,
-          paddingLeft: btb ? 5 : undefined,
-          fontSize: '0.7rem',
-          fontWeight: 500,
-          cursor: 'grab',
-          userSelect: 'none' as const,
-          whiteSpace: 'nowrap' as const,
-          lineHeight: 1.6,
-        }}
-        title={btbDir ? `Back-to-back: also in H${btbDir === 'prev' ? heat.number - 1 : btbDir === 'next' ? heat.number + 1 : `${heat.number - 1} + ${heat.number + 1}`}` : undefined}
-      >
-        {entry.studentName}
-        {btbDir && (
-          <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>
-            {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
-          </span>
-        )}
-      </span>
-    )
-  })
-}
-
 export default function HeatRebalancer({ heats: initialHeats, studios, events = [] }: Props) {
   const [heats, setHeats] = useState(initialHeats)
   const [pending, startTransition] = useTransition()
@@ -136,17 +98,43 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
   const [danceFilter, setDanceFilter] = useState<string>('All')
 
   const instructors = getAllInstructors(studios)
-  // Unified column list: instructor IDs + null sentinel for unassigned
   const columns: (number | null)[] = [...instructors.map(i => i.id), null]
   const dances = ['All', ...Array.from(new Set(initialHeats.map(h => h.dance))).sort()]
   const visibleHeats = danceFilter === 'All' ? heats : heats.filter(h => h.dance === danceFilter)
 
-  // Build a map: heatId → event (only multi-heat events)
+  // Assign a stable color index to each event that spans multiple heats
   const multiHeatEvents = events.filter(e => e.heatIds.length > 1)
-  const heatEventMap = new Map<number, { event: EventInfo; colorIdx: number }>()
-  multiHeatEvents.forEach((ev, idx) => {
-    ev.heatIds.forEach(hid => heatEventMap.set(hid, { event: ev, colorIdx: idx % EVENT_COLORS.length }))
-  })
+  const eventColorIdx = new Map(multiHeatEvents.map((e, i) => [e.id, i % EVENT_COLORS.length]))
+
+  // Expand heat list into rows: heats shared by 2+ events become multiple rows
+  const rows: Row[] = []
+  for (const heat of visibleHeats) {
+    const eventsForHeat = events.filter(e => e.heatIds.includes(heat.id))
+    if (eventsForHeat.length > 1) {
+      // Split: one row per event sharing this heat
+      for (const ev of eventsForHeat) {
+        const ci = eventColorIdx.get(ev.id) ?? (eventsForHeat.indexOf(ev) % EVENT_COLORS.length)
+        rows.push({
+          heat,
+          rowKey: `${heat.id}-${ev.id}`,
+          label: ev.name,
+          eventColor: EVENT_COLORS[ci],
+          studentFilter: new Set(ev.studentIds),
+        })
+      }
+    } else {
+      // Single row
+      const ev = eventsForHeat[0] ?? null
+      const ci = ev ? (eventColorIdx.get(ev.id) ?? 0) : null
+      rows.push({
+        heat,
+        rowKey: String(heat.id),
+        label: `H${heat.number} · ${heat.dance}`,
+        eventColor: ev && ev.heatIds.length > 1 && ci !== null ? EVENT_COLORS[ci] : null,
+        studentFilter: null,
+      })
+    }
+  }
 
   const handleDrop = (toHeatId: number, toInstrId: number | null) => {
     const drag = dragRef.current
@@ -170,7 +158,6 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
 
   return (
     <div>
-      {/* Dance filter */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {dances.map(d => (
           <button key={d} onClick={() => setDanceFilter(d)} style={{
@@ -185,11 +172,18 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
       <div style={{ overflowX: 'auto' }}>
         <table style={{
           borderCollapse: 'collapse',
-          minWidth: `${120 + columns.length * 130}px`,
+          width: '100%',
           fontSize: '0.78rem',
           opacity: pending ? 0.75 : 1,
           transition: 'opacity .15s',
+          tableLayout: 'fixed',
         }}>
+          <colgroup>
+            <col style={{ width: 130 }} />
+            {instructors.map(i => <col key={i.id} style={{ width: 140 }} />)}
+            {/* Last column gets all remaining space */}
+            <col style={{ width: 'auto' }} />
+          </colgroup>
           <thead>
             <tr>
               <th style={TH_HEAT}>Heat</th>
@@ -198,33 +192,42 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
             </tr>
           </thead>
           <tbody>
-            {visibleHeats.map(heat => {
-              const count = heat.entries.length
+            {rows.map(({ heat, rowKey, label, eventColor, studentFilter }) => {
+              const visibleEntries = studentFilter
+                ? heat.entries.filter(e => studentFilter.has(e.studentId))
+                : heat.entries
+              const count = visibleEntries.length
               const status = heatStatus(count, heat.max)
-              const ev = heatEventMap.get(heat.id)
-              const evColor = ev ? EVENT_COLORS[ev.colorIdx] : null
 
               return (
-                <tr key={heat.id} style={evColor ? { borderLeft: `4px solid ${evColor.border}` } : undefined}>
-                  <td style={{ ...TD_HEAT_LABEL, borderLeft: evColor ? `4px solid ${evColor.border}` : undefined }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>H{heat.number}</span>
-                      <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{heat.dance}</span>
+                <tr key={rowKey}>
+                  <td style={{
+                    ...TD_HEAT_LABEL,
+                    borderLeft: eventColor ? `4px solid ${eventColor.border}` : undefined,
+                    background: eventColor ? eventColor.bg : 'var(--card, #fff)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                        H{heat.number}
+                      </span>
+                      {eventColor ? (
+                        <span style={{ fontSize: '0.7rem', color: eventColor.text, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {label}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--muted)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                          {heat.dance}
+                        </span>
+                      )}
                       <span style={{
                         fontSize: '0.68rem', fontWeight: 600, padding: '1px 5px', borderRadius: 9,
-                        background: status.bg, color: status.color,
+                        background: status.bg, color: status.color, whiteSpace: 'nowrap',
                       }}>{count}</span>
                     </div>
-                    {evColor && (
-                      <div style={{
-                        fontSize: '0.65rem', fontWeight: 600, marginTop: 2,
-                        color: evColor.text, whiteSpace: 'nowrap',
-                      }}>{ev!.event.name}</div>
-                    )}
                   </td>
 
                   {columns.map(instrId => {
-                    const cellEntries = heat.entries.filter(e =>
+                    const cellEntries = visibleEntries.filter(e =>
                       instrId === null ? e.instructorId == null : e.instructorId === instrId
                     )
                     const isOver = dragOver?.heatId === heat.id && dragOver?.instrId === instrId
@@ -232,16 +235,56 @@ export default function HeatRebalancer({ heats: initialHeats, studios, events = 
                       <td
                         key={instrId ?? 'unassigned'}
                         style={{
-                          ...TD_CELL,
+                          padding: '4px 5px',
+                          border: '1px solid var(--border)',
+                          verticalAlign: 'top',
+                          transition: 'background .1s',
                           background: isOver ? 'var(--drag-bg, #e8f0fe)' : undefined,
                           outline: isOver ? '2px solid var(--accent)' : undefined,
                           outlineOffset: -2,
+                          // Last column: no width constraint, wraps freely
+                          ...(instrId === null ? { minWidth: 200 } : { minWidth: 110 }),
                         }}
                         onDragOver={e => { e.preventDefault(); setDragOver({ heatId: heat.id, instrId }) }}
                         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
                         onDrop={() => handleDrop(heat.id, instrId)}
                       >
-                        {renderChips(cellEntries, heat, heats, dragRef, setDragOver)}
+                        {cellEntries.map(entry => {
+                          const btb = isBTBEntry(entry, heat, heats)
+                          const btbDir = btb ? getBTBDir(entry, heat, heats) : null
+                          return (
+                            <span
+                              key={entry.id}
+                              draggable
+                              onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
+                              onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
+                              style={{
+                                display: 'inline-block',
+                                verticalAlign: 'middle',
+                                padding: btb ? '1px 7px 1px 5px' : '1px 7px',
+                                margin: '1px 2px 1px 0',
+                                borderRadius: 10,
+                                background: btb ? BTB_COLOR + '18' : 'var(--card, #fff)',
+                                border: `1px solid ${btb ? BTB_COLOR : 'var(--border, #d4d9e0)'}`,
+                                borderLeft: btb ? `3px solid ${BTB_COLOR}` : undefined,
+                                fontSize: '0.7rem',
+                                fontWeight: 500,
+                                cursor: 'grab',
+                                userSelect: 'none' as const,
+                                whiteSpace: 'nowrap' as const,
+                                lineHeight: 1.6,
+                              }}
+                              title={btbDir ? `Back-to-back: also in H${btbDir === 'prev' ? heat.number - 1 : btbDir === 'next' ? heat.number + 1 : `${heat.number - 1} + ${heat.number + 1}`}` : undefined}
+                            >
+                              {entry.studentName}
+                              {btbDir && (
+                                <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>
+                                  {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
+                                </span>
+                              )}
+                            </span>
+                          )
+                        })}
                       </td>
                     )
                   })}
@@ -289,13 +332,4 @@ const TD_HEAT_LABEL: React.CSSProperties = {
   position: 'sticky',
   left: 0,
   zIndex: 1,
-}
-
-const TD_CELL: React.CSSProperties = {
-  padding: '4px 5px',
-  border: '1px solid var(--border)',
-  verticalAlign: 'top',
-  minWidth: 110,
-  transition: 'background .1s',
-  lineHeight: 1.8,
 }
