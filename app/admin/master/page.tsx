@@ -55,10 +55,18 @@ export default async function MasterView() {
     instructors: s.instructors.map(i => ({ id: i.id, name: i.name })),
   }))
 
+  const rebalancerEvents = events.map(e => ({
+    id: e.id,
+    name: e.name,
+    heatIds: e.heats.map(eh => eh.heatId),
+    studentIds: eventStudentIds[e.id] ?? [],
+  }))
+
   return (
     <MasterViewClient
       rebalancerHeats={rebalancerHeats}
       rebalancerStudios={rebalancerStudios}
+      rebalancerEvents={rebalancerEvents}
       heatCount={heats.length}
       entryCount={heats.reduce((s, h) => s + h.entries.length, 0)}
     >

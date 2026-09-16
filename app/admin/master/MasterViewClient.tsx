@@ -7,11 +7,12 @@ type Props = {
   children: React.ReactNode
   rebalancerHeats: React.ComponentProps<typeof HeatRebalancer>['heats']
   rebalancerStudios: React.ComponentProps<typeof HeatRebalancer>['studios']
+  rebalancerEvents: React.ComponentProps<typeof HeatRebalancer>['events']
   heatCount: number
   entryCount: number
 }
 
-export default function MasterViewClient({ children, rebalancerHeats, rebalancerStudios, heatCount, entryCount }: Props) {
+export default function MasterViewClient({ children, rebalancerHeats, rebalancerStudios, rebalancerEvents, heatCount, entryCount }: Props) {
   const [mode, setMode] = useState<'sheet' | 'rebalance'>('rebalance')
 
   return (
@@ -56,7 +57,7 @@ export default function MasterViewClient({ children, rebalancerHeats, rebalancer
           <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
             Drag students between heats to rebalance. Colored chips with ↓↑ arrows are in back-to-back heats — avoid moving those.
           </p>
-          <HeatRebalancer heats={rebalancerHeats} studios={rebalancerStudios} />
+          <HeatRebalancer heats={rebalancerHeats} studios={rebalancerStudios} events={rebalancerEvents} />
         </div>
       )}
     </div>
