@@ -17,10 +17,6 @@ export default async function ConfigPage() {
       orderBy: { order: 'asc' },
     }),
     db.studio.findMany({
-      include: {
-        instructors: true,
-        guestStudents: { include: { student: { include: { studio: true } } } },
-      },
       orderBy: { order: 'asc' },
       select: {
         id: true, name: true, slug: true, entriesUnlocked: true,
