@@ -132,9 +132,11 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
             return (
               <tr key={heat.id}>
                 <td style={TD_HEAT_LABEL}>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>H{heat.number}</div>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.7rem', lineHeight: 1.2 }}>{heat.dance}</div>
-                  <span className={`badge badge-${cc}`}>{count}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>H{heat.number}</span>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{heat.dance}</span>
+                    <span className={`badge badge-${cc}`}>{count}</span>
+                  </div>
                 </td>
 
                 {[...instructors.map(i => i.id), UNCATEGORIZED_ID].map(instrId => {
@@ -158,12 +160,12 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                       }}
                       onDrop={() => handleDrop(heat.id, instrId === UNCATEGORIZED_ID ? null : instrId)}
                     >
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'flex-start' }}>
                         {cellEntries.map(entry => {
                           const btb = isBTBEntry(entry, heat, heats)
                           const btbDir = btb ? getBTBDir(entry, heat, heats) : null
                           return (
-                            <div
+                            <span
                               key={entry.id}
                               draggable
                               onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
@@ -188,7 +190,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                                   {btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}
                                 </span>
                               )}
-                            </div>
+                            </span>
                           )
                         })}
                       </div>
@@ -233,7 +235,7 @@ const TH_INSTR: React.CSSProperties = {
 }
 
 const TD_HEAT_LABEL: React.CSSProperties = {
-  padding: '6px 10px',
+  padding: '4px 8px',
   border: '1px solid var(--border)',
   background: 'var(--card)',
   whiteSpace: 'nowrap',
@@ -244,7 +246,7 @@ const TD_HEAT_LABEL: React.CSSProperties = {
 }
 
 const TD_CELL: React.CSSProperties = {
-  padding: '5px',
+  padding: '4px',
   border: '1px solid var(--border)',
   verticalAlign: 'top',
   minWidth: 110,
@@ -256,7 +258,6 @@ const CHIP: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   padding: '2px 7px',
-  marginBottom: 3,
   borderRadius: 10,
   background: 'var(--card-alt, #f5f3ef)',
   border: '1px solid var(--border)',
