@@ -65,11 +65,11 @@ function getBTBDir(
   return null
 }
 
-function countLabel(n: number, max: number) {
-  if (n >= max * 0.85) return 'over'
-  if (n >= max * 0.60) return 'warn'
-  if (n <= max * 0.38) return 'good'
-  return 'ok'
+function heatStatus(count: number, max: number): { label: string; color: string; bg: string } {
+  if (count >= max)                       return { label: 'Full',       color: '#dc2626', bg: '#fef2f2' }
+  if (count >= Math.floor(max * 0.75))    return { label: 'Filling Up', color: '#ea580c', bg: '#fff7ed' }
+  if (count >= Math.floor(max / 2))       return { label: 'Half Full',  color: '#d97706', bg: '#fffbeb' }
+  return                                         { label: 'Open',       color: '#16a34a', bg: '#f0fdf4' }
 }
 
 export default function HeatRebalancer({ heats: initialHeats, studios }: Props) {
@@ -128,14 +128,17 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
         <tbody>
           {heats.map(heat => {
             const count = heat.entries.length
-            const cc = countLabel(count, heat.max)
+            const status = heatStatus(count, heat.max)
             return (
               <tr key={heat.id}>
                 <td style={TD_HEAT_LABEL}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                     <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>H{heat.number}</span>
                     <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{heat.dance}</span>
-                    <span className={`badge badge-${cc}`}>{count}</span>
+                    <span style={{
+                      fontSize: '0.68rem', fontWeight: 600, padding: '1px 5px', borderRadius: 9,
+                      background: status.bg, color: status.color,
+                    }}>{count}</span>
                   </div>
                 </td>
 
@@ -248,14 +251,14 @@ const TD_CELL: React.CSSProperties = {
   border: '1px solid var(--border)',
   verticalAlign: 'top',
   minWidth: 110,
-  minHeight: 40,
   transition: 'background .1s',
+  lineHeight: 1.8,
 }
 
 const CHIP: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: '2px 7px',
+  display: 'inline-block',
+  verticalAlign: 'middle',
+  padding: '1px 7px',
   margin: '1px 2px 1px 0',
   borderRadius: 10,
   background: 'var(--card-alt, #f5f3ef)',
@@ -265,8 +268,8 @@ const CHIP: React.CSSProperties = {
   cursor: 'grab',
   userSelect: 'none',
   whiteSpace: 'nowrap',
-  maxWidth: '100%',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   transition: 'opacity .1s',
+  lineHeight: 1.6,
 }
