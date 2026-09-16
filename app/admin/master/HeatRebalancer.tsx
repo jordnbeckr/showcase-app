@@ -105,8 +105,6 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
     })
   }
 
-  const UNCATEGORIZED_ID = -1 // sentinel for "no instructor" column
-
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{
@@ -122,7 +120,6 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
             {instructors.map(i => (
               <th key={i.id} style={TH_INSTR}>{i.name}</th>
             ))}
-            <th style={TH_INSTR} title="Students with no instructor assigned">—</th>
           </tr>
         </thead>
         <tbody>
@@ -142,10 +139,8 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                   </div>
                 </td>
 
-                {[...instructors.map(i => i.id), UNCATEGORIZED_ID].map(instrId => {
-                  const cellEntries = heat.entries.filter(e =>
-                    instrId === UNCATEGORIZED_ID ? e.instructorId == null : e.instructorId === instrId
-                  )
+                {instructors.map(i => i.id).map(instrId => {
+                  const cellEntries = heat.entries.filter(e => e.instructorId === instrId)
                   const isOver = dragOver?.heatId === heat.id && dragOver?.instrId === instrId
                   return (
                     <td
@@ -161,7 +156,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                         if (!e.currentTarget.contains(e.relatedTarget as Node))
                           setDragOver(null)
                       }}
-                      onDrop={() => handleDrop(heat.id, instrId === UNCATEGORIZED_ID ? null : instrId)}
+                      onDrop={() => handleDrop(heat.id, instrId)}
                     >
                       {cellEntries.map(entry => {
                         const btb = isBTBEntry(entry, heat, heats)
