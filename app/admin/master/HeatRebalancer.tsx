@@ -138,6 +138,7 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
             {instructors.map(i => (
               <th key={i.id} style={TH_INSTR}>{i.name}</th>
             ))}
+            <th style={TH_INSTR}>—</th>
           </tr>
         </thead>
         <tbody>
@@ -211,6 +212,46 @@ export default function HeatRebalancer({ heats: initialHeats, studios }: Props) 
                     </td>
                   )
                 })}
+                {/* Unassigned column */}
+                {(() => {
+                  const cellEntries = heat.entries.filter(e => e.instructorId == null)
+                  const isOver = dragOver?.heatId === heat.id && dragOver?.instrId === null
+                  return (
+                    <td
+                      key="unassigned"
+                      style={{
+                        ...TD_CELL,
+                        background: isOver ? 'var(--drag-bg)' : undefined,
+                        outline: isOver ? '2px solid var(--accent)' : undefined,
+                        outlineOffset: -2,
+                      }}
+                      onDragOver={e => { e.preventDefault(); setDragOver({ heatId: heat.id, instrId: null }) }}
+                      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
+                      onDrop={() => handleDrop(heat.id, null)}
+                    >
+                      {cellEntries.map(entry => {
+                        const btb = isBTBEntry(entry, heat, heats)
+                        const btbDir = btb ? getBTBDir(entry, heat, heats) : null
+                        return (
+                          <span
+                            key={entry.id}
+                            draggable
+                            onDragStart={() => { dragRef.current = { entryId: entry.id, fromHeatId: heat.id } }}
+                            onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
+                            style={{
+                              ...CHIP,
+                              ...(btb ? { borderLeft: `3px solid ${BTB_COLOR}`, background: BTB_COLOR + '18', paddingLeft: 5 } : {}),
+                            }}
+                            title={btbDir ? `Back-to-back: also in H${btbDir === 'prev' ? heat.number - 1 : btbDir === 'next' ? heat.number + 1 : `${heat.number - 1} + ${heat.number + 1}`}` : undefined}
+                          >
+                            {entry.studentName}
+                            {btbDir && <span style={{ marginLeft: 3, fontWeight: 700, color: BTB_COLOR, fontSize: '0.65rem' }}>{btbDir === 'both' ? '↕' : btbDir === 'next' ? '↓' : '↑'}</span>}
+                          </span>
+                        )
+                      })}
+                    </td>
+                  )
+                })()}
               </tr>
             )
           })}
