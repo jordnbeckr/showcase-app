@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import HeatSheet from '@/components/HeatSheet'
+import MasterViewClient from './MasterViewClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,17 +29,39 @@ export default async function MasterView() {
     db.studentEvent.findMany({ select: { studentId: true, eventId: true } }),
   ])
 
-  // eventId → Set of studentIds enrolled in that event
   const eventStudentIds: Record<number, number[]> = {}
   for (const se of studentEvents) {
     if (!eventStudentIds[se.eventId]) eventStudentIds[se.eventId] = []
     eventStudentIds[se.eventId].push(se.studentId)
   }
 
+  const rebalancerHeats = heats.map(h => ({
+    id: h.id,
+    number: h.number,
+    dance: h.danceType.name,
+    max: 24,
+    entries: h.entries.map(e => ({
+      id: e.id,
+      studentId: e.student.id,
+      studentName: `${e.student.firstName} ${e.student.lastName}`,
+      instructorId: e.instructor?.id ?? null,
+      instructorName: e.instructor?.name ?? null,
+    })),
+  }))
+
+  const rebalancerStudios = studios.map(s => ({
+    id: s.id,
+    name: s.name,
+    instructors: s.instructors.map(i => ({ id: i.id, name: i.name })),
+  }))
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-center">Master Heat Sheet</h1>
-      <p className="text-sm text-gray-500 text-center">All studios · {heats.length} heats · {heats.reduce((s, h) => s + h.entries.length, 0)} total entries</p>
+    <MasterViewClient
+      rebalancerHeats={rebalancerHeats}
+      rebalancerStudios={rebalancerStudios}
+      heatCount={heats.length}
+      entryCount={heats.reduce((s, h) => s + h.entries.length, 0)}
+    >
       <HeatSheet
         heats={heats}
         studios={studios}
@@ -46,6 +69,6 @@ export default async function MasterView() {
         eventStudentIds={eventStudentIds}
         adminView
       />
-    </div>
+    </MasterViewClient>
   )
 }

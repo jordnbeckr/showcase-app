@@ -446,3 +446,9 @@ export async function setStudioEntriesUnlocked(studioId: number, unlocked: boole
   await db.studio.update({ where: { id: studioId }, data: { entriesUnlocked: unlocked } })
   revalidatePath('/admin/config')
 }
+
+export async function moveHeatEntry(entryId: number, newHeatId: number) {
+  await requireAdmin()
+  await db.heatEntry.update({ where: { id: entryId }, data: { heatId: newHeatId } })
+  revalidatePath('/admin/master')
+}
