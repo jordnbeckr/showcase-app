@@ -57,6 +57,7 @@ function capacityLabel(count: number, max: number) {
 
 export default function HeatSignUp({
   slug,
+  isLocked = false,
   students,
   instructors,
   heats,
@@ -70,6 +71,7 @@ export default function HeatSignUp({
   duplicateFirstNames = new Set<string>(),
 }: {
   slug: string
+  isLocked?: boolean
   studio: { id: number; name: string }
   students: Student[]
   instructors: Instructor[]
@@ -178,6 +180,7 @@ export default function HeatSignUp({
   }, [filteredHeats, filteredHeatIds, events, heats, heatInAnyEvent])
 
   function handleAddSingle(heatId: number, instructorId: number, studentId?: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const sid = studentId ?? (selectedStudentId ? parseInt(selectedStudentId) : null)
     if (!sid) { setError('Select a student first'); return }
     startTransition(async () => {
@@ -189,6 +192,7 @@ export default function HeatSignUp({
   }
 
   function handleAddEvent(eventId: number, instructorId: number, studentId?: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const sid = studentId ?? (selectedStudentId ? parseInt(selectedStudentId) : null)
     if (!sid) { setError('Select a student first'); return }
     startTransition(async () => {
@@ -200,6 +204,7 @@ export default function HeatSignUp({
   }
 
   function handleRemoveSingle(entryId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     setRemovedEntryIds(prev => new Set(prev).add(entryId))
     startTransition(async () => {
       const result = await removeHeatEntry(slug, entryId)
@@ -211,6 +216,7 @@ export default function HeatSignUp({
   }
 
   function handleRemoveEvent(eventId: number, studentId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const key = `${eventId}-${studentId}`
     setRemovedEventKeys(prev => new Set(prev).add(key))
     startTransition(async () => {
@@ -223,6 +229,7 @@ export default function HeatSignUp({
   }
 
   function handleAddAmateurPair(eventId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const lid = parseInt(amateurLeaderId)
     const fid = parseInt(amateurFollowerId)
     if (!lid || !fid) { setError('Select both a leader and a follower'); return }
@@ -234,6 +241,7 @@ export default function HeatSignUp({
   }
 
   function handleAddAmateurHeatPair(heatId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const lid = parseInt(amateurHeatLeaderId)
     const fid = parseInt(amateurHeatFollowerId)
     if (!lid || !fid) { setError('Select both a leader and a follower'); return }
@@ -245,6 +253,7 @@ export default function HeatSignUp({
   }
 
   function handleRemoveAmateurHeatPair(heatId: number, leaderId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const key = `${heatId}-${leaderId}`
     setRemovedAmateurHeatKeys(prev => new Set(prev).add(key))
     startTransition(async () => {
@@ -257,6 +266,7 @@ export default function HeatSignUp({
   }
 
   function handleRemoveAmateurPair(eventId: number, leaderId: number) {
+    if (isLocked) { setError('Entry deadline has passed. Contact your coordinator to make changes.'); return }
     const key = `${eventId}-${leaderId}`
     setRemovedAmateurKeys(prev => new Set(prev).add(key))
     startTransition(async () => {
@@ -478,6 +488,11 @@ export default function HeatSignUp({
 
   return (
     <div className="space-y-3">
+      {isLocked && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#991b1b' }}>
+          🔒 <strong>Entries are closed.</strong>&nbsp;The entry deadline has passed. Contact your coordinator to make changes.
+        </div>
+      )}
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-end px-4 py-3 card">
         <div>

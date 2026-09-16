@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import PlanGrid from './PlanGrid'
 import AttendancePanel from './AttendancePanel'
+import { isPastEntryDeadline } from '@/lib/entryDeadline'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,8 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
     },
   })
   if (!studio) redirect('/login/studio')
+
+  const isLocked = isPastEntryDeadline() && !studio.entriesUnlocked
 
   const [danceTypes, events, heatCounts, planEntries, planEventEntries, attendanceNotes] = await Promise.all([
     db.danceType.findMany({ orderBy: { order: 'asc' } }),
@@ -59,6 +62,7 @@ export default async function PlanPage({ params }: { params: Promise<{ slug: str
     <>
     <PlanGrid
       slug={slug}
+      isLocked={isLocked}
       instructors={[...studio.instructors]
         .sort((a, b) => {
           const lastName = (n: string) => n.trim().split(' ').slice(-1)[0].toLowerCase()

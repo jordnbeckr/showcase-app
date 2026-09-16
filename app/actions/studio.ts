@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { logActivity } from './activity'
+import { isPastEntryDeadline } from '@/lib/entryDeadline'
 
 async function requireStudio(studioSlug: string) {
   const session = await getSession()
@@ -13,6 +14,12 @@ async function requireStudio(studioSlug: string) {
   const studio = await db.studio.findUnique({ where: { slug: studioSlug } })
   if (!studio) throw new Error('Studio not found')
   return studio
+}
+
+async function checkEntryLock(studioSlug: string) {
+  if (!isPastEntryDeadline()) return
+  const studio = await db.studio.findUnique({ where: { slug: studioSlug }, select: { entriesUnlocked: true } })
+  if (!studio?.entriesUnlocked) throw new Error('Entry deadline has passed. Contact your coordinator to make changes.')
 }
 
 // --- Students ---
@@ -106,6 +113,7 @@ export async function addHeatEntry(
   studentId: number,
   instructorId: number
 ) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
 
   // Verify student belongs to this studio or is a shared guest
@@ -151,6 +159,7 @@ export async function addEventEntry(
   studentId: number,
   instructorId: number
 ) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
 
   const student = await db.student.findFirst({
@@ -205,6 +214,7 @@ export async function removeEventEntry(
   eventId: number,
   studentId: number
 ): Promise<{ error: string } | null> {
+  await checkEntryLock(studioSlug)
   await requireStudio(studioSlug)
   const eventHeatRows = await db.eventHeat.findMany({ where: { eventId } })
   const eventHeatIds = eventHeatRows.map((eh: { eventId: number; heatId: number }) => eh.heatId)
@@ -224,6 +234,7 @@ export async function addAmateurEventEntry(
   leaderId: number,
   followerId: number
 ) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
 
   const leader = await db.student.findFirst({ where: { id: leaderId, studioId: studio.id } })
@@ -272,6 +283,7 @@ export async function removeAmateurEventEntry(
   eventId: number,
   studentId: number
 ) {
+  await checkEntryLock(studioSlug)
   await requireStudio(studioSlug)
   const enrollment = await db.studentEvent.findFirst({ where: { studentId, eventId } })
   const partnerId = enrollment?.partnerStudentId ?? null
@@ -292,6 +304,7 @@ export async function removeAmateurEventEntry(
 }
 
 export async function removeHeatEntry(studioSlug: string, entryId: number) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
   const entry = await db.heatEntry.findFirst({
     where: {
@@ -325,6 +338,7 @@ export async function addAmateurHeatEntry(
   leaderId: number,
   followerId: number
 ) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
 
   const leader = await db.student.findFirst({ where: { id: leaderId, studioId: studio.id } })
@@ -358,6 +372,7 @@ export async function removeAmateurHeatEntry(
   heatId: number,
   leaderId: number
 ) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
 
   const leaderEntry = await db.heatEntry.findFirst({
@@ -398,6 +413,7 @@ export async function reassignHeatEntry(
 // --- Shows ---
 
 export async function addProShow(studioSlug: string, formData: FormData) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
   await db.proShow.create({
     data: {
@@ -414,12 +430,14 @@ export async function addProShow(studioSlug: string, formData: FormData) {
 }
 
 export async function deleteProShow(studioSlug: string, id: number) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
   await db.proShow.deleteMany({ where: { id, studioId: studio.id } })
   revalidatePath(`/studio/${studioSlug}/shows`)
 }
 
 export async function addStudentShow(studioSlug: string, formData: FormData) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
   const studentIds = (formData.getAll('studentIds') as string[]).map(Number).filter(Boolean)
   const instructorIds = (formData.getAll('instructorIds') as string[]).map(Number).filter(Boolean)
@@ -441,6 +459,7 @@ export async function addStudentShow(studioSlug: string, formData: FormData) {
 }
 
 export async function deleteStudentShow(studioSlug: string, id: number) {
+  await checkEntryLock(studioSlug)
   const studio = await requireStudio(studioSlug)
   await db.studentShow.deleteMany({ where: { id, studioId: studio.id } })
   revalidatePath(`/studio/${studioSlug}/shows`)

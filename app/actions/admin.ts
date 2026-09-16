@@ -440,3 +440,9 @@ export async function reorderFeedbackCategories(orderedIds: number[]) {
   revalidatePath('/admin/config')
   revalidatePath('/judge')
 }
+
+export async function setStudioEntriesUnlocked(studioId: number, unlocked: boolean) {
+  await requireAdmin()
+  await db.studio.update({ where: { id: studioId }, data: { entriesUnlocked: unlocked } })
+  revalidatePath('/admin/config')
+}

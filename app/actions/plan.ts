@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { logActivity } from './activity'
+import { isPastEntryDeadline } from '@/lib/entryDeadline'
 
 async function requireStudio(slug: string) {
   const session = await getSession()
@@ -11,6 +12,12 @@ async function requireStudio(slug: string) {
   const studio = await db.studio.findUnique({ where: { slug } })
   if (!studio) throw new Error('Studio not found')
   return studio
+}
+
+async function checkEntryLock(slug: string) {
+  if (!isPastEntryDeadline()) return
+  const studio = await db.studio.findUnique({ where: { slug }, select: { entriesUnlocked: true } })
+  if (!studio?.entriesUnlocked) throw new Error('Entry deadline has passed. Contact your coordinator to make changes.')
 }
 
 export async function setPlanEntry(
@@ -21,6 +28,7 @@ export async function setPlanEntry(
   category: 'closed' | 'open',
   slotIndex: number
 ) {
+  await checkEntryLock(slug)
   const studio = await requireStudio(slug)
   await db.planEntry.upsert({
     where: { instructorId_danceTypeId_category_slotIndex: { instructorId, danceTypeId, category, slotIndex } },
@@ -31,12 +39,14 @@ export async function setPlanEntry(
 }
 
 export async function clearPlanEntry(slug: string, id: number) {
+  await checkEntryLock(slug)
   await requireStudio(slug)
   await db.planEntry.delete({ where: { id } })
   revalidatePath(`/studio/${slug}/plan`)
 }
 
 export async function unpublishPlanEntry(slug: string, id: number) {
+  await checkEntryLock(slug)
   await requireStudio(slug)
   const entry = await db.planEntry.findUnique({ where: { id } })
   if (!entry) return
@@ -55,6 +65,7 @@ export async function unpublishPlanEntry(slug: string, id: number) {
 }
 
 export async function unpublishPlanEventEntry(slug: string, id: number) {
+  await checkEntryLock(slug)
   await requireStudio(slug)
   const entry = await db.planEventEntry.findUnique({ where: { id } })
   if (!entry) return
@@ -74,6 +85,7 @@ export async function addPlanEventEntry(
   studentId: number,
   eventId: number
 ) {
+  await checkEntryLock(slug)
   const studio = await requireStudio(slug)
   await db.planEventEntry.upsert({
     where: { instructorId_studentId_eventId: { instructorId, studentId, eventId } },
@@ -84,6 +96,7 @@ export async function addPlanEventEntry(
 }
 
 export async function removePlanEventEntry(slug: string, id: number) {
+  await checkEntryLock(slug)
   await requireStudio(slug)
   await db.planEventEntry.delete({ where: { id } })
   revalidatePath(`/studio/${slug}/plan`)

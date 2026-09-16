@@ -12,6 +12,8 @@ model Studio {
   slug            String                 @unique
   passwordHash    String
   order           Int                    @default(0)
+  // Entry lock — false = deadline enforced, true = admin has reopened
+  entriesUnlocked    Boolean @default(false)
   // Showcase billing config
   depositAmount      Float   @default(350)
   requiresDeposit    Boolean @default(true)

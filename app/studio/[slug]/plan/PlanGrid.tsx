@@ -48,6 +48,7 @@ type PlanEventEntry = { id: number; instructorId: number; studentId: number; eve
 
 interface Props {
   slug: string
+  isLocked?: boolean
   instructors: Instructor[]
   students: Student[]
   danceTypes: DanceType[]
@@ -59,7 +60,7 @@ interface Props {
 
 const SLOTS = [1, 2, 3, 4, 5, 6]
 
-export default function PlanGrid({ slug, instructors, students, danceTypes, events, planEntries, planEventEntries, heatCounts }: Props) {
+export default function PlanGrid({ slug, isLocked = false, instructors, students, danceTypes, events, planEntries, planEventEntries, heatCounts }: Props) {
   function availableSlots(danceTypeId: number, category: 'closed' | 'open') {
     return heatCounts.find(h => h.danceTypeId === danceTypeId && h.category === category)?.count ?? 0
   }
@@ -100,6 +101,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
   }
 
   function handleCellClick(danceTypeId: number, category: 'closed' | 'open', slotIndex: number) {
+    if (isLocked) return
     const existing = getEntry(danceTypeId, category, slotIndex)
     if (existing) {
       // Optimistic remove
@@ -144,6 +146,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
   }
 
   function handleRemoveEventEntry(id: number, isPublished: boolean) {
+    if (isLocked) return
     setLocalEventEntries(prev => prev.filter(e => e.id !== id))
     if (isPublished) {
       startTransition(async () => { await unpublishPlanEventEntry(slug, id) })
@@ -168,6 +171,12 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif' }}>
 
+      {isLocked && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#991b1b' }}>
+          🔒 <strong>Entries are closed.</strong>&nbsp;The entry deadline has passed. Contact your coordinator to make changes.
+        </div>
+      )}
+
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
         <div>
@@ -185,7 +194,7 @@ export default function PlanGrid({ slug, instructors, students, danceTypes, even
           )}
           <button
             onClick={handlePublish}
-            disabled={isPending || unpublishedCount === 0}
+            disabled={isPending || unpublishedCount === 0 || isLocked}
             style={{
               background: unpublishedCount === 0 ? '#e2e8f0' : '#1e293b',
               color: unpublishedCount === 0 ? '#94a3b8' : '#fff',

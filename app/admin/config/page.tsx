@@ -6,6 +6,7 @@ import HeatOrderConfig from './HeatOrderConfig'
 import JudgesConfig from './JudgesConfig'
 import FeedbackCategoriesConfig from './FeedbackCategoriesConfig'
 import CollapsibleSection from './CollapsibleSection'
+import EntryLockConfig from './EntryLockConfig'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,11 @@ export default async function ConfigPage() {
         guestStudents: { include: { student: { include: { studio: true } } } },
       },
       orderBy: { order: 'asc' },
+      select: {
+        id: true, name: true, slug: true, entriesUnlocked: true,
+        instructors: { select: { id: true, name: true } },
+        guestStudents: { select: { studentId: true, student: { select: { firstName: true, lastName: true, studio: { select: { name: true } } } } } },
+      },
     }),
     db.event.findMany({
       include: {
@@ -48,6 +54,12 @@ export default async function ConfigPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-3">
       <h1 className="text-xl font-bold mb-4 text-center">Configuration</h1>
+
+      <CollapsibleSection title="Entry Lock">
+        <EntryLockConfig
+          studios={studios.map(s => ({ id: s.id, name: s.name, entriesUnlocked: s.entriesUnlocked }))}
+        />
+      </CollapsibleSection>
 
       <CollapsibleSection title="Multi-Dance Events">
         <EventsConfig
@@ -126,6 +138,7 @@ export default async function ConfigPage() {
             id: s.id,
             name: s.name,
             slug: s.slug,
+            entriesUnlocked: s.entriesUnlocked,
             instructors: s.instructors.map(i => ({ id: i.id, name: i.name })),
             guestStudents: s.guestStudents.map(g => ({
               studentId: g.studentId,

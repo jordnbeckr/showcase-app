@@ -1,12 +1,14 @@
 'use client'
 
-import { addStudio, addInstructor, removeInstructor, renameInstructor, updateStudioPassword, deleteStudio, addStudentStudioAccess, removeStudentStudioAccess } from '@/app/actions/admin'
-import { useTransition, useState, useRef } from 'react'
+import { addStudio, addInstructor, removeInstructor, renameInstructor, updateStudioPassword, deleteStudio, addStudentStudioAccess, removeStudentStudioAccess, setStudioEntriesUnlocked } from '@/app/actions/admin'
+import { useTransition, useState, useRef, useEffect } from 'react'
+import { ENTRY_DEADLINE } from '@/lib/entryDeadline'
 
 type Studio = {
   id: number
   name: string
   slug: string
+  entriesUnlocked: boolean
   instructors: { id: number; name: string }[]
   guestStudents: { studentId: number; name: string; homeStudio: string }[]
 }
@@ -17,6 +19,8 @@ export default function StudiosConfig({ studios, allStudents }: { studios: Studi
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [isPastDeadline, setIsPastDeadline] = useState(false)
+  useEffect(() => { setIsPastDeadline(new Date() > ENTRY_DEADLINE) }, [])
   const [editingInstructorId, setEditingInstructorId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState('')
   const editInputRef = useRef<HTMLInputElement>(null)
@@ -217,6 +221,34 @@ export default function StudiosConfig({ studios, allStudents }: { studios: Studi
                     </button>
                   </form>
                 </div>
+
+                {isPastDeadline && (
+                  <div style={{ borderTop: '1px solid #fca5a5', paddingTop: 12 }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#dc2626' }}>Entry Lock</div>
+                    <div className="flex items-center gap-3">
+                      <div style={{ fontSize: '0.82rem', color: studio.entriesUnlocked ? '#14532d' : '#7f1d1d' }}>
+                        {studio.entriesUnlocked
+                          ? '🔓 Entries unlocked — studio can still make changes'
+                          : '🔒 Entries locked — deadline has passed'}
+                      </div>
+                      <button
+                        disabled={pending}
+                        onClick={() => startTransition(async () => {
+                          await setStudioEntriesUnlocked(studio.id, !studio.entriesUnlocked)
+                        })}
+                        className="text-xs px-3 py-1.5 font-semibold disabled:opacity-40"
+                        style={{
+                          borderRadius: 4,
+                          backgroundColor: studio.entriesUnlocked ? '#fef2f2' : '#f0fdf4',
+                          color: studio.entriesUnlocked ? '#dc2626' : '#16a34a',
+                          border: `1px solid ${studio.entriesUnlocked ? '#fca5a5' : '#86efac'}`,
+                        }}
+                      >
+                        {studio.entriesUnlocked ? 'Lock entries' : 'Unlock entries'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

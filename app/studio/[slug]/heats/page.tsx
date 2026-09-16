@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import HeatSignUp from './HeatSignUp'
 import { studentDisplayName } from '@/lib/studentDisplay'
 import DeadlineBanner from '@/components/DeadlineBanner'
+import { isPastEntryDeadline } from '@/lib/entryDeadline'
 
 export default async function HeatsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -18,6 +19,8 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
   })
 
   if (!studio) return <p>Studio not found</p>
+
+  const isLocked = isPastEntryDeadline() && !studio.entriesUnlocked
 
   const studentIds = studio.students.map(s => s.id)
   const instructorIds = studio.instructors.map(i => i.id)
@@ -152,6 +155,7 @@ export default async function HeatsPage({ params }: { params: Promise<{ slug: st
       </div>
       <HeatSignUp
         slug={slug}
+        isLocked={isLocked}
         studio={{ id: studio.id, name: studio.name }}
         students={studio.students}
         instructors={studio.instructors}
