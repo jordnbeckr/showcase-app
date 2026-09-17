@@ -85,10 +85,9 @@ function openPdfWindow(sheet: Sheet) {
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 32px; }
-  col.floor { width: 36px; }
-  col.name { width: 150px; }
-  col.dance { width: 120px; }
-  col.cat { width: 48px; }
+  col.floor { width: 38px; }
+  col.name { width: 140px; }
+  col.dance { width: 125px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
@@ -103,7 +102,7 @@ function openPdfWindow(sheet: Sheet) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="floor"><col class="name"><col class="dance"><col class="cat">
+    <col class="num"><col class="floor"><col class="name"><col class="dance"><col>
   </colgroup>
   <thead>
     <tr><th>#</th><th>Floor</th><th>Name</th><th>Dance</th><th>C/O</th></tr>
@@ -127,13 +126,13 @@ function CategoryBadge({ category }: { category: string }) {
 
 function SheetTable({ segments }: { segments: Seg[] }) {
   return (
-    <table className="data-table" style={{ fontSize: '0.8rem' }}>
+    <table className="data-table" style={{ fontSize: '0.8rem', width: '100%' }}>
       <colgroup>
-        <col style={{ width: 32 }} />
         <col style={{ width: 36 }} />
-        <col style={{ width: 160 }} />
-        <col style={{ width: 120 }} />
-        <col style={{ width: 48 }} />
+        <col style={{ width: 40 }} />
+        <col style={{ width: 150 }} />
+        <col style={{ width: 130 }} />
+        <col />
       </colgroup>
       <thead>
         <tr>
@@ -256,7 +255,7 @@ function printAll(sheets: Sheet[]) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="floor"><col class="name"><col class="dance"><col class="cat">
+    <col class="num"><col class="floor"><col class="name"><col class="dance"><col>
   </colgroup>
   <thead>
     <tr><th>#</th><th>Floor</th><th>Name</th><th>Dance</th><th>C/O</th></tr>
@@ -290,10 +289,9 @@ function printAll(sheets: Sheet[]) {
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
   col.num { width: 32px; }
-  col.floor { width: 36px; }
-  col.name { width: 150px; }
-  col.dance { width: 120px; }
-  col.cat { width: 48px; }
+  col.floor { width: 38px; }
+  col.name { width: 140px; }
+  col.dance { width: 125px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
