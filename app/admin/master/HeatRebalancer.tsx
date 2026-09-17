@@ -303,6 +303,7 @@ const TH_HEAT: React.CSSProperties = {
   position: 'sticky',
   left: 0,
   zIndex: 1,
+  minWidth: 200,
 }
 
 const TH_INSTR: React.CSSProperties = {
@@ -323,4 +324,5 @@ const TD_HEAT_LABEL: React.CSSProperties = {
   position: 'sticky',
   left: 0,
   zIndex: 1,
+  minWidth: 200,
 }
