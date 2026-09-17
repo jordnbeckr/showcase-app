@@ -150,25 +150,51 @@ export default function HeatSignUp({
     const result: Segment[] = []
     const processedEventIds = new Set<number>()
     const claimedHeatIds = new Set<number>()
+    const heatNumById = new Map(heats.map(h => [h.id, h.number]))
+
+    function firstHeatNum(evt: EventInfo) {
+      return Math.min(...evt.heatIds.map(id => heatNumById.get(id) ?? 9999))
+    }
 
     for (const heat of filteredHeats) {
       if (claimedHeatIds.has(heat.id)) continue
 
-      const eventsStartingHere = events.filter(evt => {
-        if (processedEventIds.has(evt.id)) return false
-        const sortedHeatNums = evt.heatIds
-          .map(id => heats.find(h => h.id === id)?.number ?? 9999)
-          .sort((a, b) => a - b)
-        return sortedHeatNums[0] === heat.number
-      })
+      const eventsStartingHere = events.filter(evt =>
+        !processedEventIds.has(evt.id) && firstHeatNum(evt) === heat.number
+      )
 
       if (eventsStartingHere.length > 0) {
-        for (const evt of eventsStartingHere) {
+        // Expand: pull in any events whose first heat falls inside heats claimed
+        // by events already in the group (handles events that share heats with
+        // an earlier-starting event in the same block).
+        const toProcess = [...eventsStartingHere]
+        const toClaimIds = new Set<number>()
+        let i = 0
+        while (i < toProcess.length) {
+          const evt = toProcess[i]
           processedEventIds.add(evt.id)
+          for (const heatId of evt.heatIds) {
+            if (!toClaimIds.has(heatId)) {
+              toClaimIds.add(heatId)
+              const num = heatNumById.get(heatId)
+              if (num !== undefined) {
+                const nested = events.filter(e =>
+                  !processedEventIds.has(e.id) &&
+                  !toProcess.some(x => x.id === e.id) &&
+                  firstHeatNum(e) === num
+                )
+                toProcess.push(...nested)
+              }
+            }
+          }
+          i++
+        }
+        toClaimIds.forEach(id => claimedHeatIds.add(id))
+        toProcess.sort((a, b) => firstHeatNum(a) - firstHeatNum(b))
+        for (const evt of toProcess) {
           const eventHeats = heats
             .filter(h => evt.heatIds.includes(h.id) && filteredHeatIds.has(h.id))
             .sort((a, b) => a.number - b.number)
-          evt.heatIds.forEach(id => claimedHeatIds.add(id))
           result.push({ type: 'event', event: evt, heats: eventHeats })
         }
       } else if (!heatInAnyEvent.has(heat.id)) {
