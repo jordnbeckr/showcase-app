@@ -1,9 +1,9 @@
 'use client'
 
-import { toggleCheckedIn } from '@/app/actions/admin'
+import { toggleCheckedIn, toggleInstructorCheckedIn } from '@/app/actions/admin'
 import { useState, useTransition } from 'react'
 
-type Student = {
+type Person = {
   id: number
   name: string
   role: string
@@ -12,30 +12,38 @@ type Student = {
   leaderNumber: number | null
 }
 
-export default function AttendanceManager({ students }: { students: Student[] }) {
-  const [pending, startTransition] = useTransition()
+type Props = {
+  students: Person[]
+  instructors: Person[]
+}
+
+function PersonList({
+  people,
+  onToggle,
+  pending,
+}: {
+  people: Person[]
+  onToggle: (id: number) => void
+  pending: boolean
+}) {
   const [filter, setFilter] = useState('')
   const [studioFilter, setStudioFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
 
-  const studios = [...new Set(students.map(s => s.studioName))].sort()
+  const studios = [...new Set(people.map(p => p.studioName))].sort()
 
-  const displayed = students.filter(s => {
-    if (studioFilter && s.studioName !== studioFilter) return false
-    if (roleFilter && s.role !== roleFilter) return false
-    if (filter && !s.name.toLowerCase().includes(filter.toLowerCase())) return false
+  const displayed = people.filter(p => {
+    if (studioFilter && p.studioName !== studioFilter) return false
+    if (roleFilter && p.role !== roleFilter) return false
+    if (filter && !p.name.toLowerCase().includes(filter.toLowerCase())) return false
     return true
   })
 
-  const checkedInCount = displayed.filter(s => s.checkedIn).length
-
-  function handleToggle(id: number) {
-    startTransition(() => toggleCheckedIn(id))
-  }
+  const checkedInCount = displayed.filter(p => p.checkedIn).length
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-3 items-end">
+      <div className="flex gap-3 items-end flex-wrap">
         <div>
           <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>STUDIO</label>
           <select value={studioFilter} onChange={e => setStudioFilter(e.target.value)} className="field" style={{ width: 200 }}>
@@ -72,36 +80,77 @@ export default function AttendanceManager({ students }: { students: Student[] })
             </tr>
           </thead>
           <tbody>
-            {displayed.map(student => (
+            {displayed.map(person => (
               <tr
-                key={student.id}
-                onClick={() => handleToggle(student.id)}
+                key={person.id}
+                onClick={() => onToggle(person.id)}
                 style={{
                   cursor: 'pointer',
-                  backgroundColor: student.checkedIn ? '#f0fff4' : undefined,
+                  backgroundColor: person.checkedIn ? '#f0fff4' : undefined,
                   opacity: pending ? 0.7 : 1,
                 }}
                 className="hover:bg-gray-50"
               >
                 <td style={{ textAlign: 'center', fontSize: '1.1rem' }}>
-                  {student.checkedIn ? '✓' : <span style={{ color: 'var(--border)' }}>○</span>}
+                  {person.checkedIn ? '✓' : <span style={{ color: 'var(--border)' }}>○</span>}
                 </td>
-                <td style={{ textAlign: 'center', color: 'var(--muted)', fontWeight: student.leaderNumber ? 700 : 400 }}>
-                  {student.leaderNumber ?? '—'}
+                <td style={{ textAlign: 'center', color: 'var(--muted)', fontWeight: person.leaderNumber ? 700 : 400 }}>
+                  {person.leaderNumber ?? '—'}
                 </td>
-                <td className="font-medium" style={{ textDecoration: student.checkedIn ? 'none' : undefined }}>
-                  {student.name}
-                </td>
-                <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{student.role}</td>
-                <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{student.studioName}</td>
+                <td className="font-medium">{person.name}</td>
+                <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{person.role}</td>
+                <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{person.studioName}</td>
               </tr>
             ))}
             {displayed.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic' }}>No students match</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic' }}>No results match</td></tr>
             )}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+export default function AttendanceManager({ students, instructors }: Props) {
+  const [tab, setTab] = useState<'students' | 'instructors'>('students')
+  const [pending, startTransition] = useTransition()
+
+  function handleToggleStudent(id: number) {
+    startTransition(() => toggleCheckedIn(id))
+  }
+
+  function handleToggleInstructor(id: number) {
+    startTransition(() => toggleInstructorCheckedIn(id))
+  }
+
+  const tabStyle = (active: boolean) => ({
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    padding: '5px 16px',
+    borderRadius: 6,
+    border: '1px solid var(--border)',
+    cursor: 'pointer',
+    background: active ? 'var(--ink)' : 'var(--card)',
+    color: active ? 'var(--page)' : 'var(--muted)',
+  })
+
+  return (
+    <div className="space-y-3">
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button style={tabStyle(tab === 'students')} onClick={() => setTab('students')}>
+          Students ({students.filter(s => s.checkedIn).length}/{students.length})
+        </button>
+        <button style={tabStyle(tab === 'instructors')} onClick={() => setTab('instructors')}>
+          Instructors ({instructors.filter(i => i.checkedIn).length}/{instructors.length})
+        </button>
+      </div>
+
+      {tab === 'students' ? (
+        <PersonList people={students} onToggle={handleToggleStudent} pending={pending} />
+      ) : (
+        <PersonList people={instructors} onToggle={handleToggleInstructor} pending={pending} />
+      )}
     </div>
   )
 }

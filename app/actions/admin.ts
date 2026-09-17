@@ -269,6 +269,14 @@ export async function toggleCheckedIn(studentId: number) {
   revalidatePath('/admin/attendance')
 }
 
+export async function toggleInstructorCheckedIn(instructorId: number) {
+  await requireAdmin()
+  const i = await db.instructor.findUnique({ where: { id: instructorId } })
+  if (!i) return
+  await db.instructor.update({ where: { id: instructorId }, data: { checkedIn: !i.checkedIn } })
+  revalidatePath('/admin/attendance')
+}
+
 // --- Budget ---
 
 // Budget item CRUD moved to app/actions/budget.ts
