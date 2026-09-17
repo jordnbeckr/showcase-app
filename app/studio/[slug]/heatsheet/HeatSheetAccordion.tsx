@@ -37,10 +37,10 @@ function buildTableRows(segments: Seg[]): string {
       const e = seg.entry
       return `<tr>
         <td>${e.heatNumber}</td>
+        <td>${e.floorLabel ?? '—'}</td>
+        <td>${e.partnerName}</td>
         <td>${e.dance}</td>
         <td>${categoryBadgeHtml(e.category)}</td>
-        <td>${e.partnerName}</td>
-        <td>${e.floorLabel ?? '—'}</td>
       </tr>`
     }
     const eventRow = `<tr class="event-row">
@@ -48,10 +48,10 @@ function buildTableRows(segments: Seg[]): string {
     </tr>`
     const entryRows = seg.entries.map(e => `<tr class="event-entry">
       <td>${e.heatNumber}</td>
+      <td>${e.floorLabel ?? '—'}</td>
+      <td>${e.partnerName}</td>
       <td>${e.dance}</td>
       <td>${categoryBadgeHtml(e.category)}</td>
-      <td>${e.partnerName}</td>
-      <td>${e.floorLabel ?? '—'}</td>
     </tr>`).join('')
     const closeRow = `<tr class="event-close"><td colspan="5"></td></tr>`
     return eventRow + entryRows + closeRow
@@ -84,10 +84,10 @@ function openPdfWindow(sheet: Sheet) {
   .event-count { font-weight: 400; font-size: 8.5px; letter-spacing: 0; text-transform: none; margin-left: 6px; }
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
-  col.num { width: 36px; }
-  col.dance { width: 130px; }
-  col.cat { width: 52px; }
-  col.floor { width: 44px; text-align: center; }
+  col.num { width: 32px; }
+  col.floor { width: 36px; }
+  col.dance { width: 120px; }
+  col.cat { width: 48px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
@@ -102,10 +102,10 @@ function openPdfWindow(sheet: Sheet) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="dance"><col class="cat"><col><col class="floor">
+    <col class="num"><col class="floor"><col><col class="dance"><col class="cat">
   </colgroup>
   <thead>
-    <tr><th>#</th><th>Dance</th><th>Type</th><th>Partner</th><th>Floor</th></tr>
+    <tr><th>#</th><th>Floor</th><th>Name</th><th>Dance</th><th>C/O</th></tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>
@@ -128,19 +128,19 @@ function SheetTable({ segments }: { segments: Seg[] }) {
   return (
     <table className="data-table" style={{ fontSize: '0.8rem' }}>
       <colgroup>
+        <col style={{ width: 32 }} />
         <col style={{ width: 36 }} />
-        <col style={{ width: 140 }} />
-        <col style={{ width: 52 }} />
         <col />
-        <col style={{ width: 52 }} />
+        <col style={{ width: 120 }} />
+        <col style={{ width: 48 }} />
       </colgroup>
       <thead>
         <tr>
           <th style={{ textAlign: 'center' }}>#</th>
-          <th>Dance</th>
-          <th>Type</th>
-          <th>Partner</th>
           <th style={{ textAlign: 'center' }}>Floor</th>
+          <th>Name</th>
+          <th>Dance</th>
+          <th>C/O</th>
         </tr>
       </thead>
       <tbody>
@@ -150,14 +150,14 @@ function SheetTable({ segments }: { segments: Seg[] }) {
             return (
               <tr key={e.id}>
                 <td style={{ fontFamily: 'monospace', textAlign: 'center' }}>{e.heatNumber}</td>
-                <td>{e.dance}</td>
-                <td><CategoryBadge category={e.category} /></td>
-                <td style={{ fontSize: '0.85rem' }}>{e.partnerName}</td>
                 <td style={{ textAlign: 'center' }}>
                   {e.floorLabel
                     ? <span style={{ fontWeight: 800, color: '#1e1e1e' }}>{e.floorLabel}</span>
                     : <span style={{ color: 'var(--muted)' }}>—</span>}
                 </td>
+                <td style={{ fontSize: '0.85rem' }}>{e.partnerName}</td>
+                <td>{e.dance}</td>
+                <td><CategoryBadge category={e.category} /></td>
               </tr>
             )
           }
@@ -173,14 +173,14 @@ function SheetTable({ segments }: { segments: Seg[] }) {
             ...seg.entries.map(e => (
               <tr key={e.id} style={{ backgroundColor: '#f0f5fb' }}>
                 <td style={{ fontFamily: 'monospace', textAlign: 'center', borderColor: '#bfcfdd' }}>{e.heatNumber}</td>
-                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.dance}</td>
-                <td style={{ borderColor: '#bfcfdd' }}><CategoryBadge category={e.category} /></td>
-                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.partnerName}</td>
                 <td style={{ textAlign: 'center', borderColor: '#bfcfdd' }}>
                   {e.floorLabel
                     ? <span style={{ fontWeight: 800, color: '#1e1e1e' }}>{e.floorLabel}</span>
                     : <span style={{ color: 'var(--muted)' }}>—</span>}
                 </td>
+                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.partnerName}</td>
+                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.dance}</td>
+                <td style={{ borderColor: '#bfcfdd' }}><CategoryBadge category={e.category} /></td>
               </tr>
             )),
             <tr key={`evt-close-${seg.eventName}-${i}`}>
@@ -255,10 +255,10 @@ function printAll(sheets: Sheet[]) {
 </div>
 <table>
   <colgroup>
-    <col class="num"><col class="dance"><col class="cat"><col><col class="floor">
+    <col class="num"><col class="floor"><col><col class="dance"><col class="cat">
   </colgroup>
   <thead>
-    <tr><th>#</th><th>Dance</th><th>Type</th><th>Partner</th><th>Floor</th></tr>
+    <tr><th>#</th><th>Floor</th><th>Name</th><th>Dance</th><th>C/O</th></tr>
   </thead>
   <tbody>${rows}</tbody>
 </table>
@@ -288,10 +288,10 @@ function printAll(sheets: Sheet[]) {
   .event-count { font-weight: 400; font-size: 8.5px; letter-spacing: 0; text-transform: none; margin-left: 6px; }
   .event-entry td { background: #f0f5fb !important; border-color: #bfcfdd !important; }
   .event-close td { background: #dce7f3 !important; border-bottom: 3px solid #1a2744 !important; border-top: none !important; height: 5px; padding: 0; font-size: 0; line-height: 0; }
-  col.num { width: 36px; }
-  col.dance { width: 130px; }
-  col.cat { width: 52px; }
-  col.floor { width: 44px; text-align: center; }
+  col.num { width: 32px; }
+  col.floor { width: 36px; }
+  col.dance { width: 120px; }
+  col.cat { width: 48px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
 </style>
