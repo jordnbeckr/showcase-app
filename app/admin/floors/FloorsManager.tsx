@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useRef } from 'react'
 import { addFloor, deleteFloor, autoAssignFloors, setHeatFloorAssignment } from '@/app/actions/floors'
 
 type Floor = { id: number; label: string; order: number }
@@ -46,6 +46,8 @@ export default function FloorsManager({
   })
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const dragRef = useRef<{ heatId: number; studentId: number } | null>(null)
+  const [dragOver, setDragOver] = useState<{ heatId: number; floorId: number | null } | null>(null)
 
   // Auto-assign controls
   const [fromHeat, setFromHeat] = useState(heats[0]?.number ?? 1)
@@ -101,6 +103,16 @@ export default function FloorsManager({
     const key = `${heatId}-${studentId}`
     setAssignments(prev => ({ ...prev, [key]: floorId }))
     startTransition(() => setHeatFloorAssignment(heatId, studentId, floorId))
+  }
+
+  function handleDrop(toHeatId: number, toFloorId: number) {
+    const drag = dragRef.current
+    if (!drag || drag.heatId !== toHeatId) return
+    dragRef.current = null
+    setDragOver(null)
+    const currentFloorId = assignments[`${toHeatId}-${drag.studentId}`]
+    if (currentFloorId === toFloorId) return
+    handleReassign(toHeatId, drag.studentId, toFloorId)
   }
 
   // Students with 3+ floor switches across ALL heats
@@ -266,26 +278,37 @@ export default function FloorsManager({
 
               {/* Floor columns */}
               <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.max(floors.length, 1)}, 1fr)${unassigned.length > 0 ? ' 1fr' : ''}` }}>
-                {floors.map((floor, fi) => (
-                  <div key={floor.id} style={{ borderRight: fi < floors.length - 1 ? '1px solid var(--border)' : undefined }}>
-                    <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: '#f5f5f5', borderBottom: '1px solid var(--border)', color: '#555' }}>
-                      Floor {floor.label}
+                {floors.map((floor, fi) => {
+                  const isOver = dragOver?.heatId === heat.id && dragOver?.floorId === floor.id
+                  return (
+                    <div
+                      key={floor.id}
+                      style={{ borderRight: fi < floors.length - 1 ? '1px solid var(--border)' : undefined }}
+                      onDragOver={e => { e.preventDefault(); setDragOver({ heatId: heat.id, floorId: floor.id }) }}
+                      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
+                      onDrop={() => handleDrop(heat.id, floor.id)}
+                    >
+                      <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: isOver ? '#dbeafe' : '#f5f5f5', borderBottom: '1px solid var(--border)', color: isOver ? '#1d4ed8' : '#555', transition: 'background .1s' }}>
+                        Floor {floor.label}
+                      </div>
+                      <div className="p-2 space-y-1 min-h-[48px]" style={{ background: isOver ? '#eff6ff' : undefined, transition: 'background .1s', outline: isOver ? '2px solid #93c5fd' : undefined, outlineOffset: -2 }}>
+                        {(byFloor[floor.id] ?? []).map(entry => (
+                          <EntryChip
+                            key={entry.studentId}
+                            entry={entry}
+                            floors={floors}
+                            currentFloorId={floor.id}
+                            color={studioColor[entry.studioName]}
+                            onMove={(fid) => handleReassign(heat.id, entry.studentId, fid)}
+                            onDragStart={() => { dragRef.current = { heatId: heat.id, studentId: entry.studentId } }}
+                            onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
+                            pending={pending}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div className="p-2 space-y-1 min-h-[48px]">
-                      {(byFloor[floor.id] ?? []).map(entry => (
-                        <EntryChip
-                          key={entry.studentId}
-                          entry={entry}
-                          floors={floors}
-                          currentFloorId={floor.id}
-                          color={studioColor[entry.studioName]}
-                          onMove={(fid) => handleReassign(heat.id, entry.studentId, fid)}
-                          pending={pending}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {unassigned.length > 0 && (
                   <div style={{ borderLeft: floors.length > 0 ? '1px solid var(--border)' : undefined }}>
                     <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: '#fff7ed', borderBottom: '1px solid #fed7aa', color: '#9a3412' }}>
@@ -300,6 +323,8 @@ export default function FloorsManager({
                           currentFloorId={null}
                           color={studioColor[entry.studioName]}
                           onMove={(fid) => handleReassign(heat.id, entry.studentId, fid)}
+                          onDragStart={() => { dragRef.current = { heatId: heat.id, studentId: entry.studentId } }}
+                          onDragEnd={() => { dragRef.current = null; setDragOver(null) }}
                           pending={pending}
                         />
                       ))}
@@ -327,6 +352,8 @@ function EntryChip({
   currentFloorId,
   color,
   onMove,
+  onDragStart,
+  onDragEnd,
   pending,
 }: {
   entry: HeatEntry
@@ -334,6 +361,8 @@ function EntryChip({
   currentFloorId: number | null
   color: string
   onMove: (floorId: number) => void
+  onDragStart: () => void
+  onDragEnd: () => void
   pending: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -345,10 +374,13 @@ function EntryChip({
   return (
     <div className="relative">
       <button
+        draggable
+        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart() }}
+        onDragEnd={onDragEnd}
         onClick={() => setOpen(o => !o)}
         disabled={pending}
         className="w-full text-left px-2 py-1 rounded text-xs"
-        style={{ backgroundColor: color, border: '1px solid rgba(0,0,0,0.1)' }}
+        style={{ backgroundColor: color, border: '1px solid rgba(0,0,0,0.1)', cursor: 'grab' }}
       >
         <div className="font-semibold truncate">{display}</div>
         {partner && <div className="truncate" style={{ color: '#555', fontSize: '0.68rem' }}>{partner}</div>}
