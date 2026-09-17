@@ -144,15 +144,17 @@ export async function autoAssignFloors(
         }
       }
 
-      // Choose floor: prefer last floor, then least-loaded floor
+      // Choose floor: balance load first, use last floor as tiebreaker
       const preferred = lastFloorIdx.get(sid) ?? -1
+      const minCount = Math.min(...floorCount)
       let chosen: number
 
-      if (preferred >= 0 && floorCount[preferred] <= Math.ceil(heat.entries.length / numFloors)) {
+      if (preferred >= 0 && floorCount[preferred] === minCount) {
+        // Previous floor is tied for least-loaded — stick with it
         chosen = preferred
       } else {
-        // Pick least-loaded floor
-        chosen = floorCount.reduce((minI, count, i) => count < floorCount[minI] ? i : minI, 0)
+        // Pick least-loaded floor (first by order if tied)
+        chosen = floorCount.indexOf(minCount)
       }
 
       heatAssigned.set(sid, chosen)
