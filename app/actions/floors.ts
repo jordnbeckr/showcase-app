@@ -144,17 +144,33 @@ export async function autoAssignFloors(
         }
       }
 
-      // Choose floor: balance load first, use last floor as tiebreaker
+      // Choose floor: stay on last floor if it has room, otherwise move to
+      // nearest floor (by index) that does, to minimize large jumps (A→D etc.)
       const preferred = lastFloorIdx.get(sid) ?? -1
-      const minCount = Math.min(...floorCount)
-      let chosen: number
+      const ceiling = Math.ceil(heat.entries.length / numFloors)
+      let chosen = floorCount.indexOf(Math.min(...floorCount))
 
-      if (preferred >= 0 && floorCount[preferred] === minCount) {
-        // Previous floor is tied for least-loaded — stick with it
+      if (preferred >= 0 && floorCount[preferred] < ceiling) {
+        // Last floor still has room — stay put
         chosen = preferred
-      } else {
-        // Pick least-loaded floor (first by order if tied)
-        chosen = floorCount.indexOf(minCount)
+      } else if (preferred >= 0) {
+        // Last floor full — try adjacent floors outward (±1, ±2, …)
+        let found = false
+        for (let delta = 1; delta < numFloors; delta++) {
+          const candidates: number[] = []
+          if (preferred - delta >= 0) candidates.push(preferred - delta)
+          if (preferred + delta < numFloors) candidates.push(preferred + delta)
+          const available = candidates.filter(i => floorCount[i] < ceiling)
+          if (available.length > 0) {
+            // Among the nearest candidates, pick the less loaded
+            chosen = available.reduce((a, b) => floorCount[a] <= floorCount[b] ? a : b)
+            found = true
+            break
+          }
+        }
+        if (!found) {
+          chosen = floorCount.indexOf(Math.min(...floorCount))
+        }
       }
 
       heatAssigned.set(sid, chosen)
