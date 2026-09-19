@@ -343,19 +343,19 @@ function HeatBlock({
 
 function getEntryDisplay(entry: HeatEntry): { leaderNumber: number | null; personA: string; personB: string } {
   if (entry.instructorId !== null && entry.instructorName) {
-    const instRole = entry.instructorRole ?? 'Neither'
-    const stuRole = entry.studentRole
-    if (instRole === 'Leader' && stuRole !== 'Leader') {
-      return {
-        leaderNumber: entry.instructorLeaderNumber,
-        personA: entry.instructorName,
-        personB: `${entry.studentFirstName} ${entry.studentLastName}`,
-      }
-    } else {
+    // Use student.role to determine who leads — instructor.role defaults to 'Neither' for many instructors
+    const studentLeads = entry.studentRole === 'Leader'
+    if (studentLeads) {
       return {
         leaderNumber: entry.studentLeaderNumber,
         personA: `${entry.studentFirstName} ${entry.studentLastName}`,
         personB: entry.instructorName,
+      }
+    } else {
+      return {
+        leaderNumber: entry.instructorLeaderNumber,
+        personA: entry.instructorName,
+        personB: `${entry.studentFirstName} ${entry.studentLastName}`,
       }
     }
   } else if (entry.partnerStudentId !== null) {

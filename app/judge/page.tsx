@@ -110,9 +110,10 @@ export default async function JudgePage() {
           const fid = entryFloorId.get(`${e.studentId}-${h.id}`)
           return fid !== undefined && floorIdsForThisHeat.has(fid)
         }).sort((a, b) => {
-          const numA = (a.instructor?.role === 'Leader' ? a.instructor.leaderNumber : a.student.leaderNumber) ?? 9999
-          const numB = (b.instructor?.role === 'Leader' ? b.instructor.leaderNumber : b.student.leaderNumber) ?? 9999
-          return numA - numB
+          // Use student.role to determine who leads — more reliable than instructor.role (defaults to 'Neither')
+          const numFor = (e: typeof h.entries[number]) =>
+            (e.student.role === 'Leader' ? e.student.leaderNumber : (e.instructor?.leaderNumber ?? e.student.leaderNumber)) ?? 9999
+          return numFor(a) - numFor(b)
         }).map(e => ({
           studentId: e.studentId,
           studentFirstName: e.student.firstName,
