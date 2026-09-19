@@ -247,8 +247,8 @@ export async function autoAssignLeaderNumbers() {
   })
 
   // Numbers missing from the physical collection — skip these when assigning
-  const MISSING_FOLLOWER = new Set([102, 103, 104, 106, 114, 116, 119, 129, 131, 134, 137])
-  const MISSING_LEADER   = new Set([207, 211, 212, 214, 218, 219, 221, 222, 227, 229, 231, 236])
+  const MISSING_INSTRUCTOR = new Set([102, 103, 104, 106, 114, 116, 119, 129, 131, 134, 137])
+  const MISSING_STUDENT    = new Set([207, 211, 212, 214, 218, 219, 221, 222, 227, 229, 231, 236])
 
   function availableNumbers(start: number, count: number, missing: Set<number>): number[] {
     const out: number[] = []
@@ -260,15 +260,15 @@ export async function autoAssignLeaderNumbers() {
     return out
   }
 
-  const followerNums = availableNumbers(100, sortedInstructors.length, MISSING_FOLLOWER)
-  const leaderNums   = availableNumbers(200, students.length, MISSING_LEADER)
+  const instructorNums = availableNumbers(100, sortedInstructors.length, MISSING_INSTRUCTOR)
+  const studentNums    = availableNumbers(201, students.length, MISSING_STUDENT)
 
   await db.$transaction(async (tx: Omit<typeof db, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => {
     for (let i = 0; i < sortedInstructors.length; i++) {
-      await tx.instructor.update({ where: { id: sortedInstructors[i].id }, data: { leaderNumber: followerNums[i] } })
+      await tx.instructor.update({ where: { id: sortedInstructors[i].id }, data: { leaderNumber: instructorNums[i] } })
     }
     for (let i = 0; i < students.length; i++) {
-      await tx.student.update({ where: { id: students[i].id }, data: { leaderNumber: leaderNums[i] } })
+      await tx.student.update({ where: { id: students[i].id }, data: { leaderNumber: studentNums[i] } })
     }
   })
 
