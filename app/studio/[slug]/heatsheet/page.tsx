@@ -50,8 +50,14 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       include: { heat: { include: { danceType: true } }, student: true, instructor: true },
       orderBy: { heat: { number: 'asc' } },
     }),
-    db.studentEvent.findMany({ where: { studentId: { in: [...studentIds, ...sharedStudentIds] } }, include: { event: true } }),
-    db.event.findMany({ include: { heats: true }, orderBy: { order: 'asc' } }),
+    db.studentEvent.findMany({
+      where: { studentId: { in: [...studentIds, ...sharedStudentIds] } },
+      include: { event: true, instructor: true },
+    }),
+    db.event.findMany({
+      include: { heats: { include: { heat: { include: { danceType: true } } } } },
+      orderBy: { order: 'asc' },
+    }),
     db.heatFloorAssignment.findMany({ where: { studentId: { in: studentIds } }, include: { floor: true } }),
     db.floor.findMany({ orderBy: { order: 'asc' } }),
   ])
@@ -117,6 +123,32 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     }
   }
   for (const e of studentEntries) studentMap.get(e.studentId)?.entries.push(e)
+
+  // For competitive events, synthesize entries for any heats not yet in the student's HeatEntry records.
+  // This covers cases where semifinal heats were linked to the event after enrollment was published.
+  for (const se of studentEvents) {
+    const evt = allEvents.find(e => e.id === se.eventId)
+    if (!evt?.isCompetitive) continue
+    const data = studentMap.get(se.studentId)
+    if (!data) continue
+    for (const eh of evt.heats) {
+      if (data.entries.some(e => e.heatId === eh.heatId)) continue
+      // Synthesize a minimal entry so it appears on the heat sheet
+      data.entries.push({
+        id: -(se.studentId * 100000 + eh.heatId),
+        heatId: eh.heatId,
+        studentId: se.studentId,
+        instructorId: se.instructorId,
+        partnerStudentId: null,
+        heat: { number: eh.heat.number, category: eh.heat.category, danceType: { name: eh.heat.danceType.name } },
+        student: data.student as typeof studentEntries[number]['student'],
+        instructor: se.instructor ? { name: se.instructor.name } as typeof studentEntries[number]['instructor'] : null,
+        partnerStudent: null,
+      } as typeof studentEntries[number])
+    }
+    // Keep entries sorted by heat number
+    data.entries.sort((a, b) => a.heat.number - b.heat.number)
+  }
 
   const instructorMap = new Map<number, { instructor: typeof studio.instructors[number]; entries: typeof instructorEntries }>()
   for (const i of studio.instructors) instructorMap.set(i.id, { instructor: i, entries: [] })
