@@ -66,7 +66,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       },
       orderBy: { order: 'asc' },
     }),
-    db.heatFloorAssignment.findMany({ where: { studentId: { in: studentIds } }, include: { floor: true } }),
+    db.heatFloorAssignment.findMany({ where: { studentId: { in: [...studentIds, ...sharedStudentIds] } }, include: { floor: true } }),
     db.floor.findMany({ orderBy: { order: 'asc' } }),
   ])
 
