@@ -231,30 +231,58 @@ export default function ResultsView({
           {events.map(evt => {
             const showSemi = evt.isSemi && evt.phase === 'semi'
             const showFinal = !evt.isSemi || evt.phase === 'final'
+            const ND = evt.dances.length
+            const NC = evt.couples.length
 
-            // For totals, sum across all dances (all heatIds in this phase)
-            const phaseHeatIds = new Set(evt.dances.map(d => d.heatId))
-            const couplesSorted = [...evt.couples].map(c => {
-              const phaseScores = c.scores.filter(s => phaseHeatIds.has(s.heatId))
-              const _total = phaseScores.reduce((s, x) => s + x.place, 0)
-              const _scored = phaseScores.length
-              return { ...c, _total, _scored }
-            }).sort((a, b) => {
-              if (showFinal && a._scored > 0 && b._scored > 0)
-                return a._total !== b._total ? a._total - b._total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
-              return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
+            // Per-dance judge-sum totals: danceJudgeSum[di][ci]
+            const danceJudgeSum: number[][] = evt.dances.map(dance =>
+              evt.couples.map(c =>
+                c.scores.filter(s => s.heatId === dance.heatId).reduce((sum, s) => sum + s.place, 0)
+              )
+            )
+            // Dance placement per couple: dancePlacement[di][ci] = rank (1 = lowest sum = best)
+            const dancePlacement: (number | null)[][] = danceJudgeSum.map(sums => {
+              const order = sums.map((s, ci) => ({ ci, s })).filter(x => x.s > 0).sort((a, b) => a.s - b.s)
+              const ranks: (number | null)[] = new Array(NC).fill(null)
+              order.forEach((x, i) => { ranks[x.ci] = i + 1 })
+              return ranks
             })
+            // Final total = sum of dance placements; final place = rank by final total
+            const finalTotals: number[] = evt.couples.map((_, ci) =>
+              dancePlacement.reduce((sum, dp) => sum + (dp[ci] ?? 0), 0)
+            )
+            const finalPlaces: (number | null)[] = new Array(NC).fill(null)
+            ;[...evt.couples.map((_, ci) => ci).filter(ci => finalTotals[ci] > 0)]
+              .sort((a, b) => finalTotals[a] - finalTotals[b])
+              .forEach((ci, i) => { finalPlaces[ci] = i + 1 })
 
-            const scoredCouples = couplesSorted.map(c => ({ ...c, total: c._total, judgeCount: c._scored }))
-              .filter(c => c.judgeCount > 0)
-              .sort((a, b) => a.total !== b.total ? a.total - b.total : (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+            // Callback rows (semi): sorted by distinct-judge callbackCount desc
+            const callbackRows = [...evt.couples]
+              .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called).length }))
+              .sort((a, b) => b.callbackCount - a.callbackCount || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+            const maxCallbacks = judges.length * ND
+            const cutoffCount = callbackRows[evt.finalSize - 1]?.callbackCount ?? 0
+            const hasTie = callbackRows.filter(c => c.callbackCount >= cutoffCount).length > evt.finalSize &&
+              callbackRows.filter(c => c.callbackCount === cutoffCount).length > 1
 
-            type Ranked = typeof scoredCouples[number] & { rank: number }
-            const ranked: Ranked[] = []
-            for (let i = 0; i < scoredCouples.length; i++) {
-              const rank = i === 0 ? 1 : scoredCouples[i].total === scoredCouples[i - 1].total ? ranked[i - 1].rank : i + 1
-              ranked.push({ ...scoredCouples[i], rank })
-            }
+            // Final rows: sorted by finalTotal asc, then leaderNumber
+            const couplesSortedFinal = evt.couples
+              .map((c, ci) => ({ ...c, ci, ft: finalTotals[ci], fp: finalPlaces[ci] }))
+              .sort((a, b) => {
+                if (a.ft > 0 && b.ft > 0 && a.ft !== b.ft) return a.ft - b.ft
+                return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
+              })
+
+            const JUDGE_COLORS = [
+              { bg: '#f3eeff', fg: '#4c1d95', dot: '#c084fc' },
+              { bg: '#e0f2fe', fg: '#0c4a6e', dot: '#38bdf8' },
+              { bg: '#d1fae5', fg: '#064e3b', dot: '#34d399' },
+              { bg: '#fff7ed', fg: '#7c2d12', dot: '#fb923c' },
+              { bg: '#fdf4ff', fg: '#701a75', dot: '#e879f9' },
+            ]
+
+            const cell = { borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' as const }
+            const thBase = { padding: '9px 10px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
 
             const medalStyle: Record<number, { bg: string; color: string; border: string }> = {
               1: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
@@ -262,16 +290,13 @@ export default function ResultsView({
               3: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
             }
 
-            // Callback tabulation (sorted by count desc)
-            const callbackRows = [...evt.couples]
-              .map(c => ({ ...c, count: c.callbackCount }))
-              .sort((a, b) => b.count - a.count || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-            const cutoffCount = callbackRows[evt.finalSize - 1]?.count ?? 0
-            const atCutoff = callbackRows.filter(c => c.count === cutoffCount)
-            const hasTie = atCutoff.length > 1 && callbackRows.filter(c => c.count >= cutoffCount).length > evt.finalSize
+            const rankedForBanner = couplesSortedFinal
+              .filter(c => c.fp !== null)
+              .map(c => ({ ...c, rank: c.fp! }))
 
             return (
               <div key={evt.id} className="card overflow-hidden">
+                {/* Header */}
                 <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
                   <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
                   <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>
@@ -279,200 +304,175 @@ export default function ResultsView({
                   </span>
                 </div>
 
-                {/* SEMI PHASE: callback tabulation, per dance */}
-                {showSemi && (
-                  <>
-                    {evt.dances.map((dance, dIdx) => (
-                      <div key={dance.heatId}>
-                        <div className="px-4 py-1.5 text-xs font-semibold" style={{ backgroundColor: '#ede9fe', borderTop: dIdx === 0 ? undefined : '1px solid #d8b4fe', color: '#6b21a8', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                          #{dance.heatNumber} · {dance.dance}
-                        </div>
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th style={{ width: 44 }}>#</th>
-                              <th style={{ minWidth: 160 }}>Couple</th>
-                              {judges.map(j => <th key={j.id} style={{ textAlign: 'center' }}>{j.name}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {callbackRows.map((couple, idx) => {
-                              const isIn = idx < evt.finalSize
-                              return (
-                                <tr key={couple.studentId} style={{ backgroundColor: isIn ? '#faf5ff' : undefined }}>
-                                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
-                                  <td style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>
-                                    <span style={{ fontWeight: 600 }}>{couple.personA}</span>
-                                    {couple.personB && <><br /><span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>&amp; {couple.personB}</span></>}
-                                  </td>
-                                  {judges.map(judge => {
-                                    const mark = couple.semiCalled.find(m => m.judgeId === judge.id && m.heatId === dance.heatId)
-                                    return <td key={judge.id} style={{ textAlign: 'center' }}>
-                                      {mark?.called
-                                        ? <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 900, fontSize: '0.95rem', border: '2px solid #16a34a' }}>✓</span>
-                                        : <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface)', color: 'var(--muted)', fontWeight: 400, fontSize: '1rem', border: '1px solid var(--border)' }}>–</span>
-                                      }
-                                    </td>
-                                  })}
-                                </tr>
-                              )
-                            })}
-                            {callbackRows.length === 0 && (
-                              <tr><td colSpan={2 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-                    {/* Summary: unique callback counts */}
-                    <table className="data-table" style={{ borderTop: '2px solid #d8b4fe' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ width: 44 }}>#</th>
-                          <th style={{ minWidth: 160 }}>Couple</th>
-                          <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8', width: 80 }}>Callbacks</th>
-                          <th style={{ width: 80 }}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {callbackRows.map((couple, idx) => {
-                          const isIn = idx < evt.finalSize
-                          const isTiedOut = !isIn && couple.count === cutoffCount && hasTie
-                          return (
-                            <tr key={couple.studentId} style={{ backgroundColor: isIn ? '#faf5ff' : undefined }}>
-                              <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
-                              <td style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>
-                                <span style={{ fontWeight: 600 }}>{couple.personA}</span>
-                                {couple.personB && <><br /><span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>&amp; {couple.personB}</span></>}
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <span style={{ fontWeight: 900, fontSize: '1rem', color: couple.count > 0 ? '#6b21a8' : 'var(--muted)' }}>{couple.count}</span>
-                                <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>/{evt.judgeCount}</span>
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                {isIn
-                                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, backgroundColor: '#16a34a', color: '#fff', fontWeight: 800, fontSize: '0.75rem', border: '2px solid #14532d', letterSpacing: '0.01em' }}>✓ In final</span>
-                                  : isTiedOut
-                                    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, backgroundColor: '#f59e0b', color: '#1c1917', fontWeight: 800, fontSize: '0.75rem', border: '2px solid #b45309' }}>⚠ Tie</span>
-                                    : <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 9px', borderRadius: 6, backgroundColor: 'var(--surface)', color: 'var(--muted)', fontWeight: 600, fontSize: '0.75rem', border: '1px solid var(--border)' }}>Out</span>}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                    {hasTie && (
-                      <div className="px-4 py-2 text-xs" style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', color: '#713f12' }}>
-                        ⚠ Tie at cutoff — adjust Final size in Config → Events to include tied couples.
-                      </div>
-                    )}
-                  </>
-                )}
+                {/* Judge color legend */}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '7px 14px', background: '#f9f5ff', borderBottom: '1px solid #e9d5ff', fontSize: '0.72rem', color: '#6b21a8', alignItems: 'center' }}>
+                  {judges.map((j, ji) => {
+                    const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                    return (
+                      <span key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: jc.dot, display: 'inline-block', flexShrink: 0 }} />
+                        {j.name}
+                      </span>
+                    )
+                  })}
+                  {showFinal && <>
+                    <span style={{ color: '#c4b5fd' }}>·</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 12, height: 10, borderRadius: 2, background: '#ede9fb', border: '1px solid #a78bfa', display: 'inline-block' }} />
+                      Dance total → placement
+                    </span>
+                  </>}
+                </div>
 
-                {/* FINAL PHASE: per-dance placement tables */}
-                {showFinal && (
-                  <>
-                    {evt.dances.map((dance, dIdx) => (
-                      <div key={dance.heatId}>
-                        <div className="px-4 py-1.5 text-xs font-semibold" style={{ backgroundColor: '#ede9fe', borderTop: dIdx === 0 ? undefined : '1px solid #d8b4fe', color: '#6b21a8', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                          #{dance.heatNumber} · {dance.dance}
-                        </div>
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th style={{ width: 36 }}>#</th>
-                              <th>Couple</th>
-                              {judges.map(j => <th key={j.id} style={{ textAlign: 'center', width: 52 }}>{j.name}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {couplesSorted.map(couple => {
-                              const score = couple.scores.find(s => s.heatId === dance.heatId)
-                              return (
-                                <tr key={couple.studentId}>
-                                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
-                                  <td style={{ whiteSpace: 'nowrap' }}>
-                                    <span style={{ fontWeight: 600 }}>{couple.personA}</span>
-                                    {couple.personB && <span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}> &amp; {couple.personB}</span>}
-                                  </td>
-                                  {judges.map(judge => {
-                                    const js = couple.scores.find(s => s.judgeId === judge.id && s.heatId === dance.heatId)
-                                    return <td key={judge.id} style={{ textAlign: 'center' }}>
-                                      {js
-                                        ? <span style={{ display: 'inline-block', padding: '1px 5px', borderRadius: 4, backgroundColor: '#f3e8ff', color: '#6b21a8', fontSize: '0.85rem', fontWeight: 700 }}>{js.place}</span>
-                                        : <span style={{ color: 'var(--muted)' }}>—</span>}
-                                    </td>
-                                  })}
-                                </tr>
-                              )
-                            })}
-                            {couplesSorted.length === 0 && (
-                              <tr><td colSpan={2 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-                    {/* Totals summary */}
-                    <table className="data-table" style={{ borderTop: '2px solid #d8b4fe' }}>
+                {/* SEMI: row-per-dance table */}
+                {showSemi && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 480 }}>
                       <thead>
                         <tr>
-                          <th style={{ width: 36 }}>#</th>
-                          <th>Couple</th>
-                          {judges.map(j => <th key={j.id} style={{ textAlign: 'center', width: 52 }}>{j.name} total</th>)}
-                          <th style={{ textAlign: 'center', fontWeight: 900, color: '#6b21a8', width: 60 }}>Total</th>
+                          <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
+                          <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
+                          {judges.map((j, ji) => {
+                            const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                            return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
+                          })}
+                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560', borderBottom: '2px solid #3d2560' }}>Callbacks</th>
+                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: 'none', borderBottom: '2px solid #3d2560' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {couplesSorted.map(couple => {
-                          const total = couple._total
-                          const rankEntry = ranked.find(r => r.studentId === couple.studentId)
-                          const rankNum = rankEntry?.rank
-                          const totalBg = rankNum === 1 ? '#fde68a' : rankNum === 2 ? '#cbd5e1' : rankNum === 3 ? '#fed7aa' : 'transparent'
-                          const totalColor = rankNum === 1 ? '#78350f' : rankNum === 2 ? '#1e293b' : rankNum === 3 ? '#7c2d12' : '#6b21a8'
-                          return (
-                            <tr key={couple.studentId}>
-                              <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#555', fontSize: '0.8rem' }}>{couple.leaderNumber ?? '—'}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>
-                                <span style={{ fontWeight: 600 }}>{couple.personA}</span>
-                                {couple.personB && <span style={{ color: 'var(--muted)', fontSize: '0.82rem' }}> &amp; {couple.personB}</span>}
-                              </td>
-                              {judges.map(judge => {
-                                const judgeTotal = evt.dances.reduce((sum, d) => {
-                                  const s = couple.scores.find(s => s.judgeId === judge.id && s.heatId === d.heatId)
-                                  return sum + (s?.place ?? 0)
-                                }, 0)
-                                const judgeScored = evt.dances.some(d => couple.scores.some(s => s.judgeId === judge.id && s.heatId === d.heatId))
-                                return <td key={judge.id} style={{ textAlign: 'center' }}>
-                                  {judgeScored
-                                    ? <span style={{ display: 'inline-block', padding: '1px 5px', borderRadius: 4, backgroundColor: '#f3e8ff', color: '#6b21a8', fontSize: '0.85rem', fontWeight: 700 }}>{judgeTotal}</span>
-                                    : <span style={{ color: 'var(--muted)' }}>—</span>}
-                                </td>
-                              })}
-                              <td style={{ textAlign: 'center', padding: '4px 6px' }}>
-                                {couple._scored > 0
-                                  ? <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 6, backgroundColor: totalBg, fontWeight: 900, fontSize: '0.95rem', color: totalColor }}>{total}</span>
-                                  : <span style={{ color: 'var(--muted)' }}>—</span>}
-                              </td>
-                            </tr>
-                          )
+                        {callbackRows.flatMap((couple, idx) => {
+                          const isIn = idx < evt.finalSize
+                          return evt.dances.map((dance, di) => {
+                            const isFirst = di === 0
+                            return (
+                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '2px solid var(--border)' : undefined }}>
+                                {isFirst && (
+                                  <td rowSpan={ND} style={{ ...cell, borderRight: '2px solid var(--border)', padding: '0 12px', minWidth: 130, height: ND * 38 }}>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
+                                    {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
+                                  </td>
+                                )}
+                                <td style={{ ...cell, padding: '7px 10px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
+                                {judges.map((j, ji) => {
+                                  const mark = couple.semiCalled.find(m => m.judgeId === j.id && m.heatId === dance.heatId)
+                                  const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                                  return (
+                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: mark?.called ? jc.bg : 'var(--surface)' }}>
+                                      <span style={{ display: 'inline-block', width: 11, height: 11, borderRadius: '50%', background: mark?.called ? jc.dot : 'var(--border)', verticalAlign: 'middle' }} />
+                                    </td>
+                                  )
+                                })}
+                                {isFirst && <>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
+                                    {couple.totalCbs}/{maxCallbacks}
+                                  </td>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', background: isIn ? '#dcfce7' : '#fee2e2', borderRight: 'none' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.08em', color: isIn ? '#14532d' : '#7f1d1d' }}>{isIn ? 'IN' : 'OUT'}</span>
+                                  </td>
+                                </>}
+                              </tr>
+                            )
+                          })
                         })}
-                        {couplesSorted.length === 0 && (
-                          <tr><td colSpan={3 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center' }}>No couples enrolled</td></tr>
+                        {callbackRows.length === 0 && (
+                          <tr><td colSpan={3 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
                         )}
                       </tbody>
                     </table>
-                  </>
+                  </div>
                 )}
 
-                {showFinal && ranked.length > 0 && (
+                {hasTie && showSemi && (
+                  <div className="px-4 py-2 text-xs" style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', color: '#713f12' }}>
+                    ⚠ Tie at cutoff — adjust Final size in Config → Events to include tied couples.
+                  </div>
+                )}
+
+                {/* FINAL: row-per-dance table */}
+                {showFinal && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
+                          <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
+                          {judges.map((j, ji) => {
+                            const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                            return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
+                          })}
+                          <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '1px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>∑ Judges</th>
+                          <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '2px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>Placement</th>
+                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560', borderBottom: '2px solid #3d2560' }}>Final Total</th>
+                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: 'none', borderBottom: '2px solid #3d2560' }}>Final Place</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {couplesSortedFinal.flatMap(couple => {
+                          const { ci, ft, fp } = couple
+                          const fpBg = fp === 1 ? '#fef3c7' : fp === 2 ? '#e2e8f0' : fp === 3 ? '#ffedd5' : '#1e1030'
+                          const fpFg = fp !== null && fp <= 3 ? (fp === 1 ? '#92400e' : fp === 2 ? '#334155' : '#7c2d12') : '#f0e6ff'
+                          return evt.dances.map((dance, di) => {
+                            const isFirst = di === 0
+                            const djSum = danceJudgeSum[di][ci]
+                            const dp = dancePlacement[di][ci]
+                            return (
+                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '2px solid var(--border)' : undefined }}>
+                                {isFirst && (
+                                  <td rowSpan={ND} style={{ ...cell, borderRight: '2px solid var(--border)', padding: '0 12px', minWidth: 130, height: ND * 38 }}>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
+                                    {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
+                                  </td>
+                                )}
+                                <td style={{ ...cell, padding: '7px 10px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
+                                {judges.map((j, ji) => {
+                                  const score = couple.scores.find(s => s.judgeId === j.id && s.heatId === dance.heatId)
+                                  const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                                  return (
+                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: score ? jc.bg : 'var(--surface)', color: jc.fg, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem' }}>
+                                      {score ? score.place : <span style={{ color: 'var(--muted)' }}>—</span>}
+                                    </td>
+                                  )
+                                })}
+                                <td style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: '#ede9fb', color: '#4c1d95', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', borderRight: '1px solid #a78bfa' }}>
+                                  {djSum > 0 ? djSum : <span style={{ color: 'var(--muted)' }}>—</span>}
+                                </td>
+                                <td style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: '#ede9fb', borderRight: '2px solid #a78bfa' }}>
+                                  {dp !== null
+                                    ? <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: dp === 1 ? '#92400e' : dp === 2 ? '#475569' : dp === 3 ? '#7c2d12' : 'var(--muted)' }}>{dp}</span>
+                                    : <span style={{ color: 'var(--muted)' }}>—</span>}
+                                </td>
+                                {isFirst && <>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
+                                    {ft > 0 ? ft : <span style={{ opacity: 0.4 }}>—</span>}
+                                  </td>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: fpBg, color: fpFg, borderRight: 'none' }}>
+                                    {fp ?? <span style={{ opacity: 0.4 }}>—</span>}
+                                  </td>
+                                </>}
+                              </tr>
+                            )
+                          })
+                        })}
+                        {couplesSortedFinal.length === 0 && (
+                          <tr><td colSpan={5 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Final standings banner */}
+                {showFinal && rankedForBanner.length > 0 && (
                   <div style={{ borderTop: '4px solid #1a1a2e', backgroundColor: '#1a1a2e', padding: '14px 16px' }}>
                     <div className="flex items-center gap-2 mb-3">
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa' }}>Final Standings</span>
                       <span style={{ fontSize: '0.68rem', color: '#6b7280', marginLeft: 4 }}>announced last → first</span>
                     </div>
                     {(() => {
-                      const items = [...ranked].reverse()
+                      const items = [...rankedForBanner].sort((a, b) => b.rank - a.rank)
                       const rem = items.length % 4
                       const mainItems = rem > 0 ? items.slice(0, items.length - rem) : items
                       const lastItems = rem > 0 ? items.slice(items.length - rem) : []
@@ -480,12 +480,7 @@ export default function ResultsView({
                         const ms = medalStyle[c.rank]
                         const rankLabel = c.rank === 1 ? '1st' : c.rank === 2 ? '2nd' : c.rank === 3 ? '3rd' : `${c.rank}th`
                         return (
-                          <div key={c.studentId} style={{
-                            display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 0',
-                            padding: '8px 12px', borderRadius: 8,
-                            backgroundColor: ms ? ms.bg : '#2d2d4e',
-                            border: `2px solid ${ms ? ms.border : '#4c1d95'}`,
-                          }}>
+                          <div key={c.studentId} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 0', padding: '8px 12px', borderRadius: 8, backgroundColor: ms ? ms.bg : '#2d2d4e', border: `2px solid ${ms ? ms.border : '#4c1d95'}` }}>
                             <div style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0 }}>
                               {c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#a78bfa', fontFamily: 'monospace' }}>{rankLabel}</span>}
                             </div>
@@ -499,16 +494,8 @@ export default function ResultsView({
                       }
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {mainItems.length > 0 && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                              {mainItems.map(pill)}
-                            </div>
-                          )}
-                          {lastItems.length > 0 && (
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              {lastItems.map(pill)}
-                            </div>
-                          )}
+                          {mainItems.length > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>{mainItems.map(pill)}</div>}
+                          {lastItems.length > 0 && <div style={{ display: 'flex', gap: 8 }}>{lastItems.map(pill)}</div>}
                         </div>
                       )
                     })()}
