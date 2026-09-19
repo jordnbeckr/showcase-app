@@ -535,17 +535,25 @@ function CompBlock({
   const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
   const isMultiDance = event.dances.length > 1
 
-  // For multi-dance finals: use sequential per-dance scoring
-  if (isMultiDance && !isSemiPhase) {
+  // For multi-dance events (final or semifinal): use sequential per-dance navigation
+  if (isMultiDance) {
     const currentDance = event.dances[danceIdx]
+    const marked = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+    const full = marked >= event.semiSize
     return (
       <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
         {/* Header */}
         <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
           <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
-          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
-            Final — place 1–{event.finalSize}
-          </span>
+          {isSemiPhase ? (
+            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: full ? '#dcfce7' : '#fde68a', borderRadius: 3, color: full ? '#14532d' : '#92400e' }}>
+              Semifinal — {marked}/{event.semiSize} called
+            </span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+              Final — place 1–{event.finalSize}
+            </span>
+          )}
         </div>
 
         {/* Progress pips */}
@@ -587,9 +595,12 @@ function CompBlock({
           {event.couples.map(couple => {
             const scoreKey = `${event.id}-${currentDance.heatId}-${couple.studentId}`
             const myPlace = compScores[scoreKey]
+            const myMark = semiMarks[`${event.id}-${couple.studentId}`] ?? false
+            const atLimit = marked >= event.semiSize
+            const callbackBlocked = isSemiPhase && !myMark && atLimit
             const floorLabel = currentDance.coupleFloors[couple.studentId]
             return (
-              <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+              <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: isSemiPhase && myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
                 <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
                   {couple.leaderNumber ?? '—'}
                 </span>
@@ -602,25 +613,45 @@ function CompBlock({
                   </span>
                 )}
                 <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
-                  {Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
-                    const active = myPlace === place
-                    return (
-                      <button
-                        key={place}
-                        onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)}
-                        className="w-9 h-9 text-sm font-bold"
-                        style={{
-                          borderRadius: 6,
-                          border: '2px solid',
-                          borderColor: active ? '#7c3aed' : 'var(--border)',
-                          backgroundColor: active ? '#7c3aed' : 'transparent',
-                          color: active ? 'white' : 'var(--muted)',
-                        }}
-                      >
-                        {place}
-                      </button>
-                    )
-                  })}
+                  {isSemiPhase ? (
+                    <button
+                      onClick={() => !callbackBlocked && onSemiMark(event.id, couple.studentId)}
+                      disabled={callbackBlocked}
+                      className="px-4 py-1.5 text-sm font-semibold"
+                      style={{
+                        borderRadius: 6,
+                        border: '2px solid',
+                        borderColor: myMark ? '#16a34a' : callbackBlocked ? 'var(--border)' : '#6b21a8',
+                        backgroundColor: myMark ? '#dcfce7' : 'transparent',
+                        color: myMark ? '#14532d' : callbackBlocked ? '#ccc' : '#6b21a8',
+                        minWidth: 80,
+                        cursor: callbackBlocked ? 'not-allowed' : 'pointer',
+                        opacity: callbackBlocked ? 0.45 : 1,
+                      }}
+                    >
+                      {myMark ? '✓ Called' : 'Call back'}
+                    </button>
+                  ) : (
+                    Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
+                      const active = myPlace === place
+                      return (
+                        <button
+                          key={place}
+                          onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)}
+                          className="w-9 h-9 text-sm font-bold"
+                          style={{
+                            borderRadius: 6,
+                            border: '2px solid',
+                            borderColor: active ? '#7c3aed' : 'var(--border)',
+                            backgroundColor: active ? '#7c3aed' : 'transparent',
+                            color: active ? 'white' : 'var(--muted)',
+                          }}
+                        >
+                          {place}
+                        </button>
+                      )
+                    })
+                  )}
                 </div>
               </div>
             )
