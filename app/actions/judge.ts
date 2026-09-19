@@ -63,11 +63,11 @@ export async function setCompScore(eventId: number, studentId: number, place: nu
   }
 }
 
-export async function setSemiMark(eventId: number, studentId: number, called: boolean) {
+export async function setSemiMark(eventId: number, heatId: number, studentId: number, called: boolean) {
   const judgeId = await requireJudge()
   await db.semiMark.upsert({
-    where: { judgeId_eventId_studentId: { judgeId, eventId, studentId } },
-    create: { judgeId, eventId, studentId, called },
+    where: { judgeId_eventId_heatId_studentId: { judgeId, eventId, heatId, studentId } },
+    create: { judgeId, eventId, heatId, studentId, called },
     update: { called },
   })
 }

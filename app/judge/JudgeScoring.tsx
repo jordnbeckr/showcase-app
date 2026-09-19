@@ -60,7 +60,7 @@ type Props = {
   initialOpenThumbs: { heatId: number; studentId: number; categoryId: number; sentiment: string }[]
   initialOpenNotes: { heatId: number; studentId: number; note: string }[]
   initialCompScores: { eventId: number; heatId: number; studentId: number; place: number }[]
-  initialSemiMarks: { eventId: number; studentId: number; called: boolean }[]
+  initialSemiMarks: { eventId: number; heatId: number; studentId: number; called: boolean }[]
 }
 
 function CoupleDisplay({ couple }: { couple: Couple }) {
@@ -116,10 +116,10 @@ export default function JudgeScoring({
     return map
   })
 
-  // Semi marks: key = `${eventId}-${studentId}` → called
+  // Semi marks: key = `${eventId}-${heatId}-${studentId}` → called
   const [semiMarks, setSemiMarksState] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {}
-    for (const m of initialSemiMarks) map[`${m.eventId}-${m.studentId}`] = m.called
+    for (const m of initialSemiMarks) map[`${m.eventId}-${m.heatId}-${m.studentId}`] = m.called
     return map
   })
 
@@ -174,12 +174,12 @@ export default function JudgeScoring({
     startTransition(() => setCompScore(eventId, studentId, next, heatId))
   }
 
-  function handleSemiMark(eventId: number, studentId: number) {
-    const key = `${eventId}-${studentId}`
+  function handleSemiMark(eventId: number, heatId: number, studentId: number) {
+    const key = `${eventId}-${heatId}-${studentId}`
     const current = semiMarks[key] ?? false
     const next = !current
     setSemiMarksState(prev => ({ ...prev, [key]: next }))
-    startTransition(() => setSemiMark(eventId, studentId, next))
+    startTransition(() => setSemiMark(eventId, heatId, studentId, next))
   }
 
   // Build a set of heatNumbers that belong to competitive events (to suppress individual heat scoring for them)
@@ -528,7 +528,7 @@ function CompBlock({
   compScores: Record<string, number>
   semiMarks: Record<string, boolean>
   onCompScore: (eventId: number, studentId: number, place: number, heatId?: number) => void
-  onSemiMark: (eventId: number, studentId: number) => void
+  onSemiMark: (eventId: number, heatId: number, studentId: number) => void
 }) {
   const [danceIdx, setDanceIdx] = useState(0)
 
@@ -538,7 +538,8 @@ function CompBlock({
   // For multi-dance events (final or semifinal): use sequential per-dance navigation
   if (isMultiDance) {
     const currentDance = event.dances[danceIdx]
-    const marked = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+    // Count students called back on the current dance
+    const marked = event.couples.filter(c => semiMarks[`${event.id}-${currentDance.heatId}-${c.studentId}`]).length
     const full = marked >= event.semiSize
     return (
       <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
@@ -595,7 +596,7 @@ function CompBlock({
           {event.couples.map(couple => {
             const scoreKey = `${event.id}-${currentDance.heatId}-${couple.studentId}`
             const myPlace = compScores[scoreKey]
-            const myMark = semiMarks[`${event.id}-${couple.studentId}`] ?? false
+            const myMark = semiMarks[`${event.id}-${currentDance.heatId}-${couple.studentId}`] ?? false
             const atLimit = marked >= event.semiSize
             const callbackBlocked = isSemiPhase && !myMark && atLimit
             const floorLabel = currentDance.coupleFloors[couple.studentId]
@@ -615,7 +616,7 @@ function CompBlock({
                 <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
                   {isSemiPhase ? (
                     <button
-                      onClick={() => !callbackBlocked && onSemiMark(event.id, couple.studentId)}
+                      onClick={() => !callbackBlocked && onSemiMark(event.id, currentDance.heatId, couple.studentId)}
                       disabled={callbackBlocked}
                       className="px-4 py-1.5 text-sm font-semibold"
                       style={{
@@ -671,7 +672,8 @@ function CompBlock({
       <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
         <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
         {isSemiPhase ? (() => {
-          const marked = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+          const singleHeatId = event.dances[0]?.heatId ?? 0
+          const marked = event.couples.filter(c => semiMarks[`${event.id}-${singleHeatId}-${c.studentId}`]).length
           const full = marked >= event.semiSize
           return (
             <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: full ? '#dcfce7' : '#fde68a', borderRadius: 3, color: full ? '#14532d' : '#92400e' }}>
@@ -690,8 +692,9 @@ function CompBlock({
         {event.couples.map(couple => {
           const scoreKey = `${event.id}-0-${couple.studentId}`
           const myPlace = compScores[scoreKey]
-          const myMark = semiMarks[`${event.id}-${couple.studentId}`] ?? false
-          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
+          const singleHeatId = event.dances[0]?.heatId ?? 0
+          const myMark = semiMarks[`${event.id}-${singleHeatId}-${couple.studentId}`] ?? false
+          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${singleHeatId}-${c.studentId}`]).length
           const atLimit = markedCount >= event.semiSize
           const callbackBlocked = isSemiPhase && !myMark && atLimit
 
@@ -706,7 +709,7 @@ function CompBlock({
               <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
                   {isSemiPhase ? (
                     <button
-                      onClick={() => !callbackBlocked && onSemiMark(event.id, couple.studentId)}
+                      onClick={() => !callbackBlocked && onSemiMark(event.id, singleHeatId, couple.studentId)}
                       disabled={callbackBlocked}
                       className="px-4 py-1.5 text-sm font-semibold"
                       style={{

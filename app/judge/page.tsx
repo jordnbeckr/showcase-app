@@ -196,9 +196,12 @@ export default async function JudgePage() {
         let filteredCouples = couplesWithPartners.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
         if (round === 'semifinal' && phase === 'final') {
           const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
+          // Count distinct judges who called back this student on any dance
           const withCounts = filteredCouples.map(c => ({
             ...c,
-            callbacks: eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).length,
+            callbacks: new Set(
+              eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).map(m => m.judgeId)
+            ).size,
           }))
           withCounts.sort((a, b) => b.callbacks - a.callbacks || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
           filteredCouples = withCounts.slice(0, finalSize)
@@ -244,7 +247,7 @@ export default async function JudgePage() {
       initialOpenThumbs={existingOpenThumbs.map(t => ({ heatId: t.heatId, studentId: t.studentId, categoryId: t.categoryId, sentiment: t.sentiment }))}
       initialOpenNotes={existingOpenNotes.map(n => ({ heatId: n.heatId, studentId: n.studentId, note: n.note }))}
       initialCompScores={existingCompScores.map(s => ({ eventId: s.eventId, heatId: s.heatId, studentId: s.studentId, place: s.place }))}
-      initialSemiMarks={existingSemanMarks.map(m => ({ eventId: m.eventId, studentId: m.studentId, called: m.called }))}
+      initialSemiMarks={existingSemanMarks.map(m => ({ eventId: m.eventId, heatId: m.heatId, studentId: m.studentId, called: m.called }))}
     />
   )
 }

@@ -410,11 +410,12 @@ model SemiMark {
   judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
   eventId   Int
   event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  heatId    Int     @default(0)
   studentId Int
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   called    Boolean @default(false)
 
-  @@unique([judgeId, eventId, studentId])
+  @@unique([judgeId, eventId, heatId, studentId])
 }
 
 model LunchGuest {
