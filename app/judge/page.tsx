@@ -205,9 +205,16 @@ export default async function JudgePage() {
           filteredCouples.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
         }
 
-        const eventHeats = heats
+        const allEventHeats = heats
           .filter(h => h.events.some(eh => eh.eventId === evt.id))
           .sort((a, b) => a.number - b.number)
+
+        // For semifinal events the 4 heats split into semi (first half) and final (second half).
+        // Show only the heats relevant to the current phase.
+        const half = Math.ceil(allEventHeats.length / 2)
+        const eventHeats = round === 'semifinal'
+          ? (phase === 'final' ? allEventHeats.slice(half) : allEventHeats.slice(0, half))
+          : allEventHeats
 
         return {
           id: evt.id,
