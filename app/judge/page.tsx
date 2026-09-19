@@ -87,7 +87,10 @@ export default async function JudgePage() {
   return (
     <JudgeScoring
       judgeId={judgeId}
-      heats={heats.map(h => ({
+      heats={heats.filter(h => {
+        if (!hasFloorFilter) return true
+        return judgeFloorIdsForHeat(h.number).size > 0
+      }).map(h => ({
         id: h.id,
         number: h.number,
         dance: h.danceType.name,
@@ -104,7 +107,6 @@ export default async function JudgePage() {
           if (e.instructorId === null && e.partnerStudentId !== null && e.student.role !== 'Leader') return false
           if (!hasFloorFilter) return true
           const floorIdsForThisHeat = judgeFloorIdsForHeat(h.number)
-          if (floorIdsForThisHeat.size === 0) return true // no range covers this heat — show all
           const fid = entryFloorId.get(`${e.studentId}-${h.id}`)
           return fid !== undefined && floorIdsForThisHeat.has(fid)
         }).map(e => ({
