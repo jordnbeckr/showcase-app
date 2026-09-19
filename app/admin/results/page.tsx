@@ -56,6 +56,7 @@ export default async function AdminResultsPage() {
         compScores: { include: { judge: true, student: { include: { studio: true } } } },
         semiMarks: { include: { judge: true, student: { include: { studio: true } } } },
         studentEvents: { include: { student: { include: { studio: true } }, instructor: true } },
+        heats: { include: { heat: { include: { danceType: true } } }, orderBy: { heat: { number: 'asc' } } },
       },
     }),
   ])
@@ -209,14 +210,20 @@ export default async function AdminResultsPage() {
       }),
     }))
 
-  // Fetch all semiMarks for results (need all judges' marks)
-  const allSemiMarks = await db.semiMark.findMany({ select: { eventId: true, studentId: true, judgeId: true, called: true } })
-
   const eventData: CompEventData[] = events.map(evt => {
     const isSemi = evt.compRound?.round === 'semifinal'
     const phase = evt.compRound?.phase ?? 'semi'
     const finalSize = evt.compRound?.finalSize ?? 6
-    const eventSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
+
+    // Build ordered dances list; for semi events split by phase
+    const allEventHeats = evt.heats.map(eh => ({ heatId: eh.heatId, heatNumber: eh.heat.number, dance: eh.heat.danceType.name }))
+      .sort((a, b) => a.heatNumber - b.heatNumber)
+    let dances = allEventHeats
+    if (isSemi) {
+      const half = Math.ceil(allEventHeats.length / 2)
+      dances = phase === 'final' ? allEventHeats.slice(half) : allEventHeats.slice(0, half)
+    }
+
     const couples = evt.studentEvents
       .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
       .map(se => {
@@ -236,18 +243,21 @@ export default async function AdminResultsPage() {
           const partner = evt.studentEvents.find(x => x.studentId === se.partnerStudentId)
           if (partner) personB = `${partner.student.firstName} ${partner.student.lastName}`
         }
-        const scores = judges.map(j => {
-          const s = evt.compScores.find(cs => cs.judgeId === j.id && cs.studentId === student.id)
-          return s ? { judgeId: j.id, place: s.place } : null
-        }).filter(Boolean) as { judgeId: number; place: number }[]
-        const semiCalled = judges.map(j => {
-          const m = eventSemiMarks.find(sm => sm.judgeId === j.id && sm.studentId === student.id)
-          return { judgeId: j.id, called: m?.called ?? false }
-        })
-        const callbackCount = eventSemiMarks.filter(m => m.studentId === student.id && m.called).length
+        // Per-dance placement scores
+        const scores = evt.compScores
+          .filter(cs => cs.studentId === student.id)
+          .map(cs => ({ judgeId: cs.judgeId, heatId: cs.heatId, place: cs.place }))
+        // Per-dance callback marks
+        const semiCalled = evt.semiMarks
+          .filter(sm => sm.studentId === student.id)
+          .map(sm => ({ judgeId: sm.judgeId, heatId: sm.heatId, called: sm.called }))
+        // Distinct judges who called this couple on any dance
+        const callbackCount = new Set(
+          evt.semiMarks.filter(m => m.studentId === student.id && m.called).map(m => m.judgeId)
+        ).size
         return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled, callbackCount }
       })
-    return { id: evt.id, name: evt.name, isSemi, phase, finalSize, judgeCount: judges.length, couples }
+    return { id: evt.id, name: evt.name, isSemi, phase, finalSize, judgeCount: judges.length, dances, couples }
   })
 
   return (
