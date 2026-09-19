@@ -9,6 +9,7 @@ type Entry = {
   category: string
   partnerName: string
   floorLabel: string | null
+  roundLabel: string | null
 }
 
 type Seg =
@@ -50,7 +51,7 @@ function buildTableRows(segments: Seg[]): string {
       <td>${e.heatNumber}</td>
       <td>${e.floorLabel ?? '—'}</td>
       <td>${e.partnerName}</td>
-      <td>${e.dance}</td>
+      <td>${e.dance}${e.roundLabel ? ` <span class="round-label">${e.roundLabel}</span>` : ''}</td>
       <td>${categoryBadgeHtml(e.category)}</td>
     </tr>`).join('')
     const closeRow = `<tr class="event-close"><td colspan="5"></td></tr>`
@@ -90,6 +91,7 @@ function openPdfWindow(sheet: Sheet) {
   col.dance { width: 125px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .round-label { background: #f3e8ff; color: #6b21a8; font-size: 7.5px; font-weight: 700; padding: 1px 4px; border-radius: 3px; white-space: nowrap; margin-left: 3px; }
 </style>
 </head>
 <body>
@@ -179,7 +181,10 @@ function SheetTable({ segments }: { segments: Seg[] }) {
                     : <span style={{ color: 'var(--muted)' }}>—</span>}
                 </td>
                 <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.partnerName}</td>
-                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>{e.dance}</td>
+                <td style={{ fontSize: '0.8rem', borderColor: '#bfcfdd' }}>
+                  {e.dance}
+                  {e.roundLabel && <span style={{ background: '#f3e8ff', color: '#6b21a8', fontSize: '0.65rem', fontWeight: 700, padding: '1px 4px', borderRadius: 3, marginLeft: 4, whiteSpace: 'nowrap' }}>{e.roundLabel}</span>}
+                </td>
                 <td style={{ borderColor: '#bfcfdd' }}><CategoryBadge category={e.category} /></td>
               </tr>
             )),
@@ -294,6 +299,7 @@ function printAll(sheets: Sheet[]) {
   col.dance { width: 125px; }
   .cat-open { background: #E1F5EE; color: #085041; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
   .cat-closed { background: #FAEEDA; color: #633806; font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .round-label { background: #f3e8ff; color: #6b21a8; font-size: 7.5px; font-weight: 700; padding: 1px 4px; border-radius: 3px; white-space: nowrap; margin-left: 3px; }
 </style>
 </head>
 <body>${pages}
