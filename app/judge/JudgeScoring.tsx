@@ -44,7 +44,7 @@ type CompetitiveEvent = {
   finalSize: number
   semiSize: number
   firstHeatNumber: number
-  dances: { heatId: number; dance: string }[]
+  dances: { heatId: number; heatNumber: number; dance: string; coupleFloors: Record<number, string | null> }[]
   couples: Couple[]
 }
 
@@ -572,7 +572,7 @@ function CompBlock({
             style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === 0 ? 0.35 : 1, cursor: danceIdx === 0 ? 'default' : 'pointer' }}
           >← Back</button>
           <span className="text-xs font-bold flex-1 text-center" style={{ color: '#6b21a8', letterSpacing: '0.05em' }}>
-            {currentDance.dance.toUpperCase()}
+            #{currentDance.heatNumber} · {currentDance.dance.toUpperCase()}
           </span>
           <button
             onClick={() => setDanceIdx(i => Math.min(event.dances.length - 1, i + 1))}
@@ -587,6 +587,7 @@ function CompBlock({
           {event.couples.map(couple => {
             const scoreKey = `${event.id}-${currentDance.heatId}-${couple.studentId}`
             const myPlace = compScores[scoreKey]
+            const floorLabel = currentDance.coupleFloors[couple.studentId]
             return (
               <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
                 <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
@@ -595,6 +596,11 @@ function CompBlock({
                 <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
                   {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
                 </span>
+                {floorLabel && (
+                  <span className="text-xs px-1.5 py-0.5 flex-shrink-0" style={{ backgroundColor: '#f0fdfa', border: '1px solid #0d9488', borderRadius: 3, color: '#0d9488', fontWeight: 700 }}>
+                    {floorLabel}
+                  </span>
+                )}
                 <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
                   {Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
                     const active = myPlace === place

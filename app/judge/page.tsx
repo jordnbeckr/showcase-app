@@ -210,7 +210,18 @@ export default async function JudgePage() {
           finalSize,
           semiSize: evt.compRound?.semiSize ?? 7,
           firstHeatNumber: eventHeats.length > 0 ? eventHeats[0].number : 99999,
-          dances: eventHeats.map(h => ({ heatId: h.id, dance: h.danceType.name })),
+          dances: eventHeats.map(h => ({
+            heatId: h.id,
+            heatNumber: h.number,
+            dance: h.danceType.name,
+            coupleFloors: Object.fromEntries(
+              filteredCouples.map(c => {
+                const fid = entryFloorId.get(`${c.studentId}-${h.id}`)
+                const label = fid !== undefined ? (floorById.get(fid) ?? null) : null
+                return [c.studentId, label]
+              })
+            ),
+          })),
           couples: filteredCouples,
         }
       }).sort((a, b) => a.firstHeatNumber - b.firstHeatNumber)}
