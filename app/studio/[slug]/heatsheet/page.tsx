@@ -51,8 +51,13 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
       orderBy: { heat: { number: 'asc' } },
     }),
     db.studentEvent.findMany({
-      where: { studentId: { in: [...studentIds, ...sharedStudentIds] } },
-      include: { event: true, instructor: true },
+      where: {
+        OR: [
+          { studentId: { in: [...studentIds, ...sharedStudentIds] } },
+          { instructorId: { in: instructorIds } },
+        ],
+      },
+      include: { event: true, instructor: true, student: true },
     }),
     db.event.findMany({
       include: {
@@ -181,6 +186,30 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
   const instructorMap = new Map<number, { instructor: typeof studio.instructors[number]; entries: typeof instructorEntries }>()
   for (const i of studio.instructors) instructorMap.set(i.id, { instructor: i, entries: [] })
   for (const e of instructorEntries) if (e.instructorId !== null) instructorMap.get(e.instructorId)?.entries.push(e)
+
+  // Same synthesis for instructors: add missing competitive event heats not yet in HeatEntry records
+  for (const se of studentEvents) {
+    if (!se.instructorId) continue
+    const data = instructorMap.get(se.instructorId)
+    if (!data) continue
+    const evt = allEvents.find(e => e.id === se.eventId)
+    if (!evt?.isCompetitive) continue
+    for (const eh of evt.heats) {
+      if (data.entries.some(e => e.heatId === eh.heatId && e.studentId === se.studentId)) continue
+      data.entries.push({
+        id: -(se.instructorId * 1000000 + eh.heatId * 100 + se.studentId % 100),
+        heatId: eh.heatId,
+        studentId: se.studentId,
+        instructorId: se.instructorId,
+        partnerStudentId: null,
+        heat: { number: eh.heat.number, category: eh.heat.category, danceType: { name: eh.heat.danceType.name } },
+        student: se.student as typeof instructorEntries[number]['student'],
+        instructor: data.instructor as typeof instructorEntries[number]['instructor'],
+        partnerStudent: null,
+      } as typeof instructorEntries[number])
+    }
+    data.entries.sort((a, b) => a.heat.number - b.heat.number)
+  }
 
   const studentSheets = [...studentMap.values()]
     .filter(s => s.entries.length > 0)
