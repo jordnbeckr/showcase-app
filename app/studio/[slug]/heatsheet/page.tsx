@@ -94,6 +94,7 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
   type SimpleSeg = { type: 'event'; eventName: string; entries: SimpleEntry[] } | { type: 'solo'; entry: SimpleEntry }
 
   function buildSegments(entries: typeof studentEntries, heatEventMap: Map<number, string>, partnerIsInstructor: boolean, ownStudentId?: number): SimpleSeg[] {
+    // Group key = eventName + round phase so semi and final emit as separate blocks
     const eventGroups = new Map<string, SimpleEntry[]>()
     function toSimple(e: typeof studentEntries[number]): SimpleEntry {
       const sid = ownStudentId ?? e.studentId
@@ -109,11 +110,18 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
         roundLabel: heatRoundLabel.get(e.heatId) ?? null,
       }
     }
+    function groupKey(evtName: string, roundLabel: string | null) {
+      return roundLabel ? `${evtName}||${roundLabel}` : evtName
+    }
+    function displayName(evtName: string, roundLabel: string | null) {
+      return roundLabel ? `${evtName} — ${roundLabel}` : evtName
+    }
     for (const e of entries) {
       const evtName = heatEventMap.get(e.heatId)
       if (evtName) {
-        if (!eventGroups.has(evtName)) eventGroups.set(evtName, [])
-        eventGroups.get(evtName)!.push(toSimple(e))
+        const key = groupKey(evtName, heatRoundLabel.get(e.heatId) ?? null)
+        if (!eventGroups.has(key)) eventGroups.set(key, [])
+        eventGroups.get(key)!.push(toSimple(e))
       }
     }
     const segs: SimpleSeg[] = []
@@ -121,7 +129,12 @@ export default async function HeatSheetPage({ params }: { params: Promise<{ slug
     for (const e of entries) {
       const evtName = heatEventMap.get(e.heatId)
       if (evtName) {
-        if (!emitted.has(evtName)) { emitted.add(evtName); segs.push({ type: 'event', eventName: evtName, entries: eventGroups.get(evtName)! }) }
+        const roundLabel = heatRoundLabel.get(e.heatId) ?? null
+        const key = groupKey(evtName, roundLabel)
+        if (!emitted.has(key)) {
+          emitted.add(key)
+          segs.push({ type: 'event', eventName: displayName(evtName, roundLabel), entries: eventGroups.get(key)! })
+        }
       } else {
         segs.push({ type: 'solo', entry: toSimple(e) })
       }
