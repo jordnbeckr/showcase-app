@@ -395,11 +395,12 @@ model CompScore {
   judge     Judge   @relation(fields: [judgeId], references: [id], onDelete: Cascade)
   eventId   Int
   event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  heatId    Int     @default(0) // 0 = single-dance event; actual heatId for per-dance scoring
   studentId Int     // the leader/representative student of the couple
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   place     Int
 
-  @@unique([judgeId, eventId, studentId])
+  @@unique([judgeId, eventId, heatId, studentId])
 }
 
 // Competitive semifinal: callback mark per judge × event × leader student

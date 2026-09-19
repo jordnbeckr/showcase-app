@@ -48,16 +48,16 @@ export async function setOpenNote(heatId: number, studentId: number, note: strin
   }
 }
 
-export async function setCompScore(eventId: number, studentId: number, place: number | null) {
+export async function setCompScore(eventId: number, studentId: number, place: number | null, heatId = 0) {
   const judgeId = await requireJudge()
   if (place === null) {
-    await db.compScore.deleteMany({ where: { judgeId, eventId, studentId } })
+    await db.compScore.deleteMany({ where: { judgeId, eventId, heatId, studentId } })
   } else {
-    // Enforce only one couple per place per judge per event
-    await db.compScore.deleteMany({ where: { judgeId, eventId, place } })
+    // Enforce only one couple per place per judge per event per dance
+    await db.compScore.deleteMany({ where: { judgeId, eventId, heatId, place } })
     await db.compScore.upsert({
-      where: { judgeId_eventId_studentId: { judgeId, eventId, studentId } },
-      create: { judgeId, eventId, studentId, place },
+      where: { judgeId_eventId_heatId_studentId: { judgeId, eventId, heatId, studentId } },
+      create: { judgeId, eventId, heatId, studentId, place },
       update: { place },
     })
   }

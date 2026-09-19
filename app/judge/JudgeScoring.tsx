@@ -24,6 +24,7 @@ type Heat = {
   dance: string
   category: 'none' | 'closed' | 'open'
   eventIds: number[]
+  floorLabel: string | null
   entries: HeatEntry[]
 }
 
@@ -43,6 +44,7 @@ type CompetitiveEvent = {
   finalSize: number
   semiSize: number
   firstHeatNumber: number
+  dances: { heatId: number; dance: string }[]
   couples: Couple[]
 }
 
@@ -57,7 +59,7 @@ type Props = {
   initialClosedScores: { heatId: number; studentId: number; placement: string }[]
   initialOpenThumbs: { heatId: number; studentId: number; categoryId: number; sentiment: string }[]
   initialOpenNotes: { heatId: number; studentId: number; note: string }[]
-  initialCompScores: { eventId: number; studentId: number; place: number }[]
+  initialCompScores: { eventId: number; heatId: number; studentId: number; place: number }[]
   initialSemiMarks: { eventId: number; studentId: number; called: boolean }[]
 }
 
@@ -107,10 +109,10 @@ export default function JudgeScoring({
     return map
   })
 
-  // Comp scores: key = `${eventId}-${studentId}` → place
+  // Comp scores: key = `${eventId}-${heatId}-${studentId}` → place
   const [compScores, setCompScoresState] = useState<Record<string, number>>(() => {
     const map: Record<string, number> = {}
-    for (const s of initialCompScores) map[`${s.eventId}-${s.studentId}`] = s.place
+    for (const s of initialCompScores) map[`${s.eventId}-${s.heatId}-${s.studentId}`] = s.place
     return map
   })
 
@@ -155,21 +157,21 @@ export default function JudgeScoring({
     startTransition(() => setOpenNote(heatId, studentId, note))
   }, [])
 
-  function handleCompScore(eventId: number, studentId: number, place: number) {
-    const key = `${eventId}-${studentId}`
+  function handleCompScore(eventId: number, studentId: number, place: number, heatId = 0) {
+    const key = `${eventId}-${heatId}-${studentId}`
     const current = compScores[key]
     const next = current === place ? null : place
     setCompScoresState(prev => {
       const updated = { ...prev }
-      // Remove this place from any other couple in this event
+      // Remove this place from any other couple in this event+dance
       for (const k of Object.keys(updated)) {
-        if (k.startsWith(`${eventId}-`) && updated[k] === place) delete updated[k]
+        if (k.startsWith(`${eventId}-${heatId}-`) && updated[k] === place) delete updated[k]
       }
       if (next !== null) updated[key] = next
       else delete updated[key]
       return updated
     })
-    startTransition(() => setCompScore(eventId, studentId, next))
+    startTransition(() => setCompScore(eventId, studentId, next, heatId))
   }
 
   function handleSemiMark(eventId: number, studentId: number) {
@@ -297,6 +299,11 @@ function HeatBlock({
       <div className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: headerBg }}>
         <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem', color: '#555', minWidth: 28 }}>#{heat.number}</span>
         <span className="font-semibold text-sm">{heat.dance}</span>
+        {heat.floorLabel && (
+          <span className="text-xs px-1.5 py-0.5" style={{ backgroundColor: '#f0fdfa', border: '1px solid #0d9488', borderRadius: 3, color: '#0d9488', fontWeight: 700, flexShrink: 0 }}>
+            Floor {heat.floorLabel}
+          </span>
+        )}
         {isClosed && <span className="text-xs px-1.5 py-0.5 ml-auto" style={{ backgroundColor: '#fde68a', borderRadius: 3, color: '#92400e', fontWeight: 600 }}>Closed — G/S/B</span>}
         {isOpen && <span className="text-xs px-1.5 py-0.5 ml-auto" style={{ backgroundColor: '#93c5fd', borderRadius: 3, color: '#1d4ed8', fontWeight: 600 }}>Open — Feedback</span>}
         {isNone && <span className="text-xs ml-auto" style={{ color: 'var(--muted)' }}>{heat.entries.length} entr{heat.entries.length === 1 ? 'y' : 'ies'}</span>}
@@ -520,15 +527,107 @@ function CompBlock({
   event: CompetitiveEvent
   compScores: Record<string, number>
   semiMarks: Record<string, boolean>
-  onCompScore: (eventId: number, studentId: number, place: number) => void
+  onCompScore: (eventId: number, studentId: number, place: number, heatId?: number) => void
   onSemiMark: (eventId: number, studentId: number) => void
 }) {
-  // A "semifinal event" in semi phase → show callback UI
-  // A "semifinal event" in final phase → show placement UI for called-back couples only
-  // A plain "final" event → show placement UI
-  const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
-  const isFinalPhase = !isSemiPhase
+  const [danceIdx, setDanceIdx] = useState(0)
 
+  const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
+  const isMultiDance = event.dances.length > 1
+
+  // For multi-dance finals: use sequential per-dance scoring
+  if (isMultiDance && !isSemiPhase) {
+    const currentDance = event.dances[danceIdx]
+    return (
+      <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
+        {/* Header */}
+        <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
+          <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
+          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+            Final — place 1–{event.finalSize}
+          </span>
+        </div>
+
+        {/* Progress pips */}
+        <div className="flex gap-1.5 px-4 py-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
+          {event.dances.map((d, i) => (
+            <div
+              key={d.heatId}
+              style={{
+                flex: 1,
+                height: 3,
+                borderRadius: 2,
+                backgroundColor: i <= danceIdx ? '#7c3aed' : '#e9d5ff',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Dance nav */}
+        <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
+          <button
+            onClick={() => setDanceIdx(i => Math.max(0, i - 1))}
+            disabled={danceIdx === 0}
+            className="text-xs font-semibold px-3 py-1"
+            style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === 0 ? 0.35 : 1, cursor: danceIdx === 0 ? 'default' : 'pointer' }}
+          >← Back</button>
+          <span className="text-xs font-bold flex-1 text-center" style={{ color: '#6b21a8', letterSpacing: '0.05em' }}>
+            {currentDance.dance.toUpperCase()}
+          </span>
+          <button
+            onClick={() => setDanceIdx(i => Math.min(event.dances.length - 1, i + 1))}
+            disabled={danceIdx === event.dances.length - 1}
+            className="text-xs font-semibold px-3 py-1"
+            style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === event.dances.length - 1 ? 0.35 : 1, cursor: danceIdx === event.dances.length - 1 ? 'default' : 'pointer' }}
+          >Next →</button>
+        </div>
+
+        {/* Couples for current dance */}
+        <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
+          {event.couples.map(couple => {
+            const scoreKey = `${event.id}-${currentDance.heatId}-${couple.studentId}`
+            const myPlace = compScores[scoreKey]
+            return (
+              <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+                <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
+                  {couple.leaderNumber ?? '—'}
+                </span>
+                <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
+                  {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
+                </span>
+                <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
+                  {Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
+                    const active = myPlace === place
+                    return (
+                      <button
+                        key={place}
+                        onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)}
+                        className="w-9 h-9 text-sm font-bold"
+                        style={{
+                          borderRadius: 6,
+                          border: '2px solid',
+                          borderColor: active ? '#7c3aed' : 'var(--border)',
+                          backgroundColor: active ? '#7c3aed' : 'transparent',
+                          color: active ? 'white' : 'var(--muted)',
+                        }}
+                      >
+                        {place}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+          {event.couples.length === 0 && (
+            <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No couples enrolled yet</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Single-dance or semifinal: existing UI
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
       {/* Header */}
@@ -551,15 +650,10 @@ function CompBlock({
 
       {/* Couples */}
       <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
-        {isSemiPhase && (() => {
-          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
-          const atLimit = markedCount >= event.semiSize
-          return null // used below via closure
-        })()}
         {event.couples.map(couple => {
-          const scoreKey = `${event.id}-${couple.studentId}`
+          const scoreKey = `${event.id}-0-${couple.studentId}`
           const myPlace = compScores[scoreKey]
-          const myMark = semiMarks[scoreKey] ?? false
+          const myMark = semiMarks[`${event.id}-${couple.studentId}`] ?? false
           const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${c.studentId}`]).length
           const atLimit = markedCount >= event.semiSize
           const callbackBlocked = isSemiPhase && !myMark && atLimit

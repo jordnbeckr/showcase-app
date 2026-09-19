@@ -31,6 +31,9 @@ export default async function JudgePage() {
     return ids
   }
 
+  const floors = await db.floor.findMany({ orderBy: { order: 'asc' } })
+  const floorById = new Map(floors.map(f => ({ id: f.id, label: f.label })).map(f => [f.id, f.label]))
+
   const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks, allSemiMarks] = await Promise.all([
     db.heat.findMany({
       orderBy: { number: 'asc' },
@@ -90,6 +93,12 @@ export default async function JudgePage() {
         dance: h.danceType.name,
         category: h.category as 'none' | 'closed' | 'open',
         eventIds: h.events.map(e => e.eventId),
+        floorLabel: (() => {
+          if (!hasFloorFilter) return null
+          const coveringFloorIds = judgeFloorIdsForHeat(h.number)
+          if (coveringFloorIds.size === 0) return null
+          return [...coveringFloorIds].map(id => floorById.get(id)).filter(Boolean).join(', ')
+        })(),
         entries: h.entries.filter(e => {
           // For amateur couples (no instructor, has partnerStudentId), only keep the Leader entry
           if (e.instructorId === null && e.partnerStudentId !== null && e.student.role !== 'Leader') return false
@@ -189,6 +198,10 @@ export default async function JudgePage() {
           filteredCouples.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
         }
 
+        const eventHeats = heats
+          .filter(h => h.events.some(eh => eh.eventId === evt.id))
+          .sort((a, b) => a.number - b.number)
+
         return {
           id: evt.id,
           name: evt.name,
@@ -196,10 +209,8 @@ export default async function JudgePage() {
           phase,
           finalSize,
           semiSize: evt.compRound?.semiSize ?? 7,
-          firstHeatNumber: (() => {
-            const nums = heats.filter(h => h.events.some(eh => eh.eventId === evt.id)).map(h => h.number)
-            return nums.length > 0 ? Math.min(...nums) : 99999
-          })(),
+          firstHeatNumber: eventHeats.length > 0 ? eventHeats[0].number : 99999,
+          dances: eventHeats.map(h => ({ heatId: h.id, dance: h.danceType.name })),
           couples: filteredCouples,
         }
       }).sort((a, b) => a.firstHeatNumber - b.firstHeatNumber)}
@@ -207,7 +218,7 @@ export default async function JudgePage() {
       initialClosedScores={existingClosedScores.map(s => ({ heatId: s.heatId, studentId: s.studentId, placement: s.placement }))}
       initialOpenThumbs={existingOpenThumbs.map(t => ({ heatId: t.heatId, studentId: t.studentId, categoryId: t.categoryId, sentiment: t.sentiment }))}
       initialOpenNotes={existingOpenNotes.map(n => ({ heatId: n.heatId, studentId: n.studentId, note: n.note }))}
-      initialCompScores={existingCompScores.map(s => ({ eventId: s.eventId, studentId: s.studentId, place: s.place }))}
+      initialCompScores={existingCompScores.map(s => ({ eventId: s.eventId, heatId: s.heatId, studentId: s.studentId, place: s.place }))}
       initialSemiMarks={existingSemanMarks.map(m => ({ eventId: m.eventId, studentId: m.studentId, called: m.called }))}
     />
   )
