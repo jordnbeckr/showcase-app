@@ -194,14 +194,14 @@ export default function JudgeScoring({
   // Inject competitive event blocks at their first heat position
   type Item = { type: 'heat'; heat: Heat } | { type: 'comp'; event: CompetitiveEvent }
   const items: Item[] = []
-  const insertedEventIds = new Set<number>()
+  const insertedBlockKeys = new Set<string>()
 
   for (const heat of heats) {
     // Insert competitive event block before the first heat of that event
     for (const evt of competitiveEvents) {
-      if (!insertedEventIds.has(evt.id) && heat.number === evt.firstHeatNumber) {
+      if (!insertedBlockKeys.has(evt.blockKey) && heat.number === evt.firstHeatNumber) {
         items.push({ type: 'comp', event: evt })
-        insertedEventIds.add(evt.id)
+        insertedBlockKeys.add(evt.blockKey)
       }
     }
     // Skip individual heat rows for heats belonging to a competitive event
@@ -211,7 +211,7 @@ export default function JudgeScoring({
   }
   // Append any competitive events with no heats yet
   for (const evt of competitiveEvents) {
-    if (!insertedEventIds.has(evt.id)) {
+    if (!insertedBlockKeys.has(evt.blockKey)) {
       items.push({ type: 'comp', event: evt })
     }
   }
@@ -615,7 +615,7 @@ function CompBlock({
                       {myMark ? '✓ Called' : 'Call back'}
                     </button>
                   ) : (
-                    Array.from({ length: event.finalSize }, (_, i) => i + 1).map(place => {
+                    Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
                       const active = myPlace === place
                       return (
                         <button key={place} onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)} className="w-9 h-9 text-sm font-bold"
@@ -670,7 +670,7 @@ function CompBlock({
                     {myMark ? '✓ Called' : 'Call back'}
                   </button>
                 ) : (
-                  Array.from({ length: event.finalSize }, (_, i) => i + 1).map(place => {
+                  Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
                     const active = myPlace === place
                     return (
                       <button key={place} onClick={() => onCompScore(event.id, couple.studentId, place, singleHeatId)} className="w-9 h-9 text-sm font-bold"
