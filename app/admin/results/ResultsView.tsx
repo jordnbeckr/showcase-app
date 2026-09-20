@@ -271,24 +271,20 @@ export default function ResultsView({
             ])
             const eventJudges = judges.filter(j => compJudgeIds.has(j.id))
 
-            // Callback rows (semi): sorted by total marks (judge × dance) desc
-            // Only count marks from the semi heats shown in this table (not final heats)
+            // Callback rows (semi): by leader number; totalCbs only used for cutoff/status
             const semiHeatIds = new Set(evt.dances.map(d => d.heatId))
             const callbackRows = [...evt.couples]
               .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length }))
-              .sort((a, b) => b.totalCbs - a.totalCbs || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
             const maxCallbacks = eventJudges.length * ND
-            const cutoffCount = callbackRows[evt.finalSize - 1]?.totalCbs ?? 0
+            const cutoffCount = [...callbackRows].sort((a, b) => b.totalCbs - a.totalCbs)[evt.finalSize - 1]?.totalCbs ?? 0
             const hasTie = callbackRows.filter(c => c.totalCbs >= cutoffCount).length > evt.finalSize &&
               callbackRows.filter(c => c.totalCbs === cutoffCount).length > 1
 
-            // Final rows: sorted by finalTotal asc, then leaderNumber
+            // Final rows: by leader number
             const couplesSortedFinal = evt.couples
               .map((c, ci) => ({ ...c, ci, ft: finalTotals[ci], fp: finalPlaces[ci] }))
-              .sort((a, b) => {
-                if (a.ft > 0 && b.ft > 0 && a.ft !== b.ft) return a.ft - b.ft
-                return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
-              })
+              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
 
             const cell = { borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' as const }
             const thBase = { padding: '5px 8px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
