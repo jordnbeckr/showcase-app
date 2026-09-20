@@ -50,7 +50,7 @@ export default async function AdminResultsPage() {
     db.studio.findMany({ orderBy: { order: 'asc' } }),
     db.event.findMany({
       where: { isCompetitive: true },
-      orderBy: { order: 'asc' },
+      orderBy: { order: 'asc' }, // re-sorted by first heat number below
       include: {
         compRound: true,
         compScores: { include: { judge: true, student: { include: { studio: true } } } },
@@ -209,6 +209,13 @@ export default async function AdminResultsPage() {
         return { studentId: entry.studentId, num: display.num, personA: display.personA, personB: display.personB, feedbackLines }
       }),
     }))
+
+  // Sort events by first heat number ascending
+  events.sort((a, b) => {
+    const aFirst = a.heats[0]?.heat.number ?? 9999
+    const bFirst = b.heats[0]?.heat.number ?? 9999
+    return aFirst - bFirst
+  })
 
   const eventData: CompEventData[] = events.map(evt => {
     const isSemi = evt.compRound?.round === 'semifinal'
