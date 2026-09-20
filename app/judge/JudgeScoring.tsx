@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { setClosedScore, setOpenThumb, setOpenNote, setCompScore, setSemiMark } from '@/app/actions/judge'
 
 type HeatEntry = {
@@ -532,6 +533,7 @@ function CompBlock({
   onSemiMark: (eventId: number, heatId: number, studentId: number) => void
 }) {
   const [danceIdx, setDanceIdx] = useState(0)
+  const router = useRouter()
 
   const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
   const isMultiDance = event.dances.length > 1
@@ -569,9 +571,15 @@ function CompBlock({
               Semifinal — {marked}/{event.semiSize} called
             </span>
           ) : (
-            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
-              Final — place 1–{event.finalSize}
-            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <button onClick={() => router.refresh()} className="text-xs px-2 py-0.5 font-semibold"
+                style={{ borderRadius: 3, border: '1.5px solid #a78bfa', backgroundColor: 'transparent', color: '#7c3aed', cursor: 'pointer' }}>
+                ↻ Refresh
+              </button>
+              <span className="text-xs px-2 py-0.5 font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+                Final — place 1–{event.couples.length}
+              </span>
+            </div>
           )}
         </div>
 
@@ -648,9 +656,15 @@ function CompBlock({
             Semifinal — {markedCount}/{event.semiSize} called
           </span>
         ) : (
-          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
-            Final — place 1–{event.finalSize}
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => router.refresh()} className="text-xs px-2 py-0.5 font-semibold"
+              style={{ borderRadius: 3, border: '1.5px solid #a78bfa', backgroundColor: 'transparent', color: '#7c3aed', cursor: 'pointer' }}>
+              ↻ Refresh
+            </button>
+            <span className="text-xs px-2 py-0.5 font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+              Final — place 1–{event.couples.length}
+            </span>
+          </div>
         )}
       </div>
       <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>

@@ -222,14 +222,12 @@ export default async function AdminResultsPage() {
     const phase = evt.compRound?.phase ?? 'semi'
     const finalSize = evt.compRound?.finalSize ?? 6
 
-    // Build ordered dances list; for semi events split by phase
     const allEventHeats = evt.heats.map(eh => ({ heatId: eh.heatId, heatNumber: eh.heat.number, dance: eh.heat.danceType.name }))
       .sort((a, b) => a.heatNumber - b.heatNumber)
-    let dances = allEventHeats
-    if (isSemi) {
-      const half = Math.ceil(allEventHeats.length / 2)
-      dances = phase === 'final' ? allEventHeats.slice(half) : allEventHeats.slice(0, half)
-    }
+    const half = Math.ceil(allEventHeats.length / 2)
+    const semiDances = isSemi ? allEventHeats.slice(0, half) : []
+    const finalDances = isSemi ? allEventHeats.slice(half) : allEventHeats
+    const dances = isSemi ? semiDances : allEventHeats
 
     const couples = evt.studentEvents
       .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
@@ -262,7 +260,19 @@ export default async function AdminResultsPage() {
         const callbackCount = evt.semiMarks.filter(m => m.studentId === student.id && m.called).length
         return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled, callbackCount }
       })
-    return { id: evt.id, name: evt.name, isSemi, phase, finalSize, judgeCount: judges.length, dances, couples }
+
+    // Advancing couples for finals: top finalSize by total marks on semi heats
+    const semiHeatIds = new Set(semiDances.map(d => d.heatId))
+    const withCounts = couples.map(c => ({
+      ...c,
+      _cbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length,
+    }))
+    withCounts.sort((a, b) => b._cbs - a._cbs || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+    const finalCouples = isSemi
+      ? withCounts.slice(0, finalSize).sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+      : couples
+
+    return { id: evt.id, name: evt.name, isSemi, finalSize, judgeCount: judges.length, dances, couples, semiDances, finalDances, finalCouples }
   })
 
   return (
