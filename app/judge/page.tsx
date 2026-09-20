@@ -68,7 +68,7 @@ export default async function JudgePage() {
     db.openNote.findMany({ where: { judgeId } }),
     db.compScore.findMany({ where: { judgeId } }),
     db.semiMark.findMany({ where: { judgeId } }),
-    db.semiMark.findMany({ select: { eventId: true, studentId: true, judgeId: true, called: true } }),
+    db.semiMark.findMany({ select: { eventId: true, heatId: true, studentId: true, judgeId: true, called: true } }),
   ])
 
   // Map events by first heat number so they appear at the right position in the scroll
