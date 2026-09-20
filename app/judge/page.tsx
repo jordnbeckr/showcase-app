@@ -8,6 +8,7 @@ export default async function JudgePage() {
   const session = await getSession()
   if (session?.role !== 'judge') return null
   const judgeId = session.judgeId
+  const isGuest = session.judgeName === 'Guest'
 
   // Load judge's heat-range floor assignments
   const judgeFloorRanges = await db.judgeFloorRange.findMany({
@@ -84,6 +85,8 @@ export default async function JudgePage() {
     eventByFirstHeat.set(firstHeatNum, evt)
   }
 
+  const competitiveEventsForJudge = isGuest ? [] : events
+
   return (
     <JudgeScoring
       judgeId={judgeId}
@@ -129,7 +132,7 @@ export default async function JudgePage() {
           partnerLastName: e.partnerStudent?.lastName ?? null,
         })),
       }))}
-      competitiveEvents={events.flatMap(evt => {
+      competitiveEvents={competitiveEventsForJudge.flatMap(evt => {
         // Identify couples: for instructor-led, one StudentEvent per student; for amateur, only Leader students
         const couples = evt.studentEvents
           .filter(se => {
