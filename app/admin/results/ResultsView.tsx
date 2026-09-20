@@ -271,14 +271,14 @@ export default function ResultsView({
             ])
             const eventJudges = judges.filter(j => compJudgeIds.has(j.id))
 
-            // Callback rows (semi): sorted by distinct-judge callbackCount desc
+            // Callback rows (semi): sorted by total marks (judge × dance) desc
             const callbackRows = [...evt.couples]
               .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called).length }))
-              .sort((a, b) => b.callbackCount - a.callbackCount || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+              .sort((a, b) => b.totalCbs - a.totalCbs || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
             const maxCallbacks = eventJudges.length * ND
-            const cutoffCount = callbackRows[evt.finalSize - 1]?.callbackCount ?? 0
-            const hasTie = callbackRows.filter(c => c.callbackCount >= cutoffCount).length > evt.finalSize &&
-              callbackRows.filter(c => c.callbackCount === cutoffCount).length > 1
+            const cutoffCount = callbackRows[evt.finalSize - 1]?.totalCbs ?? 0
+            const hasTie = callbackRows.filter(c => c.totalCbs >= cutoffCount).length > evt.finalSize &&
+              callbackRows.filter(c => c.totalCbs === cutoffCount).length > 1
 
             // Final rows: sorted by finalTotal asc, then leaderNumber
             const couplesSortedFinal = evt.couples

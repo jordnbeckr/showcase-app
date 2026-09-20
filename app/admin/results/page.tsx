@@ -258,10 +258,8 @@ export default async function AdminResultsPage() {
         const semiCalled = evt.semiMarks
           .filter(sm => sm.studentId === student.id)
           .map(sm => ({ judgeId: sm.judgeId, heatId: sm.heatId, called: sm.called }))
-        // Distinct judges who called this couple on any dance
-        const callbackCount = new Set(
-          evt.semiMarks.filter(m => m.studentId === student.id && m.called).map(m => m.judgeId)
-        ).size
+        // Total marks: judge × dance combinations called back
+        const callbackCount = evt.semiMarks.filter(m => m.studentId === student.id && m.called).length
         return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled, callbackCount }
       })
     return { id: evt.id, name: evt.name, isSemi, phase, finalSize, judgeCount: judges.length, dances, couples }
