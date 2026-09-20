@@ -227,8 +227,9 @@ export default async function JudgePage() {
         const semiHeats = allEventHeats.slice(0, half)
         const finalHeats = allEventHeats.slice(half)
 
-        // Advancing couples: total mark count (judge × dance), not distinct-judge count
-        const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
+        // Advancing couples: total marks from semi heats only (not final heats)
+        const semiHeatIds = new Set(semiHeats.map(h => h.id))
+        const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id && semiHeatIds.has(m.heatId))
         const withCounts = allCouples.map(c => ({
           ...c,
           callbacks: eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).length,
