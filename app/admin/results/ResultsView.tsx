@@ -256,11 +256,26 @@ export default function ResultsView({
               .sort((a, b) => finalTotals[a] - finalTotals[b])
               .forEach((ci, i) => { finalPlaces[ci] = i + 1 })
 
+            const JUDGE_COLORS = [
+              { bg: '#f3eeff', fg: '#4c1d95', dot: '#c084fc' },
+              { bg: '#e0f2fe', fg: '#0c4a6e', dot: '#38bdf8' },
+              { bg: '#d1fae5', fg: '#064e3b', dot: '#34d399' },
+              { bg: '#fff7ed', fg: '#7c2d12', dot: '#fb923c' },
+              { bg: '#fdf4ff', fg: '#701a75', dot: '#e879f9' },
+            ]
+
+            // Only show judges who actually have marks or scores for this event
+            const compJudgeIds = new Set([
+              ...evt.couples.flatMap(c => c.scores.map(s => s.judgeId)),
+              ...evt.couples.flatMap(c => c.semiCalled.map(m => m.judgeId)),
+            ])
+            const eventJudges = judges.filter(j => compJudgeIds.has(j.id))
+
             // Callback rows (semi): sorted by distinct-judge callbackCount desc
             const callbackRows = [...evt.couples]
               .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called).length }))
               .sort((a, b) => b.callbackCount - a.callbackCount || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-            const maxCallbacks = judges.length * ND
+            const maxCallbacks = eventJudges.length * ND
             const cutoffCount = callbackRows[evt.finalSize - 1]?.callbackCount ?? 0
             const hasTie = callbackRows.filter(c => c.callbackCount >= cutoffCount).length > evt.finalSize &&
               callbackRows.filter(c => c.callbackCount === cutoffCount).length > 1
@@ -272,14 +287,6 @@ export default function ResultsView({
                 if (a.ft > 0 && b.ft > 0 && a.ft !== b.ft) return a.ft - b.ft
                 return (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999)
               })
-
-            const JUDGE_COLORS = [
-              { bg: '#f3eeff', fg: '#4c1d95', dot: '#c084fc' },
-              { bg: '#e0f2fe', fg: '#0c4a6e', dot: '#38bdf8' },
-              { bg: '#d1fae5', fg: '#064e3b', dot: '#34d399' },
-              { bg: '#fff7ed', fg: '#7c2d12', dot: '#fb923c' },
-              { bg: '#fdf4ff', fg: '#701a75', dot: '#e879f9' },
-            ]
 
             const cell = { borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' as const }
             const thBase = { padding: '5px 8px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
@@ -306,7 +313,7 @@ export default function ResultsView({
 
                 {/* Judge color legend */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '7px 14px', background: '#f9f5ff', borderBottom: '1px solid #e9d5ff', fontSize: '0.72rem', color: '#6b21a8', alignItems: 'center' }}>
-                  {judges.map((j, ji) => {
+                  {eventJudges.map((j, ji) => {
                     const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                     return (
                       <span key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -332,7 +339,7 @@ export default function ResultsView({
                         <tr>
                           <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
                           <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
-                          {judges.map((j, ji) => {
+                          {eventJudges.map((j, ji) => {
                             const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                             return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
                           })}
@@ -355,7 +362,7 @@ export default function ResultsView({
                                   </td>
                                 )}
                                 <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
-                                {judges.map((j, ji) => {
+                                {eventJudges.map((j, ji) => {
                                   const mark = couple.semiCalled.find(m => m.judgeId === j.id && m.heatId === dance.heatId)
                                   const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                                   return (
@@ -377,7 +384,7 @@ export default function ResultsView({
                           })
                         })}
                         {callbackRows.length === 0 && (
-                          <tr><td colSpan={3 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
+                          <tr><td colSpan={3 + eventJudges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -398,7 +405,7 @@ export default function ResultsView({
                         <tr>
                           <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
                           <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
-                          {judges.map((j, ji) => {
+                          {eventJudges.map((j, ji) => {
                             const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                             return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
                           })}
@@ -427,7 +434,7 @@ export default function ResultsView({
                                   </td>
                                 )}
                                 <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
-                                {judges.map((j, ji) => {
+                                {eventJudges.map((j, ji) => {
                                   const score = couple.scores.find(s => s.judgeId === j.id && s.heatId === dance.heatId)
                                   const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                                   return (
@@ -457,7 +464,7 @@ export default function ResultsView({
                           })
                         })}
                         {couplesSortedFinal.length === 0 && (
-                          <tr><td colSpan={5 + judges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
+                          <tr><td colSpan={5 + eventJudges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
                         )}
                       </tbody>
                     </table>

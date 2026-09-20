@@ -129,21 +129,19 @@ export default async function JudgePage() {
           partnerLastName: e.partnerStudent?.lastName ?? null,
         })),
       }))}
-      competitiveEvents={events.map(evt => {
+      competitiveEvents={events.flatMap(evt => {
         // Identify couples: for instructor-led, one StudentEvent per student; for amateur, only Leader students
         const couples = evt.studentEvents
           .filter(se => {
             if (se.partnerStudentId !== null) {
-              // amateur: only include the Leader
               return se.student.role === 'Leader'
             }
-            return true // instructor-led: include all
+            return true
           })
           .map(se => {
             const student = se.student
             const instructor = se.instructor
 
-            // Determine display order and number
             let leaderNumber: number | null = null
             let personA: string = ''
             let personB: string = ''
@@ -152,21 +150,18 @@ export default async function JudgePage() {
               const instIsLeader = instructor.role === 'Leader'
               const stuIsLeader = student.role === 'Leader'
               if (instIsLeader && !stuIsLeader) {
-                // Instructor leads
                 leaderNumber = instructor.leaderNumber
                 personA = instructor.name
                 personB = `${student.firstName} ${student.lastName}`
               } else {
-                // Student leads (or both leaders → student goes first)
                 leaderNumber = student.leaderNumber
                 personA = `${student.firstName} ${student.lastName}`
                 personB = instructor.name
               }
             } else if (se.partnerStudentId !== null) {
-              // Amateur: this is the Leader student
               leaderNumber = student.leaderNumber
               personA = `${student.firstName} ${student.lastName}`
-              personB = '' // filled in below from studentEvents lookup
+              personB = ''
             }
 
             return {
@@ -180,67 +175,95 @@ export default async function JudgePage() {
 
         // Fill in partner names for amateur couples
         const allStudents = evt.studentEvents.map(se => se.student)
-        const couplesWithPartners = couples.map(c => {
+        const allCouples = couples.map(c => {
           if (c.personBStudentId !== null && c.personB === '') {
             const partner = allStudents.find(s => s.id === c.personBStudentId)
             return { ...c, personB: partner ? `${partner.firstName} ${partner.lastName}` : '?' }
           }
           return c
-        })
+        }).sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
 
         const round = evt.compRound?.round ?? 'final'
-        const phase = evt.compRound?.phase ?? 'semi'
         const finalSize = evt.compRound?.finalSize ?? 6
-
-        // When phase=final on a semifinal event, filter to top finalSize couples by callback count
-        let filteredCouples = couplesWithPartners.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-        if (round === 'semifinal' && phase === 'final') {
-          const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
-          // Count distinct judges who called back this student on any dance
-          const withCounts = filteredCouples.map(c => ({
-            ...c,
-            callbacks: new Set(
-              eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).map(m => m.judgeId)
-            ).size,
-          }))
-          withCounts.sort((a, b) => b.callbacks - a.callbacks || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-          filteredCouples = withCounts.slice(0, finalSize)
-          filteredCouples.sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-        }
+        const semiSize = evt.compRound?.semiSize ?? 7
 
         const allEventHeats = heats
           .filter(h => h.events.some(eh => eh.eventId === evt.id))
           .sort((a, b) => a.number - b.number)
 
-        // For semifinal events the 4 heats split into semi (first half) and final (second half).
-        // Show only the heats relevant to the current phase.
-        const half = Math.ceil(allEventHeats.length / 2)
-        const eventHeats = round === 'semifinal'
-          ? (phase === 'final' ? allEventHeats.slice(half) : allEventHeats.slice(0, half))
-          : allEventHeats
-
-        return {
-          id: evt.id,
-          name: evt.name,
-          round,
-          phase,
-          finalSize,
-          semiSize: evt.compRound?.semiSize ?? 7,
-          firstHeatNumber: eventHeats.length > 0 ? eventHeats[0].number : 99999,
-          dances: eventHeats.map(h => ({
+        function makeDances(eventHeats: typeof allEventHeats, forCouples: typeof allCouples) {
+          return eventHeats.map(h => ({
             heatId: h.id,
             heatNumber: h.number,
             dance: h.danceType.name,
             coupleFloors: Object.fromEntries(
-              filteredCouples.map(c => {
+              forCouples.map(c => {
                 const fid = entryFloorId.get(`${c.studentId}-${h.id}`)
                 const label = fid !== undefined ? (floorById.get(fid) ?? null) : null
                 return [c.studentId, label]
               })
             ),
-          })),
-          couples: filteredCouples,
+          }))
         }
+
+        if (round !== 'semifinal') {
+          // Non-semi: single block
+          return [{
+            id: evt.id,
+            name: evt.name,
+            round,
+            phase: 'final',
+            finalSize,
+            semiSize,
+            blockKey: `${evt.id}`,
+            firstHeatNumber: allEventHeats.length > 0 ? allEventHeats[0].number : 99999,
+            dances: makeDances(allEventHeats, allCouples),
+            couples: allCouples,
+          }]
+        }
+
+        // Semi event: emit two separate blocks
+        const half = Math.ceil(allEventHeats.length / 2)
+        const semiHeats = allEventHeats.slice(0, half)
+        const finalHeats = allEventHeats.slice(half)
+
+        // Advancing couples: total mark count (judge × dance), not distinct-judge count
+        const eventAllSemiMarks = allSemiMarks.filter(m => m.eventId === evt.id)
+        const withCounts = allCouples.map(c => ({
+          ...c,
+          callbacks: eventAllSemiMarks.filter(m => m.studentId === c.studentId && m.called).length,
+        }))
+        withCounts.sort((a, b) => b.callbacks - a.callbacks || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+        const advancingCouples = withCounts.slice(0, finalSize)
+          .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+
+        const semiBlock = {
+          id: evt.id,
+          name: evt.name,
+          round: 'semifinal',
+          phase: 'semi',
+          finalSize,
+          semiSize,
+          blockKey: `${evt.id}-semi`,
+          firstHeatNumber: semiHeats.length > 0 ? semiHeats[0].number : 99999,
+          dances: makeDances(semiHeats, allCouples),
+          couples: allCouples,
+        }
+
+        const finalBlock = {
+          id: evt.id,
+          name: evt.name,
+          round: 'semifinal',
+          phase: 'final',
+          finalSize,
+          semiSize,
+          blockKey: `${evt.id}-final`,
+          firstHeatNumber: finalHeats.length > 0 ? finalHeats[0].number : 99999,
+          dances: makeDances(finalHeats, advancingCouples),
+          couples: advancingCouples,
+        }
+
+        return [semiBlock, finalBlock]
       }).sort((a, b) => a.firstHeatNumber - b.firstHeatNumber)}
       categories={categories.map(c => ({ id: c.id, name: c.name }))}
       initialClosedScores={existingClosedScores.map(s => ({ heatId: s.heatId, studentId: s.studentId, placement: s.placement }))}
