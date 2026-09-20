@@ -217,17 +217,12 @@ export default async function AdminResultsPage() {
     return aFirst - bFirst
   })
 
-  const eventData: CompEventData[] = events.map(evt => {
+  const eventData: CompEventData[] = events.flatMap(evt => {
     const isSemi = evt.compRound?.round === 'semifinal'
-    const phase = evt.compRound?.phase ?? 'semi'
     const finalSize = evt.compRound?.finalSize ?? 6
 
     const allEventHeats = evt.heats.map(eh => ({ heatId: eh.heatId, heatNumber: eh.heat.number, dance: eh.heat.danceType.name }))
       .sort((a, b) => a.heatNumber - b.heatNumber)
-    const half = Math.ceil(allEventHeats.length / 2)
-    const semiDances = isSemi ? allEventHeats.slice(0, half) : []
-    const finalDances = isSemi ? allEventHeats.slice(half) : allEventHeats
-    const dances = isSemi ? semiDances : allEventHeats
 
     const couples = evt.studentEvents
       .filter(se => se.partnerStudentId !== null ? se.student.role === 'Leader' : true)
@@ -248,32 +243,62 @@ export default async function AdminResultsPage() {
           const partner = evt.studentEvents.find(x => x.studentId === se.partnerStudentId)
           if (partner) personB = `${partner.student.firstName} ${partner.student.lastName}`
         }
-        // Per-dance placement scores
         const scores = evt.compScores
           .filter(cs => cs.studentId === student.id)
           .map(cs => ({ judgeId: cs.judgeId, heatId: cs.heatId, place: cs.place }))
-        // Per-dance callback marks
         const semiCalled = evt.semiMarks
           .filter(sm => sm.studentId === student.id)
           .map(sm => ({ judgeId: sm.judgeId, heatId: sm.heatId, called: sm.called }))
-        // Total marks: judge × dance combinations called back
         const callbackCount = evt.semiMarks.filter(m => m.studentId === student.id && m.called).length
         return { studentId: student.id, leaderNumber, personA, personB, scores, semiCalled, callbackCount }
       })
 
-    // Advancing couples for finals: top finalSize by total marks on semi heats
+    if (!isSemi) {
+      return [{
+        id: evt.id,
+        name: evt.name,
+        phase: 'final' as const,
+        finalSize,
+        firstHeatNumber: allEventHeats[0]?.heatNumber ?? 99999,
+        dances: allEventHeats,
+        couples,
+      }]
+    }
+
+    // Semi event: emit two separate cards
+    const half = Math.ceil(allEventHeats.length / 2)
+    const semiDances = allEventHeats.slice(0, half)
+    const finalDances = allEventHeats.slice(half)
+
     const semiHeatIds = new Set(semiDances.map(d => d.heatId))
     const withCounts = couples.map(c => ({
       ...c,
       _cbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length,
     }))
     withCounts.sort((a, b) => b._cbs - a._cbs || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-    const finalCouples = isSemi
-      ? withCounts.slice(0, finalSize).sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-      : couples
+    const finalCouples = withCounts.slice(0, finalSize).sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
 
-    return { id: evt.id, name: evt.name, isSemi, finalSize, judgeCount: judges.length, dances, couples, semiDances, finalDances, finalCouples }
-  })
+    return [
+      {
+        id: evt.id,
+        name: evt.name,
+        phase: 'semi' as const,
+        finalSize,
+        firstHeatNumber: semiDances[0]?.heatNumber ?? 99999,
+        dances: semiDances,
+        couples,
+      },
+      {
+        id: evt.id,
+        name: evt.name,
+        phase: 'final' as const,
+        finalSize,
+        firstHeatNumber: finalDances[0]?.heatNumber ?? 99999,
+        dances: finalDances,
+        couples: finalCouples,
+      },
+    ]
+  }).sort((a, b) => a.firstHeatNumber - b.firstHeatNumber)
 
   return (
     <ResultsView

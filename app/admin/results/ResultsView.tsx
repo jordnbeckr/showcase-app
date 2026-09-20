@@ -45,16 +45,11 @@ type CoupleInfo = {
 export type CompEventData = {
   id: number
   name: string
-  isSemi: boolean
+  phase: 'semi' | 'final'  // 'semi' shows callbacks table; 'final' shows placements table
   finalSize: number
-  judgeCount: number
-  // For non-semi events: dances = all heats, finalCouples = couples
-  // For semi events: semiDances + all couples for callbacks; finalDances + finalCouples for final
-  dances: DanceInfo[]
-  couples: CoupleInfo[]
-  semiDances: DanceInfo[]
-  finalDances: DanceInfo[]
-  finalCouples: CoupleInfo[]
+  firstHeatNumber: number
+  dances: DanceInfo[]   // heats for this phase
+  couples: CoupleInfo[] // all couples (semi) or advancing couples (final)
 }
 
 export type BoBDance = { dance: string; students: { studentId: number; name: string; studioName: string }[] }
@@ -246,38 +241,12 @@ export default function ResultsView({
       {events.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Competitive Events</h2>
-          {events.map(evt => {
-            const showSemi = evt.isSemi
-            const showFinal = true
+          {events.map((evt, evtIdx) => {
+            const isSemiCard = evt.phase === 'semi'
+            const isFinalCard = evt.phase === 'final'
 
-            // Semi uses semiDances + all couples; final uses finalDances + finalCouples
-            const semiDances = evt.isSemi ? evt.semiDances : []
-            const finalDances = evt.isSemi ? evt.finalDances : evt.dances
-            const finalCouples = evt.isSemi ? evt.finalCouples : evt.couples
-
-            const ND_semi = semiDances.length
-            const ND_final = finalDances.length
-            const NC_final = finalCouples.length
-
-            // Per-dance judge-sum totals for FINAL couples on FINAL dances
-            const danceJudgeSum: number[][] = finalDances.map(dance =>
-              finalCouples.map(c =>
-                c.scores.filter(s => s.heatId === dance.heatId).reduce((sum, s) => sum + s.place, 0)
-              )
-            )
-            const dancePlacement: (number | null)[][] = danceJudgeSum.map(sums => {
-              const order = sums.map((s, ci) => ({ ci, s })).filter(x => x.s > 0).sort((a, b) => a.s - b.s)
-              const ranks: (number | null)[] = new Array(NC_final).fill(null)
-              order.forEach((x, i) => { ranks[x.ci] = i + 1 })
-              return ranks
-            })
-            const finalTotals: number[] = finalCouples.map((_, ci) =>
-              dancePlacement.reduce((sum, dp) => sum + (dp[ci] ?? 0), 0)
-            )
-            const finalPlaces: (number | null)[] = new Array(NC_final).fill(null)
-            ;[...finalCouples.map((_, ci) => ci).filter(ci => finalTotals[ci] > 0)]
-              .sort((a, b) => finalTotals[a] - finalTotals[b])
-              .forEach((ci, i) => { finalPlaces[ci] = i + 1 })
+            const ND = evt.dances.length
+            const NC = evt.couples.length
 
             const JUDGE_COLORS = [
               { bg: '#f3eeff', fg: '#4c1d95', dot: '#c084fc' },
@@ -294,21 +263,6 @@ export default function ResultsView({
             ])
             const eventJudges = judges.filter(j => compJudgeIds.has(j.id))
 
-            // Callback rows: by leader number; totalCbs used for cutoff/IN/OUT
-            const semiHeatIds = new Set(semiDances.map(d => d.heatId))
-            const callbackRows = [...evt.couples]
-              .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length }))
-              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-            const maxCallbacks = eventJudges.length * ND_semi
-            const cutoffCount = [...callbackRows].sort((a, b) => b.totalCbs - a.totalCbs)[evt.finalSize - 1]?.totalCbs ?? 0
-            const hasTie = callbackRows.filter(c => c.totalCbs >= cutoffCount).length > evt.finalSize &&
-              callbackRows.filter(c => c.totalCbs === cutoffCount).length > 1
-
-            // Final rows: by leader number
-            const couplesSortedFinal = finalCouples
-              .map((c, ci) => ({ ...c, ci, ft: finalTotals[ci], fp: finalPlaces[ci] }))
-              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
-
             const cell = { borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' as const }
             const thBase = { padding: '5px 8px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
 
@@ -318,42 +272,34 @@ export default function ResultsView({
               3: { bg: '#fb923c', color: '#431407', border: '#ea580c' },
             }
 
-            const rankedForBanner = couplesSortedFinal
-              .filter(c => c.fp !== null)
-              .map(c => ({ ...c, rank: c.fp! }))
+            // ── SEMI card ──
+            if (isSemiCard) {
+              const semiHeatIds = new Set(evt.dances.map(d => d.heatId))
+              const callbackRows = [...evt.couples]
+                .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length }))
+                .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+              const maxCallbacks = eventJudges.length * ND
+              const cutoffCount = [...callbackRows].sort((a, b) => b.totalCbs - a.totalCbs)[evt.finalSize - 1]?.totalCbs ?? 0
+              const hasTie = callbackRows.filter(c => c.totalCbs >= cutoffCount).length > evt.finalSize &&
+                callbackRows.filter(c => c.totalCbs === cutoffCount).length > 1
 
-            return (
-              <div key={evt.id} className="card overflow-hidden">
-                {/* Header */}
-                <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
-                  <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
-                  <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>
-                    {evt.isSemi ? 'Semifinal + Final' : `Final — 1–${finalCouples.length}`}
-                  </span>
-                </div>
-
-                {/* Judge color legend */}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '7px 14px', background: '#f9f5ff', borderBottom: '1px solid #e9d5ff', fontSize: '0.72rem', color: '#6b21a8', alignItems: 'center' }}>
-                  {eventJudges.map((j, ji) => {
-                    const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
-                    return (
-                      <span key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: jc.dot, display: 'inline-block', flexShrink: 0 }} />
-                        {j.name}
-                      </span>
-                    )
-                  })}
-                  {showFinal && <>
-                    <span style={{ color: '#c4b5fd' }}>·</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 12, height: 10, borderRadius: 2, background: '#ede9fb', border: '1px solid #a78bfa', display: 'inline-block' }} />
-                      Dance total → placement
-                    </span>
-                  </>}
-                </div>
-
-                {/* SEMI: row-per-dance table */}
-                {showSemi && (
+              return (
+                <div key={`${evt.id}-semi-${evtIdx}`} className="card overflow-hidden">
+                  <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
+                    <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
+                    <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>Semifinal</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '7px 14px', background: '#f9f5ff', borderBottom: '1px solid #e9d5ff', fontSize: '0.72rem', color: '#6b21a8', alignItems: 'center' }}>
+                    {eventJudges.map((j, ji) => {
+                      const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                      return (
+                        <span key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: jc.dot, display: 'inline-block', flexShrink: 0 }} />
+                          {j.name}
+                        </span>
+                      )
+                    })}
+                  </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 480 }}>
                       <thead>
@@ -371,12 +317,12 @@ export default function ResultsView({
                       <tbody>
                         {callbackRows.flatMap((couple) => {
                           const isIn = couple.totalCbs >= cutoffCount && cutoffCount > 0
-                          return semiDances.map((dance, di) => {
+                          return evt.dances.map((dance, di) => {
                             const isFirst = di === 0
                             return (
                               <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '3px solid #7c3aed' : undefined }}>
                                 {isFirst && (
-                                  <td rowSpan={ND_semi} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND_semi * 30 }}>
+                                  <td rowSpan={ND} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND * 30 }}>
                                     <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
                                     {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
@@ -393,10 +339,10 @@ export default function ResultsView({
                                   )
                                 })}
                                 {isFirst && <>
-                                  <td rowSpan={ND_semi} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
                                     {couple.totalCbs}/{maxCallbacks}
                                   </td>
-                                  <td rowSpan={ND_semi} style={{ ...cell, textAlign: 'center', background: isIn ? '#dcfce7' : '#fee2e2', borderRight: 'none' }}>
+                                  <td rowSpan={ND} style={{ ...cell, textAlign: 'center', background: isIn ? '#dcfce7' : '#fee2e2', borderRight: 'none' }}>
                                     <span style={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.08em', color: isIn ? '#14532d' : '#7f1d1d' }}>{isIn ? 'IN' : 'OUT'}</span>
                                   </td>
                                 </>}
@@ -410,90 +356,136 @@ export default function ResultsView({
                       </tbody>
                     </table>
                   </div>
-                )}
+                  {hasTie && (
+                    <div className="px-4 py-2 text-xs" style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', color: '#713f12' }}>
+                      ⚠ Tie at cutoff — adjust Final size in Config → Events to include tied couples.
+                    </div>
+                  )}
+                </div>
+              )
+            }
 
-                {hasTie && showSemi && (
-                  <div className="px-4 py-2 text-xs" style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', color: '#713f12' }}>
-                    ⚠ Tie at cutoff — adjust Final size in Config → Events to include tied couples.
-                  </div>
-                )}
+            // ── FINAL card ──
+            const danceJudgeSum: number[][] = evt.dances.map(dance =>
+              evt.couples.map(c =>
+                c.scores.filter(s => s.heatId === dance.heatId).reduce((sum, s) => sum + s.place, 0)
+              )
+            )
+            const dancePlacement: (number | null)[][] = danceJudgeSum.map(sums => {
+              const order = sums.map((s, ci) => ({ ci, s })).filter(x => x.s > 0).sort((a, b) => a.s - b.s)
+              const ranks: (number | null)[] = new Array(NC).fill(null)
+              order.forEach((x, i) => { ranks[x.ci] = i + 1 })
+              return ranks
+            })
+            const finalTotals: number[] = evt.couples.map((_, ci) =>
+              dancePlacement.reduce((sum, dp) => sum + (dp[ci] ?? 0), 0)
+            )
+            const finalPlaces: (number | null)[] = new Array(NC).fill(null)
+            ;[...evt.couples.map((_, ci) => ci).filter(ci => finalTotals[ci] > 0)]
+              .sort((a, b) => finalTotals[a] - finalTotals[b])
+              .forEach((ci, i) => { finalPlaces[ci] = i + 1 })
 
-                {/* FINAL: row-per-dance table */}
-                {showFinal && (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
-                      <thead>
-                        <tr>
-                          <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
-                          <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
-                          {eventJudges.map((j, ji) => {
-                            const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
-                            return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
-                          })}
-                          <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '1px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>∑ Judges</th>
-                          <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '2px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>Placement</th>
-                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560', borderBottom: '2px solid #3d2560' }}>Final Total</th>
-                          <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: 'none', borderBottom: '2px solid #3d2560' }}>Final Place</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {couplesSortedFinal.flatMap(couple => {
-                          const { ci, ft, fp } = couple
-                          const fpBg = fp === 1 ? '#fef3c7' : fp === 2 ? '#e2e8f0' : fp === 3 ? '#ffedd5' : '#1e1030'
-                          const fpFg = fp !== null && fp <= 3 ? (fp === 1 ? '#92400e' : fp === 2 ? '#334155' : '#7c2d12') : '#f0e6ff'
-                          return finalDances.map((dance, di) => {
-                            const isFirst = di === 0
-                            const djSum = danceJudgeSum[di][ci]
-                            const dp = dancePlacement[di][ci]
-                            return (
-                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '3px solid #7c3aed' : undefined }}>
-                                {isFirst && (
-                                  <td rowSpan={ND_final} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND_final * 30 }}>
-                                    <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
-                                    {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
-                                  </td>
-                                )}
-                                <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
-                                {eventJudges.map((j, ji) => {
-                                  const score = couple.scores.find(s => s.judgeId === j.id && s.heatId === dance.heatId)
-                                  const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
-                                  return (
-                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: score ? jc.bg : 'var(--surface)', color: jc.fg, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem' }}>
-                                      {score ? score.place : <span style={{ color: 'var(--muted)' }}>—</span>}
-                                    </td>
-                                  )
-                                })}
-                                <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', color: '#4c1d95', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', borderRight: '1px solid #a78bfa' }}>
-                                  {djSum > 0 ? djSum : <span style={{ color: 'var(--muted)' }}>—</span>}
-                                </td>
-                                <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', borderRight: '2px solid #a78bfa' }}>
-                                  {dp !== null
-                                    ? <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: dp === 1 ? '#92400e' : dp === 2 ? '#475569' : dp === 3 ? '#7c2d12' : 'var(--muted)' }}>{dp}</span>
-                                    : <span style={{ color: 'var(--muted)' }}>—</span>}
-                                </td>
-                                {isFirst && <>
-                                  <td rowSpan={ND_final} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
-                                    {ft > 0 ? ft : <span style={{ opacity: 0.4 }}>—</span>}
-                                  </td>
-                                  <td rowSpan={ND_final} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: fpBg, color: fpFg, borderRight: 'none' }}>
-                                    {fp ?? <span style={{ opacity: 0.4 }}>—</span>}
-                                  </td>
-                                </>}
-                              </tr>
-                            )
-                          })
+            const couplesSortedFinal = evt.couples
+              .map((c, ci) => ({ ...c, ci, ft: finalTotals[ci], fp: finalPlaces[ci] }))
+              .sort((a, b) => (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
+
+            const rankedForBanner = couplesSortedFinal
+              .filter(c => c.fp !== null)
+              .map(c => ({ ...c, rank: c.fp! }))
+
+            return (
+              <div key={`${evt.id}-final-${evtIdx}`} className="card overflow-hidden">
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: '#f3e8ff', borderBottom: '1px solid #d8b4fe' }}>
+                  <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {evt.name}</span>
+                  <span className="text-xs ml-auto" style={{ color: '#6b21a8' }}>Final — 1–{NC}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '7px 14px', background: '#f9f5ff', borderBottom: '1px solid #e9d5ff', fontSize: '0.72rem', color: '#6b21a8', alignItems: 'center' }}>
+                  {eventJudges.map((j, ji) => {
+                    const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                    return (
+                      <span key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: jc.dot, display: 'inline-block', flexShrink: 0 }} />
+                        {j.name}
+                      </span>
+                    )
+                  })}
+                  <span style={{ color: '#c4b5fd' }}>·</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 12, height: 10, borderRadius: 2, background: '#ede9fb', border: '1px solid #a78bfa', display: 'inline-block' }} />
+                    Dance total → placement
+                  </span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...thBase, textAlign: 'left', minWidth: 130, background: '#f3e8ff', color: '#6b21a8', borderRight: '2px solid var(--border)' }}>Couple</th>
+                        <th style={{ ...thBase, textAlign: 'left', minWidth: 70, background: '#f3e8ff', color: '#6b21a8' }}>Dance</th>
+                        {eventJudges.map((j, ji) => {
+                          const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                          return <th key={j.id} style={{ ...thBase, background: jc.bg, color: jc.fg, borderBottom: `2px solid ${jc.dot}` }}>{j.name}</th>
                         })}
-                        {couplesSortedFinal.length === 0 && (
-                          <tr><td colSpan={5 + eventJudges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Final standings banner */}
-                {showFinal && rankedForBanner.length > 0 && (
+                        <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '1px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>∑ Judges</th>
+                        <th style={{ ...thBase, background: '#ede9fb', color: '#4c1d95', borderRight: '2px solid #a78bfa', borderBottom: '2px solid #a78bfa' }}>Placement</th>
+                        <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560', borderBottom: '2px solid #3d2560' }}>Final Total</th>
+                        <th style={{ ...thBase, background: '#1e1030', color: '#f0e6ff', borderRight: 'none', borderBottom: '2px solid #3d2560' }}>Final Place</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {couplesSortedFinal.flatMap(couple => {
+                        const { ci, ft, fp } = couple
+                        const fpBg = fp === 1 ? '#fef3c7' : fp === 2 ? '#e2e8f0' : fp === 3 ? '#ffedd5' : '#1e1030'
+                        const fpFg = fp !== null && fp <= 3 ? (fp === 1 ? '#92400e' : fp === 2 ? '#334155' : '#7c2d12') : '#f0e6ff'
+                        return evt.dances.map((dance, di) => {
+                          const isFirst = di === 0
+                          const djSum = danceJudgeSum[di][ci]
+                          const dp = dancePlacement[di][ci]
+                          return (
+                            <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '3px solid #7c3aed' : undefined }}>
+                              {isFirst && (
+                                <td rowSpan={ND} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND * 30 }}>
+                                  <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
+                                  <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
+                                  {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
+                                </td>
+                              )}
+                              <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
+                              {eventJudges.map((j, ji) => {
+                                const score = couple.scores.find(s => s.judgeId === j.id && s.heatId === dance.heatId)
+                                const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
+                                return (
+                                  <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: score ? jc.bg : 'var(--surface)', color: jc.fg, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem' }}>
+                                    {score ? score.place : <span style={{ color: 'var(--muted)' }}>—</span>}
+                                  </td>
+                                )
+                              })}
+                              <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', color: '#4c1d95', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', borderRight: '1px solid #a78bfa' }}>
+                                {djSum > 0 ? djSum : <span style={{ color: 'var(--muted)' }}>—</span>}
+                              </td>
+                              <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', borderRight: '2px solid #a78bfa' }}>
+                                {dp !== null
+                                  ? <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: dp === 1 ? '#92400e' : dp === 2 ? '#475569' : dp === 3 ? '#7c2d12' : 'var(--muted)' }}>{dp}</span>
+                                  : <span style={{ color: 'var(--muted)' }}>—</span>}
+                              </td>
+                              {isFirst && <>
+                                <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: '#1e1030', color: '#f0e6ff', borderRight: '1px solid #3d2560' }}>
+                                  {ft > 0 ? ft : <span style={{ opacity: 0.4 }}>—</span>}
+                                </td>
+                                <td rowSpan={ND} style={{ ...cell, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '1rem', background: fpBg, color: fpFg, borderRight: 'none' }}>
+                                  {fp ?? <span style={{ opacity: 0.4 }}>—</span>}
+                                </td>
+                              </>}
+                            </tr>
+                          )
+                        })
+                      })}
+                      {couplesSortedFinal.length === 0 && (
+                        <tr><td colSpan={5 + eventJudges.length} style={{ color: 'var(--muted)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No couples enrolled</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {rankedForBanner.length > 0 && (
                   <div style={{ borderTop: '4px solid #1a1a2e', backgroundColor: '#1a1a2e', padding: '14px 16px' }}>
                     <div className="flex items-center gap-2 mb-3">
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa' }}>Final Standings</span>
