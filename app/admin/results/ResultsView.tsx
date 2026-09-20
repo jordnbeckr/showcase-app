@@ -282,7 +282,7 @@ export default function ResultsView({
             ]
 
             const cell = { borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' as const }
-            const thBase = { padding: '9px 10px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
+            const thBase = { padding: '5px 8px', fontSize: '0.72rem' as const, fontWeight: 700 as const, textAlign: 'center' as const, letterSpacing: '0.04em', textTransform: 'uppercase' as const, borderRight: '1px solid var(--border)', borderBottom: '2px solid var(--border)' }
 
             const medalStyle: Record<number, { bg: string; color: string; border: string }> = {
               1: { bg: '#fbbf24', color: '#78350f', border: '#d97706' },
@@ -346,20 +346,20 @@ export default function ResultsView({
                           return evt.dances.map((dance, di) => {
                             const isFirst = di === 0
                             return (
-                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '2px solid var(--border)' : undefined }}>
+                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '3px solid #7c3aed' : undefined }}>
                                 {isFirst && (
-                                  <td rowSpan={ND} style={{ ...cell, borderRight: '2px solid var(--border)', padding: '0 12px', minWidth: 130, height: ND * 38 }}>
+                                  <td rowSpan={ND} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND * 30 }}>
                                     <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
                                     {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
                                   </td>
                                 )}
-                                <td style={{ ...cell, padding: '7px 10px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
+                                <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
                                 {judges.map((j, ji) => {
                                   const mark = couple.semiCalled.find(m => m.judgeId === j.id && m.heatId === dance.heatId)
                                   const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                                   return (
-                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: mark?.called ? jc.bg : 'var(--surface)' }}>
+                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: mark?.called ? jc.bg : 'var(--surface)' }}>
                                       <span style={{ display: 'inline-block', width: 11, height: 11, borderRadius: '50%', background: mark?.called ? jc.dot : 'var(--border)', verticalAlign: 'middle' }} />
                                     </td>
                                   )
@@ -418,28 +418,28 @@ export default function ResultsView({
                             const djSum = danceJudgeSum[di][ci]
                             const dp = dancePlacement[di][ci]
                             return (
-                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '2px solid var(--border)' : undefined }}>
+                              <tr key={`${couple.studentId}-${di}`} style={{ borderTop: isFirst ? '3px solid #7c3aed' : undefined }}>
                                 {isFirst && (
-                                  <td rowSpan={ND} style={{ ...cell, borderRight: '2px solid var(--border)', padding: '0 12px', minWidth: 130, height: ND * 38 }}>
+                                  <td rowSpan={ND} style={{ ...cell, borderLeft: '3px solid #7c3aed', borderRight: '2px solid var(--border)', padding: '0 10px', minWidth: 130, height: ND * 30 }}>
                                     <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1 }}>{couple.leaderNumber ?? '—'}</div>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>{couple.personA}</div>
                                     {couple.personB && <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.2 }}>&amp; {couple.personB}</div>}
                                   </td>
                                 )}
-                                <td style={{ ...cell, padding: '7px 10px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
+                                <td style={{ ...cell, padding: '4px 8px', fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dance.dance}</td>
                                 {judges.map((j, ji) => {
                                   const score = couple.scores.find(s => s.judgeId === j.id && s.heatId === dance.heatId)
                                   const jc = JUDGE_COLORS[ji % JUDGE_COLORS.length]
                                   return (
-                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: score ? jc.bg : 'var(--surface)', color: jc.fg, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem' }}>
+                                    <td key={j.id} style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: score ? jc.bg : 'var(--surface)', color: jc.fg, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem' }}>
                                       {score ? score.place : <span style={{ color: 'var(--muted)' }}>—</span>}
                                     </td>
                                   )
                                 })}
-                                <td style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: '#ede9fb', color: '#4c1d95', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', borderRight: '1px solid #a78bfa' }}>
+                                <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', color: '#4c1d95', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem', borderRight: '1px solid #a78bfa' }}>
                                   {djSum > 0 ? djSum : <span style={{ color: 'var(--muted)' }}>—</span>}
                                 </td>
-                                <td style={{ ...cell, textAlign: 'center', padding: '7px 10px', background: '#ede9fb', borderRight: '2px solid #a78bfa' }}>
+                                <td style={{ ...cell, textAlign: 'center', padding: '4px 8px', background: '#ede9fb', borderRight: '2px solid #a78bfa' }}>
                                   {dp !== null
                                     ? <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: dp === 1 ? '#92400e' : dp === 2 ? '#475569' : dp === 3 ? '#7c2d12' : 'var(--muted)' }}>{dp}</span>
                                     : <span style={{ color: 'var(--muted)' }}>—</span>}
