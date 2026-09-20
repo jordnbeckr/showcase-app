@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 
 export type JudgeInfo = { id: number; name: string }
 
@@ -108,6 +109,10 @@ export default function ResultsView({
 }) {
   const [openClosed, setOpenClosed] = useState<Set<number>>(new Set())
   const [openOpen, setOpenOpen] = useState<Set<number>>(new Set())
+  const [refreshPending, startRefresh] = useTransition()
+  const router = useRouter()
+
+  function refresh() { startRefresh(() => { router.refresh() }) }
 
   function toggle(set: Set<number>, id: number, setter: (s: Set<number>) => void) {
     const next = new Set(set)
@@ -117,7 +122,13 @@ export default function ResultsView({
 
   return (
     <div className="max-w-5xl mx-auto space-y-10">
-      <h1 className="text-xl font-bold text-center">Judge Results</h1>
+      <div className="flex items-center justify-center gap-3">
+        <h1 className="text-xl font-bold">Judge Results</h1>
+        <button onClick={refresh} disabled={refreshPending} className="text-xs px-2.5 py-1 font-semibold"
+          style={{ borderRadius: 4, border: '1.5px solid #a78bfa', color: refreshPending ? '#c4b5fd' : '#7c3aed', backgroundColor: 'transparent', cursor: refreshPending ? 'default' : 'pointer', opacity: refreshPending ? 0.6 : 1 }}>
+          {refreshPending ? '↻ Refreshing…' : '↻ Refresh'}
+        </button>
+      </div>
 
       {/* CLOSED HEATS */}
       {closedHeats.length > 0 && (
