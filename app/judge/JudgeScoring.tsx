@@ -531,229 +531,282 @@ function CompBlock({
   onSemiMark: (eventId: number, heatId: number, studentId: number) => void
 }) {
   const [danceIdx, setDanceIdx] = useState(0)
+  const [semiCollapsed, setSemiCollapsed] = useState(false)
 
-  const isSemiPhase = event.round === 'semifinal' && event.phase !== 'final'
+  const isSemiEvent = event.round === 'semifinal'
+  const isSemiPhase = isSemiEvent && event.phase !== 'final'
   const isMultiDance = event.dances.length > 1
 
-  // For multi-dance events (final or semifinal): use sequential per-dance navigation
-  if (isMultiDance) {
-    const currentDance = event.dances[danceIdx]
-    // Count students called back on the current dance
-    const marked = event.couples.filter(c => semiMarks[`${event.id}-${currentDance.heatId}-${c.studentId}`]).length
-    const full = marked >= event.semiSize
-    return (
-      <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
-        {/* Header */}
-        <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
-          <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
-          {isSemiPhase ? (
-            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: full ? '#dcfce7' : '#fde68a', borderRadius: 3, color: full ? '#14532d' : '#92400e' }}>
-              Semifinal — {marked}/{event.semiSize} called
-            </span>
-          ) : (
+  // Total marks per couple across all dances (this judge's marks only)
+  function markTotal(studentId: number) {
+    return event.dances.filter(d => !!semiMarks[`${event.id}-${d.heatId}-${studentId}`]).length
+  }
+
+  // Couples sorted by mark total desc, then studentId for stability
+  const rankedCouples = [...event.couples].sort(
+    (a, b) => markTotal(b.studentId) - markTotal(a.studentId) || a.studentId - b.studentId
+  )
+
+  // Top finalSize couples = in final. If no marks yet, show all (fresh view).
+  const anyMarked = event.couples.some(c => markTotal(c.studentId) > 0)
+  const inFinalIds = new Set(
+    anyMarked
+      ? rankedCouples.slice(0, event.finalSize).map(c => c.studentId)
+      : event.couples.map(c => c.studentId)
+  )
+  const finalCouples = event.couples.filter(c => inFinalIds.has(c.studentId))
+
+  // ── Non-semi competitive events: preserve existing paginated nav ──────
+  if (!isSemiEvent) {
+    if (isMultiDance) {
+      const currentDance = event.dances[danceIdx]
+      return (
+        <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
+          <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
+            <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
             <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
               Final — place 1–{event.finalSize}
             </span>
-          )}
-        </div>
-
-        {/* Progress pips */}
-        <div className="flex gap-1.5 px-4 py-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
-          {event.dances.map((d, i) => (
-            <div
-              key={d.heatId}
-              style={{
-                flex: 1,
-                height: 3,
-                borderRadius: 2,
-                backgroundColor: i <= danceIdx ? '#7c3aed' : '#e9d5ff',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Dance nav */}
-        <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
-          <button
-            onClick={() => setDanceIdx(i => Math.max(0, i - 1))}
-            disabled={danceIdx === 0}
-            className="text-xs font-semibold px-3 py-1"
-            style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === 0 ? 0.35 : 1, cursor: danceIdx === 0 ? 'default' : 'pointer' }}
-          >← Back</button>
-          <span className="text-xs font-bold flex-1 text-center" style={{ color: '#6b21a8', letterSpacing: '0.05em' }}>
-            #{currentDance.heatNumber} · {currentDance.dance.toUpperCase()}
-          </span>
-          <button
-            onClick={() => setDanceIdx(i => Math.min(event.dances.length - 1, i + 1))}
-            disabled={danceIdx === event.dances.length - 1}
-            className="text-xs font-semibold px-3 py-1"
-            style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === event.dances.length - 1 ? 0.35 : 1, cursor: danceIdx === event.dances.length - 1 ? 'default' : 'pointer' }}
-          >Next →</button>
-        </div>
-
-        {/* Couples for current dance */}
-        <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
-          {event.couples.map(couple => {
-            const scoreKey = `${event.id}-${currentDance.heatId}-${couple.studentId}`
-            const myPlace = compScores[scoreKey]
-            const myMark = semiMarks[`${event.id}-${currentDance.heatId}-${couple.studentId}`] ?? false
-            const atLimit = marked >= event.semiSize
-            const callbackBlocked = isSemiPhase && !myMark && atLimit
-            const floorLabel = currentDance.coupleFloors[couple.studentId]
-            return (
-              <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: isSemiPhase && myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
-                <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
-                  {couple.leaderNumber ?? '—'}
-                </span>
-                <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
-                  {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
-                </span>
-                {floorLabel && (
-                  <span className="text-xs px-1.5 py-0.5 flex-shrink-0" style={{ backgroundColor: '#f0fdfa', border: '1px solid #0d9488', borderRadius: 3, color: '#0d9488', fontWeight: 700 }}>
-                    {floorLabel}
-                  </span>
-                )}
-                <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
-                  {isSemiPhase ? (
-                    <button
-                      onClick={() => !callbackBlocked && onSemiMark(event.id, currentDance.heatId, couple.studentId)}
-                      disabled={callbackBlocked}
-                      className="px-4 py-1.5 text-sm font-semibold"
-                      style={{
-                        borderRadius: 6,
-                        border: '2px solid',
-                        borderColor: myMark ? '#16a34a' : callbackBlocked ? 'var(--border)' : '#6b21a8',
-                        backgroundColor: myMark ? '#dcfce7' : 'transparent',
-                        color: myMark ? '#14532d' : callbackBlocked ? '#ccc' : '#6b21a8',
-                        minWidth: 80,
-                        cursor: callbackBlocked ? 'not-allowed' : 'pointer',
-                        opacity: callbackBlocked ? 0.45 : 1,
-                      }}
-                    >
-                      {myMark ? '✓ Called' : 'Call back'}
-                    </button>
-                  ) : (
-                    Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
+          </div>
+          <div className="flex gap-1.5 px-4 py-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
+            {event.dances.map((d, i) => (
+              <div key={d.heatId} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= danceIdx ? '#7c3aed' : '#e9d5ff' }} />
+            ))}
+          </div>
+          <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderTop: '1px solid #e9d5ff', backgroundColor: '#faf5ff' }}>
+            <button onClick={() => setDanceIdx(i => Math.max(0, i - 1))} disabled={danceIdx === 0} className="text-xs font-semibold px-3 py-1"
+              style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === 0 ? 0.35 : 1, cursor: danceIdx === 0 ? 'default' : 'pointer' }}>← Back</button>
+            <span className="text-xs font-bold flex-1 text-center" style={{ color: '#6b21a8', letterSpacing: '0.05em' }}>
+              #{currentDance.heatNumber} · {currentDance.dance.toUpperCase()}
+            </span>
+            <button onClick={() => setDanceIdx(i => Math.min(event.dances.length - 1, i + 1))} disabled={danceIdx === event.dances.length - 1} className="text-xs font-semibold px-3 py-1"
+              style={{ borderRadius: 4, border: '1.5px solid #d8b4fe', backgroundColor: 'var(--card)', color: '#6b21a8', opacity: danceIdx === event.dances.length - 1 ? 0.35 : 1, cursor: danceIdx === event.dances.length - 1 ? 'default' : 'pointer' }}>Next →</button>
+          </div>
+          <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
+            {event.couples.map(couple => {
+              const myPlace = compScores[`${event.id}-${currentDance.heatId}-${couple.studentId}`]
+              return (
+                <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>{couple.leaderNumber ?? '—'}</span>
+                  <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>{couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}</span>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
                       const active = myPlace === place
                       return (
-                        <button
-                          key={place}
-                          onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)}
-                          className="w-9 h-9 text-sm font-bold"
-                          style={{
-                            borderRadius: 6,
-                            border: '2px solid',
-                            borderColor: active ? '#7c3aed' : 'var(--border)',
-                            backgroundColor: active ? '#7c3aed' : 'transparent',
-                            color: active ? 'white' : 'var(--muted)',
-                          }}
-                        >
+                        <button key={place} onClick={() => onCompScore(event.id, couple.studentId, place, currentDance.heatId)} className="w-9 h-9 text-sm font-bold"
+                          style={{ borderRadius: 6, border: '2px solid', borderColor: active ? '#7c3aed' : 'var(--border)', backgroundColor: active ? '#7c3aed' : 'transparent', color: active ? 'white' : 'var(--muted)' }}>
                           {place}
                         </button>
                       )
-                    })
-                  )}
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+            {event.couples.length === 0 && <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No couples enrolled yet</div>}
+          </div>
+        </div>
+      )
+    }
+
+    // Single-dance final
+    const singleHeatId = event.dances[0]?.heatId ?? 0
+    return (
+      <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
+        <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
+          <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
+          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
+            Final — place 1–{event.finalSize}
+          </span>
+        </div>
+        <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
+          {event.couples.map(couple => {
+            const myPlace = compScores[`${event.id}-0-${couple.studentId}`]
+            return (
+              <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+                <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>{couple.leaderNumber ?? '—'}</span>
+                <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>{couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}</span>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  {Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
+                    const active = myPlace === place
+                    return (
+                      <button key={place} onClick={() => onCompScore(event.id, couple.studentId, place, singleHeatId)} className="w-9 h-9 text-sm font-bold"
+                        style={{ borderRadius: 6, border: '2px solid', borderColor: active ? '#7c3aed' : 'var(--border)', backgroundColor: active ? '#7c3aed' : 'transparent', color: active ? 'white' : 'var(--muted)' }}>
+                        {place}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )
           })}
-          {event.couples.length === 0 && (
-            <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No couples enrolled yet</div>
-          )}
+          {event.couples.length === 0 && <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No couples enrolled yet</div>}
         </div>
       </div>
     )
   }
 
-  // Single-dance or semifinal: existing UI
+  // ── Semi event: Option D layout ───────────────────────────────────────
+  // All dances stacked, no per-dance callback limit.
+  // Final section always visible; only advancing couples shown there.
+  const totalMarked = event.couples.reduce((sum, c) => sum + markTotal(c.studentId), 0)
+  const maxMarks = event.couples.length * event.dances.length
+
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: '2px solid #d8b4fe' }}>
       {/* Header */}
       <div className="px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: '#f3e8ff' }}>
         <span className="font-bold text-sm" style={{ color: '#6b21a8' }}>◆ {event.name}</span>
-        {isSemiPhase ? (() => {
-          const singleHeatId = event.dances[0]?.heatId ?? 0
-          const marked = event.couples.filter(c => semiMarks[`${event.id}-${singleHeatId}-${c.studentId}`]).length
-          const full = marked >= event.semiSize
-          return (
-            <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: full ? '#dcfce7' : '#fde68a', borderRadius: 3, color: full ? '#14532d' : '#92400e' }}>
-              Semifinal — {marked}/{event.semiSize} called
-            </span>
-          )
-        })() : (
-          <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{ backgroundColor: '#d8b4fe', borderRadius: 3, color: '#6b21a8' }}>
-            Final — place 1–{event.finalSize}
-          </span>
-        )}
+        <span className="text-xs px-2 py-0.5 ml-auto font-semibold" style={{
+          backgroundColor: isSemiPhase ? (anyMarked ? '#dcfce7' : '#fde68a') : '#d8b4fe',
+          borderRadius: 3,
+          color: isSemiPhase ? (anyMarked ? '#14532d' : '#92400e') : '#6b21a8',
+        }}>
+          {isSemiPhase
+            ? (anyMarked ? `${inFinalIds.size}/${event.finalSize} advancing` : 'Semifinal')
+            : `Final — place 1–${event.finalSize}`}
+        </span>
       </div>
 
-      {/* Couples */}
-      <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
-        {event.couples.map(couple => {
-          const scoreKey = `${event.id}-0-${couple.studentId}`
-          const myPlace = compScores[scoreKey]
-          const singleHeatId = event.dances[0]?.heatId ?? 0
-          const myMark = semiMarks[`${event.id}-${singleHeatId}-${couple.studentId}`] ?? false
-          const markedCount = event.couples.filter(c => semiMarks[`${event.id}-${singleHeatId}-${c.studentId}`]).length
-          const atLimit = markedCount >= event.semiSize
-          const callbackBlocked = isSemiPhase && !myMark && atLimit
+      {/* Semi section — collapsible, only shown during semi phase */}
+      {isSemiPhase && (
+        <>
+          <div
+            onClick={() => setSemiCollapsed(c => !c)}
+            className="px-4 py-1.5 flex items-center gap-2 cursor-pointer select-none"
+            style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', borderBottom: semiCollapsed ? '1px solid #fde68a' : undefined }}
+          >
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#92400e' }}>Semifinal — mark callbacks</span>
+            <span className="text-xs" style={{ color: '#b45309' }}>{totalMarked}/{maxMarks} marked</span>
+            <span className="ml-auto text-xs" style={{ color: '#92400e' }}>{semiCollapsed ? '▾' : '▴'}</span>
+          </div>
 
-          return (
-            <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: isSemiPhase && myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40 }}>
-              <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
-                {couple.leaderNumber ?? '—'}
-              </span>
-              <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
-                {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
-              </span>
-              <div className="flex gap-1.5 flex-wrap flex-shrink-0 justify-start">
-                  {isSemiPhase ? (
-                    <button
-                      onClick={() => !callbackBlocked && onSemiMark(event.id, singleHeatId, couple.studentId)}
-                      disabled={callbackBlocked}
-                      className="px-4 py-1.5 text-sm font-semibold"
-                      style={{
-                        borderRadius: 6,
-                        border: '2px solid',
-                        borderColor: myMark ? '#16a34a' : callbackBlocked ? 'var(--border)' : '#6b21a8',
-                        backgroundColor: myMark ? '#dcfce7' : 'transparent',
-                        color: myMark ? '#14532d' : callbackBlocked ? '#ccc' : '#6b21a8',
-                        minWidth: 80,
-                        cursor: callbackBlocked ? 'not-allowed' : 'pointer',
-                        opacity: callbackBlocked ? 0.45 : 1,
-                      }}
-                    >
-                      {myMark ? '✓ Called' : 'Call back'}
-                    </button>
-                  ) : (
-                    Array.from({ length: event.couples.length }, (_, i) => i + 1).map(place => {
-                      const active = myPlace === place
-                      return (
+          {!semiCollapsed ? (
+            <>
+              {event.dances.map(dance => (
+                <div key={dance.heatId}>
+                  <div className="px-4 py-1 flex items-center gap-2" style={{ backgroundColor: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#92400e' }}>#{dance.heatNumber}</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#92400e' }}>{dance.dance}</span>
+                    <span className="ml-auto text-xs" style={{ color: '#b45309' }}>
+                      {event.couples.filter(c => !!semiMarks[`${event.id}-${dance.heatId}-${c.studentId}`]).length} marked
+                    </span>
+                  </div>
+                  {event.couples.map(couple => {
+                    const myMark = !!semiMarks[`${event.id}-${dance.heatId}-${couple.studentId}`]
+                    const floorLabel = dance.coupleFloors[couple.studentId]
+                    return (
+                      <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2"
+                        style={{ backgroundColor: myMark ? '#f0fdf4' : 'var(--card)', minHeight: 40, borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
+                          {couple.leaderNumber ?? '—'}
+                        </span>
+                        <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 100px' }}>
+                          {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
+                        </span>
+                        {/* Mark dots — one per dance, shows aggregate progress */}
+                        <div className="flex gap-1 flex-shrink-0">
+                          {event.dances.map(d => (
+                            <div key={d.heatId} style={{
+                              width: 7, height: 7, borderRadius: '50%',
+                              backgroundColor: semiMarks[`${event.id}-${d.heatId}-${couple.studentId}`] ? '#7c3aed' : '#e9d5ff',
+                            }} />
+                          ))}
+                        </div>
+                        {floorLabel && (
+                          <span className="text-xs px-1.5 flex-shrink-0" style={{ backgroundColor: '#f0fdfa', border: '1px solid #0d9488', borderRadius: 3, color: '#0d9488', fontWeight: 700 }}>
+                            {floorLabel}
+                          </span>
+                        )}
                         <button
-                          key={place}
-                          onClick={() => onCompScore(event.id, couple.studentId, place)}
-                          className="w-9 h-9 text-sm font-bold"
+                          onClick={() => onSemiMark(event.id, dance.heatId, couple.studentId)}
+                          className="px-4 py-1.5 text-sm font-semibold flex-shrink-0"
                           style={{
-                            borderRadius: 6,
-                            border: '2px solid',
-                            borderColor: active ? '#7c3aed' : 'var(--border)',
-                            backgroundColor: active ? '#7c3aed' : 'transparent',
-                            color: active ? 'white' : 'var(--muted)',
+                            borderRadius: 6, border: '2px solid',
+                            borderColor: myMark ? '#16a34a' : '#6b21a8',
+                            backgroundColor: myMark ? '#dcfce7' : 'transparent',
+                            color: myMark ? '#14532d' : '#6b21a8',
+                            minWidth: 76, cursor: 'pointer',
                           }}
                         >
+                          {myMark ? '✓ Called' : 'Call back'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+              <div onClick={() => setSemiCollapsed(true)} className="px-4 py-2 text-center cursor-pointer text-xs font-semibold select-none"
+                style={{ backgroundColor: '#fef9c3', borderTop: '1px solid #fde68a', color: '#92400e' }}>
+                Done with semi — collapse ▲
+              </div>
+            </>
+          ) : (
+            /* Collapsed summary: IN chips */
+            <div onClick={() => setSemiCollapsed(false)} className="px-3 py-2 flex items-center gap-1.5 flex-wrap cursor-pointer select-none"
+              style={{ backgroundColor: '#f0fdf4', borderBottom: '1px solid #bbf7d0' }}>
+              <span className="text-xs font-bold flex-shrink-0" style={{ color: '#15803d' }}>IN:</span>
+              {finalCouples.length > 0
+                ? finalCouples.map(c => (
+                  <span key={c.studentId} className="text-xs font-bold px-1.5 py-0.5"
+                    style={{ backgroundColor: 'white', border: '1px solid #16a34a', borderRadius: 4, color: '#15803d', fontFamily: 'monospace' }}>
+                    #{c.leaderNumber ?? c.studentId}
+                  </span>
+                ))
+                : <span className="text-xs" style={{ color: '#6b7280' }}>No callbacks yet</span>}
+              <span className="ml-auto text-xs flex-shrink-0" style={{ color: '#15803d' }}>▾ edit</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Final section — always visible; only advancing couples shown */}
+      <div className="px-4 py-1.5 flex items-center gap-2"
+        style={{ backgroundColor: '#faf5ff', borderTop: '2px solid #d8b4fe', borderBottom: '1px solid #d8b4fe' }}>
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6b21a8' }}>Final — placements</span>
+        {isSemiPhase && anyMarked && <span className="text-xs" style={{ color: '#9333ea' }}>· live</span>}
+      </div>
+
+      {event.dances.map(dance => (
+        <div key={dance.heatId}>
+          {isMultiDance && (
+            <div className="px-4 py-1 flex items-center gap-2" style={{ backgroundColor: '#faf5ff', borderBottom: '1px solid #e9d5ff' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#9333ea' }}>#{dance.heatNumber}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6b21a8' }}>{dance.dance}</span>
+            </div>
+          )}
+          <div className="divide-y" style={{ borderTop: '1px solid #e9d5ff' }}>
+            {finalCouples.length > 0 ? finalCouples.map(couple => {
+              const myPlace = compScores[`${event.id}-${dance.heatId}-${couple.studentId}`]
+              return (
+                <div key={couple.studentId} className="px-3 py-1.5 flex items-center gap-2" style={{ backgroundColor: 'var(--card)', minHeight: 40 }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'monospace', color: '#1e1e1e', minWidth: 36, flexShrink: 0 }}>
+                    {couple.leaderNumber ?? '—'}
+                  </span>
+                  <span className="text-sm font-medium truncate" style={{ minWidth: 0, flex: '1 1 120px' }}>
+                    {couple.personA}{couple.personB ? ` & ${couple.personB}` : ''}
+                  </span>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {Array.from({ length: event.finalSize }, (_, i) => i + 1).map(place => {
+                      const active = myPlace === place
+                      return (
+                        <button key={place} onClick={() => onCompScore(event.id, couple.studentId, place, dance.heatId)} className="w-9 h-9 text-sm font-bold"
+                          style={{ borderRadius: 6, border: '2px solid', borderColor: active ? '#7c3aed' : 'var(--border)', backgroundColor: active ? '#7c3aed' : 'transparent', color: active ? 'white' : 'var(--muted)' }}>
                           {place}
                         </button>
                       )
-                    })
-                  )}
+                    })}
+                  </div>
                 </div>
-            </div>
-          )
-        })}
-        {event.couples.length === 0 && (
-          <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>No couples enrolled yet</div>
-        )}
-      </div>
+              )
+            }) : (
+              <div className="px-4 py-3 text-sm italic" style={{ color: 'var(--muted)' }}>
+                {event.couples.length === 0 ? 'No couples enrolled yet' : 'Mark callbacks above to see advancing couples'}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
