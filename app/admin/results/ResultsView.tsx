@@ -272,8 +272,10 @@ export default function ResultsView({
             const eventJudges = judges.filter(j => compJudgeIds.has(j.id))
 
             // Callback rows (semi): sorted by total marks (judge × dance) desc
+            // Only count marks from the semi heats shown in this table (not final heats)
+            const semiHeatIds = new Set(evt.dances.map(d => d.heatId))
             const callbackRows = [...evt.couples]
-              .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called).length }))
+              .map(c => ({ ...c, totalCbs: c.semiCalled.filter(m => m.called && semiHeatIds.has(m.heatId)).length }))
               .sort((a, b) => b.totalCbs - a.totalCbs || (a.leaderNumber ?? 9999) - (b.leaderNumber ?? 9999))
             const maxCallbacks = eventJudges.length * ND
             const cutoffCount = callbackRows[evt.finalSize - 1]?.totalCbs ?? 0
