@@ -70,6 +70,7 @@ function buildStudentFeedback(
       name: `${student.firstName} ${student.lastName}`,
       studioName: student.studio.name,
       heats: studentHeats,
+      closedHeats: [],
     }
   })
 }

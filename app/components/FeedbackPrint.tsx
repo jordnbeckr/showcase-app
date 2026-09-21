@@ -20,6 +20,7 @@ export type StudentFeedback = {
   name: string
   studioName: string
   heats: FeedbackHeat[]
+  closedHeats: { heatNumber: number; dance: string; placement: string }[]
 }
 
 function buildJudgeLines(student: StudentFeedback, heat: FeedbackHeat) {
@@ -34,11 +35,58 @@ function buildJudgeLines(student: StudentFeedback, heat: FeedbackHeat) {
   return lines
 }
 
+const PLACEMENT_STYLES: Record<string, React.CSSProperties> = {
+  Gold:   { background: '#fef9c3', border: '1.5px solid #fbbf24', color: '#713f12' },
+  Silver: { background: '#f1f5f9', border: '1.5px solid #94a3b8', color: '#1e293b' },
+  Bronze: { background: '#fff7ed', border: '1.5px solid #f97316', color: '#7c2d12' },
+}
+const PLACEMENT_DOT: Record<string, string> = { Gold: '#fbbf24', Silver: '#94a3b8', Bronze: '#f97316' }
+
+function PlacementChip({ placement }: { placement: string }) {
+  const s = PLACEMENT_STYLES[placement] ?? { background: '#f0f2f5', border: '1.5px solid #d4d9e0', color: '#5a6470' }
+  const dot = PLACEMENT_DOT[placement] ?? '#a0aab4'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 3, fontSize: 11, fontWeight: 700, ...s }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, display: 'inline-block' }} />
+      {placement}
+    </span>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+      color: 'var(--muted)', padding: '6px 12px 4px', background: '#f5f7fa',
+      borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6,
+    }}>
+      {children}
+    </div>
+  )
+}
+
 function StudentCard({ student }: { student: StudentFeedback }) {
   const [open, setOpen] = useState(false)
+  const hasAnything = student.closedHeats.length > 0 || student.heats.length > 0
+
+  const goldCount   = student.closedHeats.filter(h => h.placement === 'Gold').length
+  const silverCount = student.closedHeats.filter(h => h.placement === 'Silver').length
+  const bronzeCount = student.closedHeats.filter(h => h.placement === 'Bronze').length
 
   function printOne() {
-    const rows = student.heats.map(heat => {
+    const closedRows = student.closedHeats.map(h => {
+      const s = PLACEMENT_STYLES[h.placement] ?? {}
+      const dot = PLACEMENT_DOT[h.placement] ?? '#a0aab4'
+      return `<tr>
+        <td style="padding:5px 8px 5px 0;font-family:monospace;font-size:11px;color:#5a6470;width:32px">${h.heatNumber}</td>
+        <td style="padding:5px 12px 5px 0;color:#333;width:140px;white-space:nowrap">${h.dance}</td>
+        <td style="padding:5px 0"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700;background:${(s as Record<string,string>).background ?? ''};border:${(s as Record<string,string>).border ?? ''};color:${(s as Record<string,string>).color ?? ''}">
+          <span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>${h.placement}
+        </span></td>
+      </tr>`
+    }).join('')
+
+    const openRows = student.heats.map(heat => {
       const judgeLines = buildJudgeLines(student, heat)
       if (judgeLines.length === 0) return ''
       return `<tr>
@@ -57,12 +105,15 @@ function StudentCard({ student }: { student: StudentFeedback }) {
   body { font-family: Arial, Helvetica, sans-serif; padding: 24px; font-size: 13px; color: #0f1923; }
   h2 { font-size: 16px; font-weight: 700; margin: 0 0 2px; }
   .sub { font-size: 11px; color: #555; margin-bottom: 14px; }
+  .section-lbl { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #5a6470; padding: 10px 0 4px; border-top: 1px solid #e5e7eb; margin-top: 10px; }
   table { width: 100%; border-collapse: collapse; }
   tr { border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  .none { font-size: 11px; font-style: italic; color: #888; padding: 6px 0; }
 </style></head><body>
 <h2>${student.name}</h2>
-<div class="sub">${student.studioName} · Judge Feedback</div>
-<table><tbody>${rows}</tbody></table>
+<div class="sub">${student.studioName}</div>
+${student.closedHeats.length > 0 ? `<div class="section-lbl">Closed Heats — G/S/B</div><table><tbody>${closedRows}</tbody></table>` : ''}
+${student.heats.length > 0 ? `<div class="section-lbl">Open Heats — Judge Feedback</div><table><tbody>${openRows}</tbody></table>` : ''}
 </body></html>`)
     win.document.close()
     win.print()
@@ -73,16 +124,25 @@ function StudentCard({ student }: { student: StudentFeedback }) {
       id={`feedback-student-${student.studentId}`}
       style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, marginBottom: 8, overflow: 'hidden' }}
     >
-      {/* Card header row */}
+      {/* Header */}
       <div
         style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
         onClick={() => setOpen(o => !o)}
       >
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: 13, fontWeight: 700 }}>{student.name}</span>
-          {' '}
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{student.heats.length} heat{student.heats.length !== 1 ? 's' : ''}</span>
         </div>
+        {/* Tally chips in collapsed header */}
+        {student.closedHeats.length > 0 && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            {goldCount   > 0 && <PlacementChip placement="Gold" />}
+            {silverCount > 0 && <PlacementChip placement="Silver" />}
+            {bronzeCount > 0 && <PlacementChip placement="Bronze" />}
+          </div>
+        )}
+        {student.heats.length > 0 && (
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{student.heats.length} open</span>
+        )}
         <button
           className="no-print"
           onClick={e => { e.stopPropagation(); printOne() }}
@@ -93,28 +153,68 @@ function StudentCard({ student }: { student: StudentFeedback }) {
         <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 2, display: 'inline-block', transition: 'transform .15s', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
       </div>
 
-      {/* Expanded feedback */}
-      {open && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <tbody>
-              {student.heats.map(heat => {
-                const judgeLines = buildJudgeLines(student, heat)
-                if (judgeLines.length === 0) return null
-                return (
-                  <tr key={heat.heatId} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
-                    <td style={{ padding: '5px 8px 5px 0', fontWeight: 700, whiteSpace: 'nowrap', color: '#1a2744', width: 32 }}>{heat.heatNumber}</td>
-                    <td style={{ padding: '5px 12px 5px 0', whiteSpace: 'nowrap', color: '#555', width: 140 }}>{heat.dance}</td>
-                    <td style={{ padding: '5px 0', color: '#222', lineHeight: 1.6 }}>
-                      {judgeLines.map((j, i) => (
-                        <div key={i}><span style={{ fontWeight: 600, color: '#1a2744', marginRight: 6 }}>{j.name}:</span>{j.text}</div>
-                      ))}
-                    </td>
+      {/* Expanded: two stacked sections */}
+      {open && hasAnything && (
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+
+          {/* ── Closed G/S/B section ── */}
+          <SectionLabel>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fbbf24', display: 'inline-block' }} />
+            Closed Heats — G/S/B
+            {student.closedHeats.length > 0 && (
+              <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                {goldCount   > 0 && <span style={{ ...PLACEMENT_STYLES.Gold,   display: 'inline-block', padding: '1px 5px', borderRadius: 3, fontSize: 10, fontWeight: 700 }}>🥇 {goldCount}</span>}
+                {silverCount > 0 && <span style={{ ...PLACEMENT_STYLES.Silver, display: 'inline-block', padding: '1px 5px', borderRadius: 3, fontSize: 10, fontWeight: 700 }}>🥈 {silverCount}</span>}
+                {bronzeCount > 0 && <span style={{ ...PLACEMENT_STYLES.Bronze, display: 'inline-block', padding: '1px 5px', borderRadius: 3, fontSize: 10, fontWeight: 700 }}>🥉 {bronzeCount}</span>}
+              </span>
+            )}
+          </SectionLabel>
+          {student.closedHeats.length === 0 ? (
+            <p style={{ padding: '6px 12px', fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>No closed heat placements recorded.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+              <tbody>
+                {student.closedHeats.map((h, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                    <td style={{ padding: '5px 12px', fontFamily: 'monospace', fontSize: 11, color: 'var(--muted)', width: 36 }}>#{h.heatNumber}</td>
+                    <td style={{ padding: '5px 12px', flex: 1 }}>{h.dance}</td>
+                    <td style={{ padding: '5px 12px', textAlign: 'right' }}><PlacementChip placement={h.placement} /></td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* ── Open feedback section ── */}
+          <SectionLabel>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#93c5fd', display: 'inline-block' }} />
+            Open Heats — Judge Feedback
+          </SectionLabel>
+          {student.heats.length === 0 ? (
+            <p style={{ padding: '6px 12px', fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>No open heat feedback recorded.</p>
+          ) : (
+            <div style={{ padding: '4px 12px 8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <tbody>
+                  {student.heats.map(heat => {
+                    const judgeLines = buildJudgeLines(student, heat)
+                    if (judgeLines.length === 0) return null
+                    return (
+                      <tr key={heat.heatId} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
+                        <td style={{ padding: '5px 8px 5px 0', fontWeight: 700, whiteSpace: 'nowrap', color: '#1a2744', width: 32 }}>{heat.heatNumber}</td>
+                        <td style={{ padding: '5px 12px 5px 0', whiteSpace: 'nowrap', color: '#555', width: 140 }}>{heat.dance}</td>
+                        <td style={{ padding: '5px 0', color: '#222', lineHeight: 1.6 }}>
+                          {judgeLines.map((j, idx) => (
+                            <div key={idx}><span style={{ fontWeight: 600, color: '#1a2744', marginRight: 6 }}>{j.name}:</span>{j.text}</div>
+                          ))}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -122,12 +222,12 @@ function StudentCard({ student }: { student: StudentFeedback }) {
 }
 
 export default function FeedbackPrint({ students }: { students: StudentFeedback[] }) {
-  const withFeedback = students.filter(s => s.heats.length > 0)
+  const withFeedback = students.filter(s => s.heats.length > 0 || s.closedHeats.length > 0)
 
   if (withFeedback.length === 0) {
     return (
       <p className="text-sm italic" style={{ color: 'var(--muted)' }}>
-        No open heat feedback recorded yet.
+        No feedback or placements recorded yet.
       </p>
     )
   }

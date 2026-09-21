@@ -14,7 +14,7 @@ export default async function StudioFeedbackPage({ params }: { params: Promise<{
 
   const studentIds = studio.students.map(s => s.id)
 
-  const [openThumbs, openNotes, judges, heats] = await Promise.all([
+  const [openThumbs, openNotes, judges, heats, closedScores] = await Promise.all([
     db.openThumb.findMany({
       where: { studentId: { in: studentIds } },
       include: { judge: true, category: true, heat: { include: { danceType: true } } },
@@ -25,6 +25,11 @@ export default async function StudioFeedbackPage({ params }: { params: Promise<{
     }),
     db.judge.findMany({ orderBy: { name: 'asc' } }),
     db.heat.findMany({ where: { category: 'open' }, orderBy: { number: 'asc' }, include: { danceType: true } }),
+    db.closedScore.findMany({
+      where: { studentId: { in: studentIds } },
+      include: { heat: { include: { danceType: true } } },
+      orderBy: { heat: { number: 'asc' } },
+    }),
   ])
 
   const students = studio.students
@@ -53,11 +58,16 @@ export default async function StudioFeedbackPage({ params }: { params: Promise<{
         })).filter(j => j.thumbs.length > 0 || j.note),
       }))
 
+    const closedHeats = closedScores
+      .filter(sc => sc.studentId === student.id)
+      .map(sc => ({ heatNumber: sc.heat.number, dance: sc.heat.danceType.name, placement: sc.placement }))
+
     return {
       studentId: student.id,
       name: `${student.firstName} ${student.lastName}`,
       studioName: studio.name,
       heats: studentHeats,
+      closedHeats,
     }
   })
 
