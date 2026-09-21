@@ -105,15 +105,22 @@ function StudentCard({ student }: { student: StudentFeedback }) {
   body { font-family: Arial, Helvetica, sans-serif; padding: 24px; font-size: 13px; color: #0f1923; }
   h2 { font-size: 16px; font-weight: 700; margin: 0 0 2px; }
   .sub { font-size: 11px; color: #555; margin-bottom: 14px; }
-  .section-lbl { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #5a6470; padding: 10px 0 4px; border-top: 1px solid #e5e7eb; margin-top: 10px; }
   table { width: 100%; border-collapse: collapse; }
   tr { border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-  .none { font-size: 11px; font-style: italic; color: #888; padding: 6px 0; }
+  .page { page-break-after: always; padding-bottom: 24px; }
+  .page:last-child { page-break-after: avoid; }
+  @media print { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 </style></head><body>
+${student.closedHeats.length > 0 ? `<div class="page">
 <h2>${student.name}</h2>
-<div class="sub">${student.studioName}</div>
-${student.closedHeats.length > 0 ? `<div class="section-lbl">Closed Heats — G/S/B</div><table><tbody>${closedRows}</tbody></table>` : ''}
-${student.heats.length > 0 ? `<div class="section-lbl">Open Heats — Judge Feedback</div><table><tbody>${openRows}</tbody></table>` : ''}
+<div class="sub">${student.studioName} · Closed Heats — G/S/B</div>
+<table><tbody>${closedRows}</tbody></table>
+</div>` : ''}
+${openRows.trim() ? `<div class="page">
+<h2>${student.name}</h2>
+<div class="sub">${student.studioName} · Open Heats — Judge Feedback</div>
+<table><tbody>${openRows}</tbody></table>
+</div>` : ''}
 </body></html>`)
     win.document.close()
     win.print()
@@ -245,26 +252,102 @@ export default function FeedbackPrint({ students }: { students: StudentFeedback[
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; -webkit-print-color-adjust: exact; }
+          .screen-only { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           header, nav { display: none !important; }
+          .print-page { page-break-after: always; }
+          .print-page:last-child { page-break-after: avoid; }
+        }
+        @media screen {
+          .print-only { display: none !important; }
         }
       `}</style>
 
-      <div className="no-print flex items-center gap-3 mb-4">
-        <h1 className="text-xl font-bold">Judge Feedback Sheets</h1>
-        <button
-          onClick={() => window.print()}
-          className="text-sm px-4 py-1.5 font-medium text-white"
-          style={{ backgroundColor: 'var(--accent)', borderRadius: 6 }}
-        >
-          Print all
-        </button>
-        <span className="text-xs" style={{ color: 'var(--muted)' }}>{withFeedback.length} student{withFeedback.length !== 1 ? 's' : ''} with feedback</span>
+      {/* ── Screen: accordion cards ── */}
+      <div className="screen-only">
+        <div className="no-print flex items-center gap-3 mb-4">
+          <h1 className="text-xl font-bold">Judge Feedback Sheets</h1>
+          <button
+            onClick={() => window.print()}
+            className="text-sm px-4 py-1.5 font-medium text-white"
+            style={{ backgroundColor: 'var(--accent)', borderRadius: 6 }}
+          >
+            Print all
+          </button>
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>{withFeedback.length} student{withFeedback.length !== 1 ? 's' : ''} with feedback</span>
+        </div>
+        {withFeedback.map(student => (
+          <StudentCard key={student.studentId} student={student} />
+        ))}
       </div>
 
-      {withFeedback.map(student => (
-        <StudentCard key={student.studentId} student={student} />
-      ))}
+      {/* ── Print-only: always fully rendered, closed and open on separate pages ── */}
+      <div className="print-only">
+        {withFeedback.flatMap(student => {
+          const pages: React.ReactNode[] = []
+
+          if (student.closedHeats.length > 0) {
+            pages.push(
+              <div key={`${student.studentId}-closed`} className="print-page" style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 13, color: '#0f1923', padding: '0 0 24px' }}>
+                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{student.name}</div>
+                <div style={{ fontSize: 11, color: '#5a6470', marginBottom: 12 }}>{student.studioName} · Closed Heats — G/S/B</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <tbody>
+                    {student.closedHeats.map((h, i) => {
+                      const s = PLACEMENT_STYLES[h.placement] ?? {}
+                      const dot = PLACEMENT_DOT[h.placement] ?? '#a0aab4'
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '5px 8px 5px 0', fontFamily: 'monospace', fontSize: 11, color: '#5a6470', width: 32 }}>#{h.heatNumber}</td>
+                          <td style={{ padding: '5px 12px 5px 0', width: 160 }}>{h.dance}</td>
+                          <td style={{ padding: '5px 0' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 3, fontSize: 11, fontWeight: 700, ...s }}>
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, display: 'inline-block' }} />
+                              {h.placement}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+
+          if (student.heats.length > 0) {
+            const openRows = student.heats.flatMap(heat => {
+              const judgeLines = buildJudgeLines(student, heat)
+              if (judgeLines.length === 0) return []
+              return [(
+                <tr key={heat.heatId} style={{ borderBottom: '1px solid #e5e7eb', verticalAlign: 'top' }}>
+                  <td style={{ padding: '5px 8px 5px 0', fontWeight: 700, color: '#1a2744', width: 32, whiteSpace: 'nowrap' }}>{heat.heatNumber}</td>
+                  <td style={{ padding: '5px 12px 5px 0', color: '#555', width: 160, whiteSpace: 'nowrap' }}>{heat.dance}</td>
+                  <td style={{ padding: '5px 0', color: '#222', lineHeight: 1.6 }}>
+                    {judgeLines.map((j, idx) => (
+                      <div key={idx}><span style={{ fontWeight: 600, color: '#1a2744', marginRight: 6 }}>{j.name}:</span>{j.text}</div>
+                    ))}
+                  </td>
+                </tr>
+              )]
+            })
+            if (openRows.length > 0) {
+              pages.push(
+                <div key={`${student.studentId}-open`} className="print-page" style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 13, color: '#0f1923', padding: '0 0 24px' }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{student.name}</div>
+                  <div style={{ fontSize: 11, color: '#5a6470', marginBottom: 12 }}>{student.studioName} · Open Heats — Judge Feedback</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <tbody>{openRows}</tbody>
+                  </table>
+                </div>
+              )
+            }
+          }
+
+          return pages
+        })}
+      </div>
     </>
   )
 }
