@@ -89,6 +89,7 @@ export default function JudgeScoring({
   initialSemiMarks,
 }: Props) {
   const [, startTransition] = useTransition()
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Closed scores: key = `${heatId}-${studentId}` → placement
   const [closedScores, setClosedScoresState] = useState<Record<string, string>>(() => {
@@ -125,30 +126,55 @@ export default function JudgeScoring({
     return map
   })
 
+  function save(action: () => Promise<void>, rollback: () => void) {
+    startTransition(() => {
+      action().catch(() => {
+        rollback()
+        setSaveError('Save failed — check your connection and try again.')
+      })
+    })
+  }
+
   function handleClosedScore(heatId: number, studentId: number, placement: string) {
     const key = `${heatId}-${studentId}`
-    const current = closedScores[key]
-    const next = current === placement ? null : placement
-    setClosedScoresState(prev => {
-      const updated = { ...prev }
+    const prev = closedScores[key] ?? null
+    const next = prev === placement ? null : placement
+    setClosedScoresState(cur => {
+      const updated = { ...cur }
       if (next) updated[key] = next
       else delete updated[key]
       return updated
     })
-    startTransition(() => setClosedScore(heatId, studentId, next))
+    save(
+      () => setClosedScore(heatId, studentId, next),
+      () => setClosedScoresState(cur => {
+        const updated = { ...cur }
+        if (prev) updated[key] = prev
+        else delete updated[key]
+        return updated
+      })
+    )
   }
 
   function handleThumb(heatId: number, studentId: number, categoryId: number, sentiment: 'up' | 'down') {
     const key = `${heatId}-${studentId}-${categoryId}`
-    const current = openThumbs[key]
-    const next = current === sentiment ? null : (sentiment as string)
-    setOpenThumbsState(prev => {
-      const updated = { ...prev }
+    const prev = openThumbs[key] ?? null
+    const next = prev === sentiment ? null : (sentiment as string)
+    setOpenThumbsState(cur => {
+      const updated = { ...cur }
       if (next) updated[key] = next
       else delete updated[key]
       return updated
     })
-    startTransition(() => setOpenThumb(heatId, studentId, categoryId, next))
+    save(
+      () => setOpenThumb(heatId, studentId, categoryId, next),
+      () => setOpenThumbsState(cur => {
+        const updated = { ...cur }
+        if (prev) updated[key] = prev
+        else delete updated[key]
+        return updated
+      })
+    )
   }
 
   const handleNote = useCallback((heatId: number, studentId: number, note: string) => {
@@ -156,7 +182,10 @@ export default function JudgeScoring({
   }, [])
 
   const saveNote = useCallback((heatId: number, studentId: number, note: string) => {
-    startTransition(() => setOpenNote(heatId, studentId, note))
+    save(
+      () => setOpenNote(heatId, studentId, note),
+      () => {} // note rollback is complex; error banner is enough
+    )
   }, [])
 
   function handleCompScore(eventId: number, studentId: number, place: number, heatId = 0) {
@@ -173,7 +202,15 @@ export default function JudgeScoring({
       else delete updated[key]
       return updated
     })
-    startTransition(() => setCompScore(eventId, studentId, next, heatId))
+    save(
+      () => setCompScore(eventId, studentId, next, heatId),
+      () => setCompScoresState(prev => {
+        const updated = { ...prev }
+        if (current !== undefined) updated[key] = current
+        else delete updated[key]
+        return updated
+      })
+    )
   }
 
   function handleSemiMark(eventId: number, heatId: number, studentId: number) {
@@ -181,7 +218,10 @@ export default function JudgeScoring({
     const current = semiMarks[key] ?? false
     const next = !current
     setSemiMarksState(prev => ({ ...prev, [key]: next }))
-    startTransition(() => setSemiMark(eventId, heatId, studentId, next))
+    save(
+      () => setSemiMark(eventId, heatId, studentId, next),
+      () => setSemiMarksState(prev => ({ ...prev, [key]: current }))
+    )
   }
 
   // Build a set of heatNumbers that belong to competitive events (to suppress individual heat scoring for them)
@@ -219,6 +259,15 @@ export default function JudgeScoring({
 
   return (
     <div className="space-y-3 pb-20">
+      {saveError && (
+        <div
+          style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 4, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}
+          role="alert"
+        >
+          <span style={{ fontSize: 13, color: '#991b1b', flex: 1 }}>⚠️ {saveError}</span>
+          <button onClick={() => setSaveError(null)} style={{ fontSize: 12, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Dismiss</button>
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-4">
         <h1 className="text-lg font-bold">Score Sheet</h1>
         <div className="flex gap-2 text-xs">

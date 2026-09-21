@@ -132,12 +132,20 @@ ${student.heats.length > 0 ? `<div class="section-lbl">Open Heats — Judge Feed
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: 13, fontWeight: 700 }}>{student.name}</span>
         </div>
-        {/* Tally chips in collapsed header */}
+        {/* Tally chips in collapsed header — always show all three if student has any closed heats */}
         {student.closedHeats.length > 0 && (
           <div style={{ display: 'flex', gap: 4 }}>
-            {goldCount   > 0 && <PlacementChip placement="Gold" />}
-            {silverCount > 0 && <PlacementChip placement="Silver" />}
-            {bronzeCount > 0 && <PlacementChip placement="Bronze" />}
+            {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
+              const count = p === 'Gold' ? goldCount : p === 'Silver' ? silverCount : bronzeCount
+              const s = PLACEMENT_STYLES[p]
+              const dot = PLACEMENT_DOT[p]
+              return (
+                <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 3, fontSize: 11, fontWeight: 700, opacity: count === 0 ? 0.35 : 1, ...s }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, display: 'inline-block' }} />
+                  {count}
+                </span>
+              )
+            })}
           </div>
         )}
         {student.heats.length > 0 && (
