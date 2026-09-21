@@ -139,25 +139,23 @@ ${openRows.trim() ? `<div class="page">
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: 13, fontWeight: 700 }}>{student.name}</span>
         </div>
-        {/* Tally chips in collapsed header — always show all three if student has any closed heats */}
-        {student.closedHeats.length > 0 && (
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
-              const count = p === 'Gold' ? goldCount : p === 'Silver' ? silverCount : bronzeCount
-              const s = PLACEMENT_STYLES[p]
-              const dot = PLACEMENT_DOT[p]
-              return (
-                <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 3, fontSize: 11, fontWeight: 700, opacity: count === 0 ? 0.35 : 1, ...s }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, display: 'inline-block' }} />
-                  {count}
-                </span>
-              )
-            })}
-          </div>
-        )}
-        {student.heats.length > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{student.heats.length} open</span>
-        )}
+        {/* Fixed-width tally columns so they align down the page */}
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          {(['Gold', 'Silver', 'Bronze'] as const).map(p => {
+            const count = p === 'Gold' ? goldCount : p === 'Silver' ? silverCount : bronzeCount
+            const s = PLACEMENT_STYLES[p]
+            const dot = PLACEMENT_DOT[p]
+            return (
+              <span key={p} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, width: 36, padding: '2px 0', borderRadius: 3, fontSize: 11, fontWeight: 700, opacity: count === 0 ? 0.3 : 1, ...s }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0, display: 'inline-block' }} />
+                {count}
+              </span>
+            )
+          })}
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 46, padding: '2px 0', borderRadius: 3, fontSize: 11, fontWeight: 700, background: '#f0f2f5', color: student.heats.length === 0 ? 'var(--border-dark)' : 'var(--muted)', opacity: student.heats.length === 0 ? 0.6 : 1 }}>
+            {student.heats.length} open
+          </span>
+        </div>
         <button
           className="no-print"
           onClick={e => { e.stopPropagation(); printOne() }}
