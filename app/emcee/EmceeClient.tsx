@@ -61,6 +61,20 @@ export default function EmceeClient({
     startTransition(() => { advanceHeat(num) })
   }
 
+  function completeCurrent() {
+    if (!currentHeat) return
+    // Mark done then advance to next
+    setDoneHeats(prev => {
+      const next = new Set(prev)
+      next.add(currentHeat.number)
+      saveDone(next)
+      return next
+    })
+    if (nextHeat) {
+      startTransition(() => { advanceHeat(nextHeat.number) })
+    }
+  }
+
   function toggleDone(num: number) {
     setDoneHeats(prev => {
       const next = new Set(prev)
@@ -101,19 +115,47 @@ export default function EmceeClient({
               Now Announcing
             </div>
             {currentHeat ? (
-              <div className="space-y-1">
-                <div className="text-4xl font-bold" style={{ color: 'var(--text)' }}>
-                  Heat {currentHeat.number}
-                </div>
-                <div className="text-xl" style={{ color: 'var(--muted)' }}>{currentHeat.dance}</div>
-                {currentHeat.event && (
-                  <div className="text-sm font-medium pt-1" style={{ color: '#1e3a5f' }}>
-                    {currentHeat.event.name}
-                    {currentHeat.event.phase === 'final' && (
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#16a34a' }}>Final</span>
-                    )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="text-4xl font-bold" style={{ color: 'var(--text)' }}>
+                    Heat {currentHeat.number}
                   </div>
-                )}
+                  <div className="text-xl" style={{ color: 'var(--muted)' }}>{currentHeat.dance}</div>
+                  {currentHeat.event && (
+                    <div className="text-sm font-medium pt-1" style={{ color: '#1e3a5f' }}>
+                      {currentHeat.event.name}
+                      {currentHeat.event.phase === 'final' && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#16a34a' }}>Final</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={completeCurrent}
+                  title="Mark done and advance"
+                  style={{
+                    flexShrink: 0,
+                    width: 44, height: 44,
+                    borderRadius: '50%',
+                    border: '2px solid #e2e8f0',
+                    backgroundColor: 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#dcfce7'
+                    ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#16a34a'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0'
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10.5l4 4 8-8" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
               </div>
             ) : (
               <div className="text-lg" style={{ color: 'var(--muted)' }}>No heat selected</div>
