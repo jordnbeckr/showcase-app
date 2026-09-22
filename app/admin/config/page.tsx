@@ -4,6 +4,7 @@ import StudiosConfig from './StudiosConfig'
 import EventsConfig from './EventsConfig'
 import HeatOrderConfig from './HeatOrderConfig'
 import JudgesConfig from './JudgesConfig'
+import EmceesConfig from './EmceesConfig'
 import FeedbackCategoriesConfig from './FeedbackCategoriesConfig'
 import CollapsibleSection from './CollapsibleSection'
 import EntryLockConfig from './EntryLockConfig'
@@ -156,6 +157,10 @@ export default async function ConfigPage() {
           judges={judges.map(j => ({ id: j.id, name: j.name, floorRanges: j.floorRanges.map(r => ({ id: r.id, floorId: r.floorId, floorLabel: r.floor.label, heatFrom: r.heatFrom, heatTo: r.heatTo })) }))}
           floors={await db.floor.findMany({ orderBy: { order: 'asc' }, select: { id: true, label: true } })}
         />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Emcees">
+        <EmceesConfig emcees={await db.emcee.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } })} />
       </CollapsibleSection>
 
       <CollapsibleSection title="Open Heat Feedback Categories">

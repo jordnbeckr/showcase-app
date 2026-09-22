@@ -9,6 +9,7 @@ export type Session =
   | { role: 'admin' }
   | { role: 'studio'; studioId: number; studioSlug: string; studioName: string }
   | { role: 'judge'; judgeId: number; judgeName: string }
+  | { role: 'emcee'; emceeId: number; emceeName: string }
 
 export async function createSession(payload: Session) {
   const token = await new SignJWT(payload as Record<string, unknown>)

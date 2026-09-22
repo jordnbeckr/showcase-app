@@ -273,6 +273,17 @@ model StudentShow {
   createdAt    DateTime     @default(now())
 }
 
+model Emcee {
+  id      Int    @id @default(autoincrement())
+  name    String @unique
+  pinHash String
+}
+
+model ShowState {
+  id                Int @id @default(autoincrement())
+  currentHeatNumber Int @default(0)
+}
+
 model Judge {
   id           Int                @id @default(autoincrement())
   name         String             @unique

@@ -51,6 +51,19 @@ export async function judgeLogin(_prev: ActionState, formData: FormData): Promis
   redirect('/judge')
 }
 
+export async function emceeLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const emceeId = parseInt(formData.get('emceeId') as string)
+  const pin = formData.get('pin') as string
+
+  const emcee = await db.emcee.findUnique({ where: { id: emceeId } })
+  if (!emcee || emcee.pinHash !== hash(pin)) {
+    return { error: 'Invalid emcee or PIN' }
+  }
+
+  await createSession({ role: 'emcee', emceeId: emcee.id, emceeName: emcee.name })
+  redirect('/emcee')
+}
+
 export async function logout() {
   await deleteSession()
   redirect('/')

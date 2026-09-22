@@ -477,3 +477,33 @@ export async function moveHeatEntry(entryId: number, newHeatId: number) {
   await db.heatEntry.update({ where: { id: entryId }, data: { heatId: newHeatId } })
   revalidatePath('/admin/master')
 }
+
+// --- Emcees ---
+
+export async function addEmcee(formData: FormData) {
+  await requireAdmin()
+  const name = (formData.get('name') as string).trim()
+  const pin = (formData.get('pin') as string).trim()
+  if (!name || !pin) return { error: 'Name and PIN required' }
+  if (!/^\d{4,8}$/.test(pin)) return { error: 'PIN must be 4–8 digits' }
+  try {
+    await db.emcee.create({ data: { name, pinHash: hash(pin) } })
+  } catch {
+    return { error: 'Emcee name already exists' }
+  }
+  revalidatePath('/admin/config')
+}
+
+export async function resetEmceePin(emceeId: number, formData: FormData) {
+  await requireAdmin()
+  const pin = (formData.get('pin') as string).trim()
+  if (!pin || !/^\d{4,8}$/.test(pin)) return { error: 'PIN must be 4–8 digits' }
+  await db.emcee.update({ where: { id: emceeId }, data: { pinHash: hash(pin) } })
+  revalidatePath('/admin/config')
+}
+
+export async function deleteEmcee(emceeId: number) {
+  await requireAdmin()
+  await db.emcee.delete({ where: { id: emceeId } })
+  revalidatePath('/admin/config')
+}

@@ -47,6 +47,17 @@ const entries = [
     ),
   },
   {
+    href: '/login/emcee',
+    label: 'Emcee Login',
+    color: '#1e3a5f',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="7" r="4"/>
+        <path d="M8 13h6M9 17l1-4M13 17l-1-4"/>
+      </svg>
+    ),
+  },
+  {
     href: '/view',
     label: 'Heat Sheet (Read Only)',
     color: '#5a5a5a',
@@ -69,6 +80,7 @@ export default async function Home() {
   if (session?.role === 'admin') redirect('/admin')
   if (session?.role === 'studio') redirect(`/studio/${session.studioSlug}`)
   if (session?.role === 'judge') redirect('/judge')
+  if (session?.role === 'emcee') redirect('/emcee')
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--surface)' }}>
