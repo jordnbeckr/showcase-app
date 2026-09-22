@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { advanceHeat, moveEventToFinals } from './actions'
 
 type HeatRow = {
@@ -20,6 +20,22 @@ type CompEvent = {
   finalPlacements: { place: number; name: string }[]
 }
 
+const STORAGE_KEY = 'emcee-done-heats'
+
+function loadDone(): Set<number> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return new Set(JSON.parse(raw) as number[])
+  } catch {}
+  return new Set()
+}
+
+function saveDone(done: Set<number>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...done]))
+  } catch {}
+}
+
 export default function EmceeClient({
   currentHeatNumber,
   heats,
@@ -31,6 +47,11 @@ export default function EmceeClient({
 }) {
   const [, startTransition] = useTransition()
   const [tab, setTab] = useState<'heats' | 'comp'>('heats')
+  const [doneHeats, setDoneHeats] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    setDoneHeats(loadDone())
+  }, [])
 
   const currentIdx = heats.findIndex(h => h.number === currentHeatNumber)
   const currentHeat = currentIdx >= 0 ? heats[currentIdx] : null
@@ -38,6 +59,16 @@ export default function EmceeClient({
 
   function callHeat(num: number) {
     startTransition(() => { advanceHeat(num) })
+  }
+
+  function toggleDone(num: number) {
+    setDoneHeats(prev => {
+      const next = new Set(prev)
+      if (next.has(num)) next.delete(num)
+      else next.add(num)
+      saveDone(next)
+      return next
+    })
   }
 
   function triggerFinals(eventId: number) {
@@ -110,34 +141,97 @@ export default function EmceeClient({
             </button>
           )}
 
-          {/* All heats — full scrollable list */}
+          {/* All heats */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>All Heats</p>
             <div className="space-y-1">
               {heats.map(h => {
                 const isCurrent = h.number === currentHeatNumber
+                const isDone = doneHeats.has(h.number)
+
+                if (isDone) {
+                  // Collapsed done strip
+                  return (
+                    <div
+                      key={h.number}
+                      className="flex items-center justify-between rounded-md"
+                      style={{
+                        padding: '3px 8px',
+                        backgroundColor: 'var(--surface)',
+                        opacity: 0.6,
+                      }}
+                    >
+                      <span
+                        className="text-xs cursor-pointer flex-1"
+                        style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}
+                        onClick={() => callHeat(h.number)}
+                      >
+                        {h.number} — {h.dance}
+                        {h.event && <span className="ml-1" style={{ color: 'var(--muted)' }}>· {h.event.name}</span>}
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); toggleDone(h.number) }}
+                        title="Mark undone"
+                        style={{
+                          width: 18, height: 18,
+                          borderRadius: '50%',
+                          backgroundColor: '#dcfce7',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, border: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 5.5l2 2 4-4" stroke="#16a34a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )
+                }
+
+                // Normal row
                 return (
-                  <button
+                  <div
                     key={h.number}
-                    onClick={() => callHeat(h.number)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors"
+                    className="flex items-center gap-2 rounded-lg text-sm transition-colors"
                     style={{
                       backgroundColor: isCurrent ? '#1e3a5f' : 'var(--card)',
                       color: isCurrent ? 'white' : 'var(--text)',
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
-                    <span>
-                      Heat {h.number} — {h.dance}
-                      {h.event && (
-                        <span className="ml-2 text-xs" style={{ color: isCurrent ? 'rgba(255,255,255,0.65)' : 'var(--muted)' }}>
-                          {h.event.name}{h.event.phase === 'final' ? ' (Final)' : ''}
-                        </span>
-                      )}
-                    </span>
-                    <span style={{ color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--muted)', fontSize: '0.75rem' }}>
-                      {h.entries.length}
-                    </span>
-                  </button>
+                    <button
+                      onClick={() => callHeat(h.number)}
+                      className="flex items-center gap-2 flex-1 text-left"
+                      style={{ padding: '7px 8px', minWidth: 0 }}
+                    >
+                      <span className="font-semibold" style={{ minWidth: 24 }}>{h.number}</span>
+                      <span style={{ color: isCurrent ? 'rgba(255,255,255,0.75)' : 'var(--muted)', fontSize: '0.8125rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {h.dance}
+                        {h.event && (
+                          <span style={{ color: isCurrent ? 'rgba(255,255,255,0.5)' : 'var(--muted)' }}>
+                            {' '}· {h.event.name}{h.event.phase === 'final' ? ' (Final)' : ''}
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ color: isCurrent ? 'rgba(255,255,255,0.45)' : 'var(--muted)', fontSize: '0.75rem', flexShrink: 0 }}>
+                        {h.entries.length}
+                      </span>
+                    </button>
+                    {!isCurrent && (
+                      <button
+                        onClick={() => toggleDone(h.number)}
+                        title="Mark done"
+                        style={{
+                          width: 18, height: 18, marginRight: 8,
+                          borderRadius: '50%',
+                          border: '1.5px solid var(--border)',
+                          backgroundColor: 'transparent',
+                          flexShrink: 0, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      />
+                    )}
+                  </div>
                 )
               })}
             </div>
