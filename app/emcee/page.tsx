@@ -46,7 +46,6 @@ export default async function EmceePage() {
           include: {
             student: true,
             instructor: true,
-            partnerStudent: true,
           },
         },
       },
@@ -85,20 +84,21 @@ export default async function EmceePage() {
     const heatNumber = ev.heats[0]?.heat?.number ?? 0
 
     // Build couple label map: studentId → "Leader & Follower"
+    // partnerStudentId exists on StudentEvent but has no Prisma relation —
+    // look up the partner's name from the studentEvents we already loaded.
+    const studentNameById = new Map(
+      ev.studentEvents.map(se => [se.studentId, `${se.student.firstName} ${se.student.lastName}`])
+    )
     const coupleLabel = new Map<number, string>()
     for (const se of ev.studentEvents) {
       const studentFull = `${se.student.firstName} ${se.student.lastName}`
       let label: string
       if (se.instructor) {
-        // Pro-am: figure out who leads
-        if (se.instructor.role === 'Leader') {
-          label = `${se.instructor.name} & ${studentFull}`
-        } else {
-          label = `${studentFull} & ${se.instructor.name}`
-        }
-      } else if (se.partnerStudent) {
-        // Amateur couple: student is leader (only leaders have SemiMarks)
-        const partnerFull = `${se.partnerStudent.firstName} ${se.partnerStudent.lastName}`
+        label = se.instructor.role === 'Leader'
+          ? `${se.instructor.name} & ${studentFull}`
+          : `${studentFull} & ${se.instructor.name}`
+      } else if (se.partnerStudentId) {
+        const partnerFull = studentNameById.get(se.partnerStudentId) ?? 'Partner'
         label = se.student.role === 'Leader'
           ? `${studentFull} & ${partnerFull}`
           : `${partnerFull} & ${studentFull}`
