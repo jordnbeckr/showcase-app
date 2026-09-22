@@ -33,9 +33,8 @@ export default function EmceeClient({
   const [tab, setTab] = useState<'heats' | 'comp'>('heats')
 
   const currentIdx = heats.findIndex(h => h.number === currentHeatNumber)
-  const prevHeat = currentIdx > 0 ? heats[currentIdx - 1] : null
   const currentHeat = currentIdx >= 0 ? heats[currentIdx] : null
-  const nextHeat = currentIdx >= 0 && currentIdx < heats.length - 1 ? heats[currentIdx + 1] : heats[0] ?? null
+  const nextHeat = currentIdx >= 0 && currentIdx < heats.length - 1 ? heats[currentIdx + 1] : null
 
   function callHeat(num: number) {
     startTransition(() => { advanceHeat(num) })
@@ -46,19 +45,17 @@ export default function EmceeClient({
   }
 
   const TAB = 'px-4 py-2 rounded-lg text-sm font-medium transition-colors'
-  const ACTIVE = 'text-white'
-  const INACTIVE = 'text-[var(--muted)]'
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       {/* Tab bar */}
       <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: 'var(--card)' }}>
-        <button className={`${TAB} flex-1 ${tab === 'heats' ? ACTIVE : INACTIVE}`}
+        <button className={`${TAB} flex-1 ${tab === 'heats' ? 'text-white' : 'text-[var(--muted)]'}`}
           style={tab === 'heats' ? { backgroundColor: '#1e3a5f' } : {}}
           onClick={() => setTab('heats')}>
-          Heat Announcer
+          Heat Tracker
         </button>
-        <button className={`${TAB} flex-1 ${tab === 'comp' ? ACTIVE : INACTIVE}`}
+        <button className={`${TAB} flex-1 ${tab === 'comp' ? 'text-white' : 'text-[var(--muted)]'}`}
           style={tab === 'comp' ? { backgroundColor: '#1e3a5f' } : {}}
           onClick={() => setTab('comp')}>
           Competitive Results
@@ -66,84 +63,83 @@ export default function EmceeClient({
       </div>
 
       {tab === 'heats' && (
-        <div className="space-y-3">
-          {/* Current heat — big */}
-          {currentHeat ? (
-            <div className="card p-5 space-y-3" style={{ border: '2px solid #1e3a5f' }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Now Announcing</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#1e3a5f22', color: '#1e3a5f' }}>
-                  {currentHeat.category === 'closed' ? 'Closed' : currentHeat.category === 'open' ? 'Open' : 'Heat'}
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-bold" style={{ color: 'var(--text)' }}>Heat {currentHeat.number}</div>
-                <div className="text-lg font-medium" style={{ color: 'var(--muted)' }}>{currentHeat.dance}</div>
-              </div>
-              {currentHeat.event && (
-                <div className="text-sm font-medium" style={{ color: '#1e3a5f' }}>Event: {currentHeat.event.name}</div>
-              )}
-              <div className="space-y-1.5 pt-1">
-                {currentHeat.entries.map((e, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div>
-                      <span style={{ color: 'var(--text)' }}>{e.studentName}</span>
-                      {e.partnerName && <span style={{ color: 'var(--muted)' }}> & {e.partnerName}</span>}
-                      {e.instructor && <span style={{ color: 'var(--muted)' }}> / {e.instructor}</span>}
-                      <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)' }}>{e.level}</span>
-                    </div>
-                    {e.floor && <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)' }}>Floor {e.floor}</span>}
+        <div className="space-y-4">
+          {/* Current heat */}
+          <div className="card p-6" style={{ border: '2px solid #1e3a5f' }}>
+            <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--muted)' }}>
+              Now Announcing
+            </div>
+            {currentHeat ? (
+              <div className="space-y-1">
+                <div className="text-4xl font-bold" style={{ color: 'var(--text)' }}>
+                  Heat {currentHeat.number}
+                </div>
+                <div className="text-xl" style={{ color: 'var(--muted)' }}>{currentHeat.dance}</div>
+                {currentHeat.event && (
+                  <div className="text-sm font-medium pt-1" style={{ color: '#1e3a5f' }}>
+                    {currentHeat.event.name}
+                    {currentHeat.event.phase === 'final' && (
+                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#16a34a' }}>Final</span>
+                    )}
                   </div>
-                ))}
-                {currentHeat.entries.length === 0 && <p className="text-sm" style={{ color: 'var(--muted)' }}>No entries</p>}
+                )}
               </div>
-            </div>
-          ) : (
-            <div className="card p-5 text-center" style={{ color: 'var(--muted)' }}>
-              No heat selected. Call the first heat below.
-            </div>
-          )}
+            ) : (
+              <div className="text-lg" style={{ color: 'var(--muted)' }}>No heat selected</div>
+            )}
+          </div>
 
           {/* Next up */}
-          {nextHeat && nextHeat.number !== currentHeatNumber && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Next Up</p>
-              <button
-                onClick={() => callHeat(nextHeat.number)}
-                className="card p-4 w-full text-left hover:opacity-80 transition-opacity"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold" style={{ color: 'var(--text)' }}>Heat {nextHeat.number} — {nextHeat.dance}</div>
-                    <div className="text-sm" style={{ color: 'var(--muted)' }}>{nextHeat.entries.length} dancer{nextHeat.entries.length !== 1 ? 's' : ''}</div>
+          {nextHeat && (
+            <button
+              onClick={() => callHeat(nextHeat.number)}
+              className="card p-4 w-full text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--muted)' }}>Next Up</div>
+                  <div className="font-semibold" style={{ color: 'var(--text)' }}>
+                    Heat {nextHeat.number} — {nextHeat.dance}
                   </div>
-                  <span className="text-sm font-medium" style={{ color: '#1e3a5f' }}>Call →</span>
+                  {nextHeat.event && (
+                    <div className="text-sm" style={{ color: '#1e3a5f' }}>{nextHeat.event.name}</div>
+                  )}
                 </div>
-              </button>
-            </div>
+                <span className="text-lg font-medium" style={{ color: '#1e3a5f' }}>→</span>
+              </div>
+            </button>
           )}
 
-          {/* Full heat list */}
+          {/* All heats — full scrollable list */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>All Heats</p>
             <div className="space-y-1">
-              {heats.map(h => (
-                <button
-                  key={h.number}
-                  onClick={() => callHeat(h.number)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors"
-                  style={{
-                    backgroundColor: h.number === currentHeatNumber ? '#1e3a5f' : 'var(--card)',
-                    color: h.number === currentHeatNumber ? 'white' : 'var(--text)',
-                    opacity: prevHeat && h.number < currentHeatNumber ? 0.5 : 1,
-                  }}
-                >
-                  <span>Heat {h.number} — {h.dance}</span>
-                  <span style={{ color: h.number === currentHeatNumber ? 'rgba(255,255,255,0.7)' : 'var(--muted)', fontSize: '0.75rem' }}>
-                    {h.entries.length} entries
-                  </span>
-                </button>
-              ))}
+              {heats.map(h => {
+                const isCurrent = h.number === currentHeatNumber
+                return (
+                  <button
+                    key={h.number}
+                    onClick={() => callHeat(h.number)}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors"
+                    style={{
+                      backgroundColor: isCurrent ? '#1e3a5f' : 'var(--card)',
+                      color: isCurrent ? 'white' : 'var(--text)',
+                    }}
+                  >
+                    <span>
+                      Heat {h.number} — {h.dance}
+                      {h.event && (
+                        <span className="ml-2 text-xs" style={{ color: isCurrent ? 'rgba(255,255,255,0.65)' : 'var(--muted)' }}>
+                          {h.event.name}{h.event.phase === 'final' ? ' (Final)' : ''}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--muted)', fontSize: '0.75rem' }}>
+                      {h.entries.length}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -163,7 +159,7 @@ export default function EmceeClient({
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full font-medium"
                   style={{ backgroundColor: ev.phase === 'final' ? '#dcfce7' : '#fef9c3', color: ev.phase === 'final' ? '#16a34a' : '#a16207' }}>
-                  {ev.phase === 'semi' ? 'Semi — awaiting callbacks' : 'Final'}
+                  {ev.phase === 'semi' ? 'Semi' : 'Final'}
                 </span>
               </div>
 
@@ -173,9 +169,9 @@ export default function EmceeClient({
                     Callbacks ({ev.callbacks.length})
                   </p>
                   <ul className="space-y-1">
-                    {ev.callbacks.map((name, i) => (
+                    {ev.callbacks.map((label, i) => (
                       <li key={i} className="text-sm py-1.5 px-3 rounded" style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
-                        {name}
+                        {label}
                       </li>
                     ))}
                   </ul>

@@ -42,6 +42,13 @@ export default async function EmceePage() {
         heats: { include: { heat: true } },
         semiMarks: { include: { student: true } },
         compScores: { include: { student: true } },
+        studentEvents: {
+          include: {
+            student: true,
+            instructor: true,
+            partnerStudent: true,
+          },
+        },
       },
       orderBy: { order: 'asc' },
     }),
@@ -77,25 +84,55 @@ export default async function EmceePage() {
   const compEvents = events.map(ev => {
     const heatNumber = ev.heats[0]?.heat?.number ?? 0
 
-    const callMap = new Map<number, { name: string; count: number }>()
+    // Build couple label map: studentId → "Leader & Follower"
+    const coupleLabel = new Map<number, string>()
+    for (const se of ev.studentEvents) {
+      const studentFull = `${se.student.firstName} ${se.student.lastName}`
+      let label: string
+      if (se.instructor) {
+        // Pro-am: figure out who leads
+        if (se.instructor.role === 'Leader') {
+          label = `${se.instructor.name} & ${studentFull}`
+        } else {
+          label = `${studentFull} & ${se.instructor.name}`
+        }
+      } else if (se.partnerStudent) {
+        // Amateur couple: student is leader (only leaders have SemiMarks)
+        const partnerFull = `${se.partnerStudent.firstName} ${se.partnerStudent.lastName}`
+        label = se.student.role === 'Leader'
+          ? `${studentFull} & ${partnerFull}`
+          : `${partnerFull} & ${studentFull}`
+      } else {
+        label = studentFull
+      }
+      coupleLabel.set(se.studentId, label)
+    }
+
+    const callMap = new Map<number, { label: string; count: number }>()
     for (const m of ev.semiMarks) {
       if (m.called) {
         const existing = callMap.get(m.studentId)
         if (existing) existing.count++
-        else callMap.set(m.studentId, { name: `${m.student.firstName} ${m.student.lastName}`, count: 1 })
+        else callMap.set(m.studentId, {
+          label: coupleLabel.get(m.studentId) ?? `${m.student.firstName} ${m.student.lastName}`,
+          count: 1,
+        })
       }
     }
-    const callbacks = [...callMap.values()].sort((a, b) => b.count - a.count).map(v => v.name)
+    const callbacks = [...callMap.values()].sort((a, b) => b.count - a.count).map(v => v.label)
 
-    const placeMap = new Map<number, { name: string; total: number }>()
+    const placeMap = new Map<number, { label: string; total: number }>()
     for (const s of ev.compScores) {
       const existing = placeMap.get(s.studentId)
       if (existing) existing.total += s.place
-      else placeMap.set(s.studentId, { name: `${s.student.firstName} ${s.student.lastName}`, total: s.place })
+      else placeMap.set(s.studentId, {
+        label: coupleLabel.get(s.studentId) ?? `${s.student.firstName} ${s.student.lastName}`,
+        total: s.place,
+      })
     }
     const finalPlacements = [...placeMap.values()]
       .sort((a, b) => a.total - b.total)
-      .map((v, i) => ({ place: i + 1, name: v.name }))
+      .map((v, i) => ({ place: i + 1, name: v.label }))
 
     return {
       id: ev.id,
