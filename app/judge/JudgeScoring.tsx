@@ -557,7 +557,8 @@ function EntryRow({
             value={note}
             onChange={e => onNoteChange(heat.id, entry.studentId, e.target.value)}
             onBlur={e => onNoteSave(heat.id, entry.studentId, e.target.value)}
-            placeholder="Notes…"
+            placeholder="One specific thing to try…"
+            maxLength={160}
             rows={1}
             className="text-xs rounded px-2 py-0.5"
             style={{ border: '1px solid var(--border)', resize: 'none', backgroundColor: 'var(--surface)', flex: '1 1 80px', minWidth: 60 }}
