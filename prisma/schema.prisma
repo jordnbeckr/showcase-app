@@ -124,6 +124,7 @@ model Heat {
   closedScores    ClosedScore[]
   openThumbs      OpenThumb[]
   openNotes       OpenNote[]
+  heatNotes       HeatNote[]
   floorAssignments HeatFloorAssignment[]
 }
 
@@ -291,6 +292,7 @@ model Judge {
   closedScores ClosedScore[]
   openThumbs   OpenThumb[]
   openNotes    OpenNote[]
+  heatNotes    HeatNote[]
   compScores   CompScore[]
   semiMarks    SemiMark[]
   judgeFloors  JudgeFloor[]
@@ -451,6 +453,25 @@ model AttendanceNote {
   name      String
   status    String   // "out" | "maybe"
   note      String?
+}
+
+// Emcee script: freeform text attached to a heat number for the emcee to read
+model HeatScript {
+  id         Int    @id @default(autoincrement())
+  heatNumber Int    @unique
+  script     String
+}
+
+// Judge heat note: freeform note per judge × heat (no per-student breakdown)
+model HeatNote {
+  id      Int    @id @default(autoincrement())
+  judgeId Int
+  judge   Judge  @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  heatId  Int
+  heat    Heat   @relation(fields: [heatId], references: [id], onDelete: Cascade)
+  note    String
+
+  @@unique([judgeId, heatId])
 }
 
 model ActivityLog {

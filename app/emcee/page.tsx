@@ -9,7 +9,7 @@ export default async function EmceePage() {
   const session = await getSession()
   if (session?.role !== 'emcee') redirect('/login/emcee')
 
-  const [heats, showState, events] = await Promise.all([
+  const [heats, showState, events, heatScripts] = await Promise.all([
     db.heat.findMany({
       orderBy: { number: 'asc' },
       include: {
@@ -51,9 +51,11 @@ export default async function EmceePage() {
       },
       orderBy: { order: 'asc' },
     }),
+    db.heatScript.findMany(),
   ])
 
   const currentHeatNumber = showState?.currentHeatNumber ?? 0
+  const scriptByHeatNumber = new Map(heatScripts.map(s => [s.heatNumber, s.script]))
 
   const heatRows = heats.map(h => {
     const eventLink = h.events[0]?.event ?? null
@@ -77,6 +79,7 @@ export default async function EmceePage() {
           .filter(m => m.called)
           .map(m => `${m.student.firstName} ${m.student.lastName}`),
       } : null,
+      script: scriptByHeatNumber.get(h.number) ?? null,
     }
   })
 

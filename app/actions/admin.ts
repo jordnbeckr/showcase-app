@@ -507,3 +507,23 @@ export async function deleteEmcee(emceeId: number) {
   await db.emcee.delete({ where: { id: emceeId } })
   revalidatePath('/admin/config')
 }
+
+// --- Heat Scripts ---
+
+export async function setHeatScript(formData: FormData) {
+  await requireAdmin()
+  const heatNumber = parseInt(formData.get('heatNumber') as string, 10)
+  const script = (formData.get('script') as string ?? '').trim()
+  if (!heatNumber) return
+  if (!script) {
+    await db.heatScript.deleteMany({ where: { heatNumber } })
+  } else {
+    await db.heatScript.upsert({
+      where: { heatNumber },
+      create: { heatNumber, script },
+      update: { script },
+    })
+  }
+  revalidatePath('/admin/config')
+  revalidatePath('/emcee')
+}

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { setClosedScore, setOpenThumb, setOpenNote, setCompScore, setSemiMark } from '@/app/actions/judge'
+import { setClosedScore, setOpenThumb, setOpenNote, setHeatNote, setCompScore, setSemiMark } from '@/app/actions/judge'
 
 type HeatEntry = {
   studentId: number
@@ -61,6 +61,7 @@ type Props = {
   initialClosedScores: { heatId: number; studentId: number; placement: string }[]
   initialOpenThumbs: { heatId: number; studentId: number; categoryId: number; sentiment: string }[]
   initialOpenNotes: { heatId: number; studentId: number; note: string }[]
+  initialHeatNotes: { heatId: number; note: string }[]
   initialCompScores: { eventId: number; heatId: number; studentId: number; place: number }[]
   initialSemiMarks: { eventId: number; heatId: number; studentId: number; called: boolean }[]
 }
@@ -85,6 +86,7 @@ export default function JudgeScoring({
   initialClosedScores,
   initialOpenThumbs,
   initialOpenNotes,
+  initialHeatNotes,
   initialCompScores,
   initialSemiMarks,
 }: Props) {
@@ -109,6 +111,13 @@ export default function JudgeScoring({
   const [openNotes, setOpenNotesState] = useState<Record<string, string>>(() => {
     const map: Record<string, string> = {}
     for (const n of initialOpenNotes) map[`${n.heatId}-${n.studentId}`] = n.note
+    return map
+  })
+
+  // Heat notes: key = heatId → note (judge's overall observation for the heat)
+  const [heatNotes, setHeatNotesState] = useState<Record<number, string>>(() => {
+    const map: Record<number, string> = {}
+    for (const n of initialHeatNotes) map[n.heatId] = n.note
     return map
   })
 
@@ -185,6 +194,17 @@ export default function JudgeScoring({
     save(
       () => setOpenNote(heatId, studentId, note),
       () => {} // note rollback is complex; error banner is enough
+    )
+  }, [])
+
+  const handleHeatNote = useCallback((heatId: number, note: string) => {
+    setHeatNotesState(prev => ({ ...prev, [heatId]: note }))
+  }, [])
+
+  const saveHeatNote = useCallback((heatId: number, note: string) => {
+    save(
+      () => setHeatNote(heatId, note),
+      () => {}
     )
   }, [])
 
@@ -288,10 +308,13 @@ export default function JudgeScoring({
               closedScores={closedScores}
               openThumbs={openThumbs}
               openNotes={openNotes}
+              heatNotes={heatNotes}
               onClosedScore={handleClosedScore}
               onThumb={handleThumb}
               onNoteChange={handleNote}
               onNoteSave={saveNote}
+              onHeatNoteChange={handleHeatNote}
+              onHeatNoteSave={saveHeatNote}
             />
           )
         } else {
@@ -322,20 +345,26 @@ function HeatBlock({
   closedScores,
   openThumbs,
   openNotes,
+  heatNotes,
   onClosedScore,
   onThumb,
   onNoteChange,
   onNoteSave,
+  onHeatNoteChange,
+  onHeatNoteSave,
 }: {
   heat: Heat
   categories: Category[]
   closedScores: Record<string, string>
   openThumbs: Record<string, string>
   openNotes: Record<string, string>
+  heatNotes: Record<number, string>
   onClosedScore: (heatId: number, studentId: number, placement: string) => void
   onThumb: (heatId: number, studentId: number, categoryId: number, sentiment: 'up' | 'down') => void
   onNoteChange: (heatId: number, studentId: number, note: string) => void
   onNoteSave: (heatId: number, studentId: number, note: string) => void
+  onHeatNoteChange: (heatId: number, note: string) => void
+  onHeatNoteSave: (heatId: number, note: string) => void
 }) {
   const isClosed = heat.category === 'closed'
   const isOpen = heat.category === 'open'
@@ -388,6 +417,19 @@ function HeatBlock({
           <span className="text-xs italic" style={{ color: 'var(--muted)' }}>No scoring for this heat</span>
         </div>
       )}
+
+      {/* Heat-level note (handwritten observation for the entire heat) */}
+      <div className="px-3 py-2" style={{ borderTop: `1px solid ${borderColor}`, backgroundColor: 'var(--surface)' }}>
+        <textarea
+          value={heatNotes[heat.id] ?? ''}
+          onChange={e => onHeatNoteChange(heat.id, e.target.value)}
+          onBlur={e => onHeatNoteSave(heat.id, e.target.value)}
+          placeholder="Heat observation (optional)…"
+          rows={1}
+          className="w-full text-xs rounded px-2 py-1"
+          style={{ border: '1px solid var(--border)', resize: 'none', backgroundColor: 'var(--card)', color: 'var(--text)' }}
+        />
+      </div>
     </div>
   )
 }

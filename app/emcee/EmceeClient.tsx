@@ -9,6 +9,7 @@ type HeatRow = {
   category: string
   entries: { studentName: string; partnerName: string | null; instructor: string | null; floor: string | null; level: string }[]
   event?: { id: number; name: string; phase: string; callbacks: string[] } | null
+  script?: string | null
 }
 
 type CompEvent = {
@@ -127,6 +128,11 @@ export default function EmceeClient({
                       {currentHeat.event.phase === 'final' && (
                         <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: '#16a34a' }}>Final</span>
                       )}
+                    </div>
+                  )}
+                  {currentHeat.script && (
+                    <div className="mt-3 p-3 rounded-lg text-sm leading-relaxed" style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#78350f', whiteSpace: 'pre-wrap' }}>
+                      {currentHeat.script}
                     </div>
                   )}
                 </div>
@@ -255,6 +261,9 @@ export default function EmceeClient({
                           </span>
                         )}
                       </span>
+                      {h.script && (
+                        <span title="Has script" style={{ fontSize: '0.65rem', flexShrink: 0, color: isCurrent ? 'rgba(255,255,255,0.6)' : '#d97706' }}>📝</span>
+                      )}
                       <span style={{ color: isCurrent ? 'rgba(255,255,255,0.45)' : 'var(--muted)', fontSize: '0.75rem', flexShrink: 0 }}>
                         {h.entries.length}
                       </span>

@@ -35,7 +35,7 @@ export default async function JudgePage() {
   const floors = await db.floor.findMany({ orderBy: { order: 'asc' } })
   const floorById = new Map(floors.map(f => ({ id: f.id, label: f.label })).map(f => [f.id, f.label]))
 
-  const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks, allSemiMarks] = await Promise.all([
+  const [heats, events, categories, existingClosedScores, existingOpenThumbs, existingOpenNotes, existingCompScores, existingSemanMarks, allSemiMarks, existingHeatNotes] = await Promise.all([
     db.heat.findMany({
       orderBy: { number: 'asc' },
       include: {
@@ -70,6 +70,7 @@ export default async function JudgePage() {
     db.compScore.findMany({ where: { judgeId } }),
     db.semiMark.findMany({ where: { judgeId } }),
     db.semiMark.findMany({ select: { eventId: true, heatId: true, studentId: true, judgeId: true, called: true } }),
+    db.heatNote.findMany({ where: { judgeId } }),
   ])
 
   // Map events by first heat number so they appear at the right position in the scroll
@@ -275,6 +276,7 @@ export default async function JudgePage() {
       initialOpenNotes={existingOpenNotes.map(n => ({ heatId: n.heatId, studentId: n.studentId, note: n.note }))}
       initialCompScores={existingCompScores.map(s => ({ eventId: s.eventId, heatId: s.heatId, studentId: s.studentId, place: s.place }))}
       initialSemiMarks={existingSemanMarks.map(m => ({ eventId: m.eventId, heatId: m.heatId, studentId: m.studentId, called: m.called }))}
+      initialHeatNotes={existingHeatNotes.map(n => ({ heatId: n.heatId, note: n.note }))}
     />
   )
 }

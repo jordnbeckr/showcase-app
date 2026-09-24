@@ -8,6 +8,7 @@ import EmceesConfig from './EmceesConfig'
 import FeedbackCategoriesConfig from './FeedbackCategoriesConfig'
 import CollapsibleSection from './CollapsibleSection'
 import EntryLockConfig from './EntryLockConfig'
+import EmceeScriptsConfig from './EmceeScriptsConfig'
 
 export const dynamic = 'force-dynamic'
 
@@ -165,6 +166,17 @@ export default async function ConfigPage() {
 
       <CollapsibleSection title="Open Heat Feedback Categories">
         <FeedbackCategoriesConfig categories={feedbackCategories} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Emcee Scripts">
+        <EmceeScriptsConfig
+          heats={allHeats.map(h => ({
+            number: h.number,
+            dance: h.danceType.name,
+            eventName: h.events.length > 0 ? (events.find(e => e.id === h.events[0].eventId)?.name ?? null) : null,
+          }))}
+          initialScripts={await db.heatScript.findMany({ orderBy: { heatNumber: 'asc' } })}
+        />
       </CollapsibleSection>
     </div>
   )

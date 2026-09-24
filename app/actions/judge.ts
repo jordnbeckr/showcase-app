@@ -71,3 +71,16 @@ export async function setSemiMark(eventId: number, heatId: number, studentId: nu
     update: { called },
   })
 }
+
+export async function setHeatNote(heatId: number, note: string) {
+  const judgeId = await requireJudge()
+  if (!note.trim()) {
+    await db.heatNote.deleteMany({ where: { judgeId, heatId } })
+  } else {
+    await db.heatNote.upsert({
+      where: { judgeId_heatId: { judgeId, heatId } },
+      create: { judgeId, heatId, note: note.trim() },
+      update: { note: note.trim() },
+    })
+  }
+}
