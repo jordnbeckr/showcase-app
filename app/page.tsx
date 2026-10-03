@@ -85,6 +85,11 @@ export default async function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--surface)' }}>
       <div className="w-full space-y-8" style={{ maxWidth: 680 }}>
+        <div className="text-center rounded-lg p-5" style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b', color: '#78350f' }}>
+          <p className="text-lg font-bold">This app has moved</p>
+          <p className="text-sm mt-1">All showcases now live in the new Showcase app, and Team Spirit Showcase (Sept 20, 2026) is kept there as a past showcase. This old app is no longer used — please don&rsquo;t enter anything here.</p>
+          <a href="{URL}" className="inline-block mt-3 px-4 py-2 rounded text-sm font-semibold text-white" style={{ backgroundColor: '#92400e' }}>Open the new Showcase app →</a>
+        </div>
         <DeadlineBanner />
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-center" style={{ color: 'var(--text)' }}>Team Spirit Showcase</h1>
