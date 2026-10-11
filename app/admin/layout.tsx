@@ -1,75 +1,50 @@
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { TOOLKIT_URL } from '@/lib/toolkit'
+import { logout } from '@/app/actions/auth'
+import NavShell, { type NavGroup } from '@/components/NavShell'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (session?.role !== 'admin') redirect('/login/admin')
 
+  const jar = await cookies()
+  const railCollapsed = jar.get('nav_rail')?.value === '1'
+
+  const groups: NavGroup[] = [
+    { items: [{ href: '/admin', label: 'Dashboard', icon: 'dashboard' }] },
+    { heading: 'SHOW DAY', items: [
+      { href: '/admin/master', label: 'Master View', icon: 'master' },
+      { href: '/admin/headcount', label: 'Head Count', icon: 'headcount' },
+      { href: '/admin/attendance', label: 'Attendance', icon: 'attendance' },
+    ] },
+    { heading: 'SCORING', items: [
+      { href: '/admin/results', label: 'Results', icon: 'results' },
+      { href: '/admin/feedback', label: 'Feedback', icon: 'feedback' },
+    ] },
+    { heading: 'MONEY & SETUP', items: [
+      { href: '/admin/budget', label: 'Budget', icon: 'budget' },
+      { href: '/admin/config', label: 'Config', icon: 'config' },
+      { href: '/admin/floors', label: 'Floors', icon: 'floors' },
+      { href: '/admin/leaders', label: 'Leader #s', icon: 'leaders' },
+      { href: '/admin/activity', label: 'Activity', icon: 'activity' },
+    ] },
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header
-        className="sticky top-0 z-50 flex items-center gap-0 shadow-md"
-        style={{ backgroundColor: 'var(--header)', minHeight: 64 }}
-      >
-        {/* Brand */}
-        <div className="px-6 py-4 flex items-center gap-3 border-r border-white/10">
-          <a href={TOOLKIT_URL} title="Back to the Toolkit" aria-label="Back to the Toolkit" className="inline-flex items-center justify-center shrink-0 rounded-[11px] hover:bg-white/25 transition-colors" style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)' }}><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 5L3.5 10.5 9 16M4 10.5h8.5a5 5 0 0 1 5 5V17" /></svg></a>
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="3" stroke="white" strokeWidth="1.5"/>
-            <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <span className="font-bold text-white tracking-wide" style={{ fontSize: '0.9rem' }}>Admin</span>
-        </div>
-        {/* Nav */}
-        <nav className="flex items-stretch h-full">
-          {[
-            { href: '/admin', label: 'Dashboard' },
-            { href: '/admin/config', label: 'Config' },
-            { href: '/admin/master', label: 'Master View' },
-            // { href: '/admin/shows', label: 'Shows' },  // uncomment to restore
-            { href: '/admin/results', label: 'Results' },
-            { href: '/admin/feedback', label: 'Feedback' },
-            { href: '/admin/floors', label: 'Floors' },
-            { href: '/admin/leaders', label: 'Leader #s' },
-            { href: '/admin/headcount', label: 'Head Count' },
-            { href: '/admin/budget', label: 'Budget' },
-            { href: '/admin/attendance', label: 'Attendance' },
-            { href: '/admin/activity', label: 'Activity' },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="px-5 text-white/75 hover:text-white hover:bg-white/10 transition-all flex items-center"
-              style={{ fontSize: '0.875rem' }}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-3 px-5">
-          <Link href="/login/judge" className="text-xs text-white/50 hover:text-white/80 transition-colors">
-            Judge login
-          </Link>
-          <Link href="/" className="text-xs text-white/50 hover:text-white/80 transition-colors">
-            ← Home
-          </Link>
-          <form action={logout}>
-            <button
-              className="text-xs font-medium px-3 py-1.5 rounded text-white/90 hover:text-white transition-colors"
-              style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-      <main className="flex-1 p-6">
+    <NavShell
+      toolkit
+      groups={groups}
+      role="Admin"
+      showcaseName="Team Spirit Showcase"
+      initialCollapsed={railCollapsed}
+      logoutAction={logout}
+      topExtra={<Link href="/login/judge" className="text-xs px-2 py-1.5 rounded" style={{ color: 'var(--muted)' }}>Judge login</Link>}
+    >
+      <main className="flex-1 p-6 pb-16">
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>{children}</div>
       </main>
-    </div>
+    </NavShell>
   )
 }

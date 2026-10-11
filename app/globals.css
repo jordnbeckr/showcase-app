@@ -63,3 +63,8 @@ body {
 .data-table tr:hover td {
   background-color: #fafafa;
 }
+
+/* Anything marked no-print (the side rail and top bar) stays off printed pages. */
+@media print {
+  .no-print { display: none !important; }
+}

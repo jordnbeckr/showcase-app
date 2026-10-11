@@ -1,8 +1,9 @@
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { TOOLKIT_URL } from '@/lib/toolkit'
+import { logout } from '@/app/actions/auth'
+import NavShell, { type NavGroup } from '@/components/NavShell'
 
 export default async function StudioLayout({
   children,
@@ -17,64 +18,42 @@ export default async function StudioLayout({
     redirect('/login/studio')
   }
 
+  const jar = await cookies()
+  const railCollapsed = jar.get('nav_rail')?.value === '1'
+  const base = `/studio/${slug}`
+  const groups: NavGroup[] = [
+    { items: [{ href: base, label: 'Home', icon: 'home' }] },
+    { heading: 'SIGN UP', items: [
+      { href: `${base}/roster`, label: 'Roster', icon: 'roster' },
+      { href: `${base}/heats`, label: 'Heat Sign-Up', icon: 'heats' },
+      { href: `${base}/shows`, label: 'Solos', icon: 'solos' },
+      ...(slug === 'sherman-oaks' ? [{ href: `${base}/plan`, label: 'Plan', icon: 'plan' }, { href: `${base}/students`, label: 'Payments', icon: 'payments' }] : []),
+    ] },
+    { heading: 'SHEETS', items: [
+      { href: `${base}/breakdown`, label: 'Breakdown', icon: 'breakdown' },
+      { href: `${base}/heatsheet`, label: 'Heat Sheet', icon: 'sheet' },
+      { href: `${base}/headcount`, label: 'Head Count', icon: 'headcount' },
+    ] },
+    { heading: 'RESULTS', items: [
+      { href: `${base}/results`, label: 'Results', icon: 'results' },
+      { href: `${base}/feedback`, label: 'Feedback', icon: 'feedback' },
+    ] },
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header
-        className="sticky top-0 z-50 flex items-center gap-0 shadow-md"
-        style={{ backgroundColor: 'var(--header)', minHeight: 64 }}
-      >
-        {/* Studio name */}
-        <div className="px-6 py-4 flex items-center gap-3 border-r border-white/10">
-          {slug === 'sherman-oaks' && <a href={TOOLKIT_URL} title="Back to the Toolkit" aria-label="Back to the Toolkit" className="inline-flex items-center justify-center shrink-0 rounded-[11px] hover:bg-white/25 transition-colors" style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)' }}><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 5L3.5 10.5 9 16M4 10.5h8.5a5 5 0 0 1 5 5V17" /></svg></a>}
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="7" width="14" height="8" rx="1" stroke="white" strokeWidth="1.5"/>
-            <path d="M4 7V5.5a4 4 0 018 0V7" stroke="white" strokeWidth="1.5"/>
-          </svg>
-          <span className="font-bold text-white tracking-wide" style={{ fontSize: '0.9rem' }}>{session.studioName}</span>
-        </div>
-        {/* Nav */}
-        <nav className="flex items-stretch h-full">
-          {[
-            { href: `/studio/${slug}`, label: 'Home' },
-            { href: `/studio/${slug}/roster`, label: 'Roster' },
-            { href: `/studio/${slug}/heats`, label: 'Heat Sign-Up' },
-            { href: `/studio/${slug}/shows`, label: 'Solos' },
-            ...(slug === 'sherman-oaks' ? [{ href: `/studio/${slug}/plan`, label: 'Plan' }] : []),
-            ...(slug === 'sherman-oaks' ? [{ href: `/studio/${slug}/students`, label: 'Payments' }] : []),
-            { href: `/studio/${slug}/breakdown`, label: 'Breakdown' },
-            { href: `/studio/${slug}/heatsheet`, label: 'Heat Sheet' },
-            { href: `/studio/${slug}/headcount`, label: 'Head Count' },
-            { href: `/studio/${slug}/results`, label: 'Results' },
-            { href: `/studio/${slug}/feedback`, label: 'Feedback' },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="px-4 text-white/75 hover:text-white hover:bg-white/10 transition-all flex items-center"
-              style={{ fontSize: '0.875rem' }}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-3 px-5">
-          <Link href="/view" className="text-xs text-white/50 hover:text-white/80 transition-colors">
-            View sheet
-          </Link>
-          <form action={logout}>
-            <button
-              className="text-xs font-medium px-3 py-1.5 rounded text-white/90 hover:text-white transition-colors"
-              style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-      <main className="flex-1 p-6">
+    <NavShell
+      toolkit={slug === 'sherman-oaks'}
+      groups={groups}
+      role={session.studioName}
+      showcaseName="Team Spirit Showcase"
+      initialCollapsed={railCollapsed}
+      logoutAction={logout}
+      showHomeLink={false}
+      topExtra={<Link href="/view" className="text-xs px-2 py-1.5 rounded" style={{ color: 'var(--muted)' }}>View sheet</Link>}
+    >
+      <main className="flex-1 p-6 pb-16">
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>{children}</div>
       </main>
-    </div>
+    </NavShell>
   )
 }
