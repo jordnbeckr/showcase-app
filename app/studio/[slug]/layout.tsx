@@ -2,6 +2,7 @@ import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
 import Link from 'next/link'
+import { TOOLKIT_URL } from '@/lib/toolkit'
 
 export default async function StudioLayout({
   children,
@@ -57,6 +58,7 @@ export default async function StudioLayout({
         </nav>
         {/* Right side */}
         <div className="ml-auto flex items-center gap-3 px-5">
+          {slug === 'sherman-oaks' && <a href={TOOLKIT_URL} className="text-xs text-white/70 hover:text-white transition-colors">‹ Toolkit</a>}
           <Link href="/view" className="text-xs text-white/50 hover:text-white/80 transition-colors">
             View sheet
           </Link>
